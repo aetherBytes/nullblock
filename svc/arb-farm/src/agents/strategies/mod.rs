@@ -1,12 +1,12 @@
-pub mod venue_snapshot;
 pub mod graduation_sniper_strategy;
 pub mod raydium_snipe_strategy;
+pub mod venue_snapshot;
 // TODO: WIP - uncomment when KOL copy trading strategy is ready
 // pub mod kol_copy_strategy;
 
-pub use venue_snapshot::{TokenData, VenueSnapshot};
 pub use graduation_sniper_strategy::GraduationSniperStrategy;
 pub use raydium_snipe_strategy::RaydiumSnipeStrategy;
+pub use venue_snapshot::{TokenData, VenueSnapshot};
 
 #[derive(Debug, Clone)]
 pub struct GraduationEvent {
@@ -65,7 +65,8 @@ impl StrategyRegistry {
 
     pub async fn get_active(&self) -> Vec<Arc<dyn BehavioralStrategy>> {
         let strategies = self.strategies.read().await;
-        strategies.iter()
+        strategies
+            .iter()
             .filter(|s| s.is_active())
             .cloned()
             .collect()
@@ -73,7 +74,8 @@ impl StrategyRegistry {
 
     pub async fn get_by_venue(&self, venue_type: VenueType) -> Vec<Arc<dyn BehavioralStrategy>> {
         let strategies = self.strategies.read().await;
-        strategies.iter()
+        strategies
+            .iter()
             .filter(|s| s.is_active() && s.supported_venues().contains(&venue_type))
             .cloned()
             .collect()

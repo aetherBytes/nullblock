@@ -3,7 +3,10 @@ use std::net::SocketAddr;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 
-use axum::{routing::{get, post}, Router};
+use axum::{
+    routing::{get, post},
+    Router,
+};
 use tower_http::{cors::CorsLayer, trace::TraceLayer};
 use tracing::{info, warn};
 
@@ -28,10 +31,16 @@ mod venues;
 mod wallet;
 mod webhooks;
 
-use axum::Json;
 use crate::config::Config;
-use crate::handlers::{approvals as approval_handlers, autonomous as autonomous_handlers, config_handlers, consensus as consensus_handlers, curves, edges, engram as engram_handlers, health, helius as helius_handlers, kol, positions as position_handlers, research as research_handlers, scanner, settings, sniper as sniper_handlers, sse, strategies, swarm, threat as threat_handlers, trades, wallet as wallet_handlers, webhooks as webhook_handlers};
-use crate::mcp::{get_manifest, get_all_tools, handlers as mcp_handlers};
+use crate::handlers::{
+    approvals as approval_handlers, autonomous as autonomous_handlers, config_handlers,
+    consensus as consensus_handlers, curves, edges, engram as engram_handlers, health,
+    helius as helius_handlers, kol, positions as position_handlers, research as research_handlers,
+    scanner, settings, sniper as sniper_handlers, sse, strategies, swarm,
+    threat as threat_handlers, trades, wallet as wallet_handlers, webhooks as webhook_handlers,
+};
+use crate::mcp::{get_all_tools, get_manifest, handlers as mcp_handlers};
+use axum::Json;
 
 async fn print_startup_summary(state: &server::AppState) {
     println!("\n{}", "=".repeat(70));
@@ -46,7 +55,8 @@ async fn print_startup_summary(state: &server::AppState) {
         println!("   Signer:  ✅ DEV MODE (private key from env)");
 
         // Try to get balance via RPC
-        let balance_result: Result<serde_json::Value, _> = state.helius_rpc_client
+        let balance_result: Result<serde_json::Value, _> = state
+            .helius_rpc_client
             .rpc_call("getBalance", serde_json::json!([address]))
             .await;
         match balance_result {
@@ -72,13 +82,18 @@ async fn print_startup_summary(state: &server::AppState) {
     println!("\n📊 STRATEGIES:");
     let strategies = state.strategy_engine.list_strategies().await;
     for strategy in &strategies {
-        let status = if strategy.is_active { "🟢 ON" } else { "⚪ OFF" };
+        let status = if strategy.is_active {
+            "🟢 ON"
+        } else {
+            "⚪ OFF"
+        };
         let mode = match strategy.execution_mode.as_str() {
             "autonomous" => "🤖 AUTO",
             "hybrid" => "🔀 HYBRID",
             _ => "👤 MANUAL",
         };
-        println!("   {} {} - {} | {} | max:{:.2} SOL | risk:{}",
+        println!(
+            "   {} {} - {} | {} | max:{:.2} SOL | risk:{}",
             status,
             strategy.name,
             strategy.strategy_type,
@@ -94,13 +109,23 @@ async fn print_startup_summary(state: &server::AppState) {
     println!("   Max Position:      {:.2} SOL", risk.max_position_sol);
     println!("   Daily Loss Limit:  {:.2} SOL", risk.daily_loss_limit_sol);
     println!("   Max Drawdown:      {:.1}%", risk.max_drawdown_percent);
-    println!("   Max Concurrent:    {} positions", risk.max_concurrent_positions);
+    println!(
+        "   Max Concurrent:    {} positions",
+        risk.max_concurrent_positions
+    );
     drop(risk);
 
     // Autonomous Executor
     println!("\n🤖 AUTONOMOUS EXECUTOR:");
     let executor_stats = state.autonomous_executor.get_stats().await;
-    println!("   Running:    {}", if executor_stats.is_running { "✅ YES" } else { "⏸️ NO" });
+    println!(
+        "   Running:    {}",
+        if executor_stats.is_running {
+            "✅ YES"
+        } else {
+            "⏸️ NO"
+        }
+    );
     println!("   Attempted:  {}", executor_stats.executions_attempted);
     println!("   Succeeded:  {}", executor_stats.executions_succeeded);
     println!("   Failed:     {}", executor_stats.executions_failed);
@@ -109,22 +134,63 @@ async fn print_startup_summary(state: &server::AppState) {
     // Scanner Status
     println!("\n📡 SCANNER:");
     let scanner_status = state.scanner.get_status().await;
-    println!("   Running:  {}", if scanner_status.is_running { "🟢 YES" } else { "⚪ NO" });
-    println!("   Venues:   {}/{} healthy", scanner_status.stats.healthy_venues, scanner_status.stats.total_venues);
-    println!("   Signals:  {} detected", scanner_status.stats.total_signals_detected);
+    println!(
+        "   Running:  {}",
+        if scanner_status.is_running {
+            "🟢 YES"
+        } else {
+            "⚪ NO"
+        }
+    );
+    println!(
+        "   Venues:   {}/{} healthy",
+        scanner_status.stats.healthy_venues, scanner_status.stats.total_venues
+    );
+    println!(
+        "   Signals:  {} detected",
+        scanner_status.stats.total_signals_detected
+    );
 
     // Real-time Monitor Status
     println!("\n📡 REAL-TIME MONITOR:");
     let laserstream_configured = state.laserstream_client.is_configured();
-    println!("   LaserStream: {}", if laserstream_configured { "✅ Configured" } else { "⚠️ Not configured" });
+    println!(
+        "   LaserStream: {}",
+        if laserstream_configured {
+            "✅ Configured"
+        } else {
+            "⚠️ Not configured"
+        }
+    );
     let subscribed = state.realtime_monitor.get_subscribed_count().await;
     println!("   Subscriptions: {} bonding curves", subscribed);
 
     // API Key Status
     println!("\n🔑 API KEYS:");
-    println!("   Helius:     {}", if state.config.helius_api_key.is_some() { "✅" } else { "❌" });
-    println!("   Birdeye:    {}", if state.config.birdeye_api_key.is_some() { "✅" } else { "⚠️ Optional" });
-    println!("   OpenRouter: {}", if state.config.openrouter_api_key.is_some() { "✅" } else { "⚠️ Optional" });
+    println!(
+        "   Helius:     {}",
+        if state.config.helius_api_key.is_some() {
+            "✅"
+        } else {
+            "❌"
+        }
+    );
+    println!(
+        "   Birdeye:    {}",
+        if state.config.birdeye_api_key.is_some() {
+            "✅"
+        } else {
+            "⚠️ Optional"
+        }
+    );
+    println!(
+        "   OpenRouter: {}",
+        if state.config.openrouter_api_key.is_some() {
+            "✅"
+        } else {
+            "⚠️ Optional"
+        }
+    );
 
     println!("\n{}", "=".repeat(70));
     println!("📋 QUICK COMMANDS:");
@@ -159,7 +225,10 @@ async fn main() -> anyhow::Result<()> {
         for error in &errors {
             tracing::error!("❌ Config validation error: {}", error);
         }
-        anyhow::bail!("Configuration validation failed with {} errors", errors.len());
+        anyhow::bail!(
+            "Configuration validation failed with {} errors",
+            errors.len()
+        );
     }
     info!("✅ Configuration validated");
 
@@ -172,7 +241,8 @@ async fn main() -> anyhow::Result<()> {
     const MIN_BALANCE_SOL: f64 = 0.05;
     if state.dev_signer.is_configured() {
         if let Some(address) = state.dev_signer.get_address() {
-            let balance_result: Result<serde_json::Value, _> = state.helius_rpc_client
+            let balance_result: Result<serde_json::Value, _> = state
+                .helius_rpc_client
                 .rpc_call("getBalance", serde_json::json!([address]))
                 .await;
 
@@ -217,7 +287,8 @@ async fn main() -> anyhow::Result<()> {
                             } else {
                                 (25.0, "large (50+ SOL)")
                             };
-                            let computed = (available_for_trading / divisor).min(MAX_POSITION_CAP_SOL);
+                            let computed =
+                                (available_for_trading / divisor).min(MAX_POSITION_CAP_SOL);
                             info!(
                                 "💰 Dynamic max position: {:.2} SOL (1/{} of {:.2} SOL, tier: {}, cap: {} SOL)",
                                 computed, divisor as u32, available_for_trading, tier_name, MAX_POSITION_CAP_SOL
@@ -238,7 +309,8 @@ async fn main() -> anyhow::Result<()> {
 
                         use crate::database::repositories::strategies::UpdateStrategyRecord;
                         let strategies = state.strategy_engine.list_strategies().await;
-                        let active_strategies: Vec<_> = strategies.iter().filter(|s| s.is_active).collect();
+                        let active_strategies: Vec<_> =
+                            strategies.iter().filter(|s| s.is_active).collect();
                         let strategy_count = active_strategies.len().max(1);
                         let per_strategy_max = dynamic_max_position;
 
@@ -258,15 +330,27 @@ async fn main() -> anyhow::Result<()> {
                             params.max_position_sol = per_strategy_max;
 
                             // Update in-memory
-                            if state.strategy_engine.set_risk_params(strategy.id, params.clone()).await.is_ok() {
+                            if state
+                                .strategy_engine
+                                .set_risk_params(strategy.id, params.clone())
+                                .await
+                                .is_ok()
+                            {
                                 // Persist to database
-                                if let Err(e) = state.strategy_repo.update(strategy.id, UpdateStrategyRecord {
-                                    name: None,
-                                    venue_types: None,
-                                    execution_mode: None,
-                                    risk_params: Some(params),
-                                    is_active: None,
-                                }).await {
+                                if let Err(e) = state
+                                    .strategy_repo
+                                    .update(
+                                        strategy.id,
+                                        UpdateStrategyRecord {
+                                            name: None,
+                                            venue_types: None,
+                                            execution_mode: None,
+                                            risk_params: Some(params),
+                                            is_active: None,
+                                        },
+                                    )
+                                    .await
+                                {
                                     warn!("Failed to persist per-strategy budget to DB for strategy {}: {}", strategy.id, e);
                                 }
                                 synced += 1;
@@ -282,7 +366,10 @@ async fn main() -> anyhow::Result<()> {
                     }
                 }
                 Err(e) => {
-                    warn!("⚠️ Could not validate wallet balance: {}. Proceeding with caution.", e);
+                    warn!(
+                        "⚠️ Could not validate wallet balance: {}. Proceeding with caution.",
+                        e
+                    );
                 }
             }
         }
@@ -315,8 +402,16 @@ async fn main() -> anyhow::Result<()> {
     let consensus_last_queried = state.consensus_last_queried.clone();
 
     // Load persisted toggle states from DB (before spawning workers)
-    let persisted_scanner = state.settings_repo.get_bool("scanner_running").await.unwrap_or(None);
-    let persisted_consensus = state.settings_repo.get_bool("consensus_scheduler_enabled").await.unwrap_or(None);
+    let persisted_scanner = state
+        .settings_repo
+        .get_bool("scanner_running")
+        .await
+        .unwrap_or(None);
+    let persisted_consensus = state
+        .settings_repo
+        .get_bool("consensus_scheduler_enabled")
+        .await
+        .unwrap_or(None);
 
     // Apply persisted consensus state to the AtomicBool immediately
     if let Some(enabled) = persisted_consensus {
@@ -419,14 +514,18 @@ async fn main() -> anyhow::Result<()> {
         }
 
         // Queue any PendingExit positions from previous session for immediate retry
-        let pending_exits = position_manager_for_autostart.get_pending_exit_positions().await;
+        let pending_exits = position_manager_for_autostart
+            .get_pending_exit_positions()
+            .await;
         if !pending_exits.is_empty() {
             info!(
                 "🔄 Found {} positions in PendingExit from previous session - queueing for retry",
                 pending_exits.len()
             );
             for pos in &pending_exits {
-                position_manager_for_autostart.queue_priority_exit(pos.id).await;
+                position_manager_for_autostart
+                    .queue_priority_exit(pos.id)
+                    .await;
                 info!(
                     "   📋 Queued {} ({}) for priority retry",
                     pos.token_symbol.as_deref().unwrap_or(&pos.token_mint[..8]),
@@ -472,7 +571,9 @@ async fn main() -> anyhow::Result<()> {
         if sniper_entry_enabled {
             let mut sniper_config = graduation_sniper_for_autostart.get_config().await;
             sniper_config.enable_post_graduation_entry = true;
-            graduation_sniper_for_autostart.update_config(sniper_config).await;
+            graduation_sniper_for_autostart
+                .update_config(sniper_config)
+                .await;
             info!("⚡ Sniper ENTRY enabled (ARBFARM_SNIPER_ENTRY=1) - will execute buys");
         }
 
@@ -490,7 +591,10 @@ async fn main() -> anyhow::Result<()> {
         // Run wallet reconciliation to pick up orphaned positions
         if let Some(wallet_address) = dev_signer_for_autostart.get_address() {
             info!("🔄 Running wallet position reconciliation...");
-            match helius_das_for_autostart.get_token_accounts_by_owner(&wallet_address).await {
+            match helius_das_for_autostart
+                .get_token_accounts_by_owner(&wallet_address)
+                .await
+            {
                 Ok(token_accounts) => {
                     let wallet_tokens: Vec<crate::execution::WalletTokenHolding> = token_accounts
                         .into_iter()
@@ -502,12 +606,20 @@ async fn main() -> anyhow::Result<()> {
                         })
                         .collect();
 
-                    info!("📊 Found {} tokens with balance in wallet", wallet_tokens.len());
+                    info!(
+                        "📊 Found {} tokens with balance in wallet",
+                        wallet_tokens.len()
+                    );
 
-                    let result = position_manager_for_autostart.reconcile_wallet_tokens(&wallet_tokens).await;
+                    let result = position_manager_for_autostart
+                        .reconcile_wallet_tokens(&wallet_tokens)
+                        .await;
 
                     for position_id in &result.orphaned_positions {
-                        if let Err(e) = position_manager_for_autostart.mark_position_orphaned(*position_id).await {
+                        if let Err(e) = position_manager_for_autostart
+                            .mark_position_orphaned(*position_id)
+                            .await
+                        {
                             warn!("Failed to mark position {} as orphaned: {}", position_id, e);
                         }
                     }
@@ -516,8 +628,16 @@ async fn main() -> anyhow::Result<()> {
                         info!("🔍 Discovered {} untracked tokens in wallet - auto-creating exit strategies:", result.discovered_tokens.len());
 
                         // Get current position count and max limit to prevent exceeding limits
-                        let max_concurrent = risk_config_for_autostart.read().await.max_concurrent_positions as usize;
-                        let current_positions = position_manager_for_autostart.get_stats().await.active_positions as usize;
+                        let max_concurrent = risk_config_for_autostart
+                            .read()
+                            .await
+                            .max_concurrent_positions
+                            as usize;
+                        let current_positions = position_manager_for_autostart
+                            .get_stats()
+                            .await
+                            .active_positions
+                            as usize;
                         let mut positions_created = 0usize;
 
                         for token in &result.discovered_tokens {
@@ -535,36 +655,50 @@ async fn main() -> anyhow::Result<()> {
                                 break;
                             }
 
-                            let (estimated_price, is_dead_token) = match on_chain_fetcher_for_autostart.get_bonding_curve_state(&token.mint).await {
-                                Ok(curve_state) => {
-                                    if curve_state.virtual_token_reserves > 0 {
-                                        (curve_state.virtual_sol_reserves as f64 / curve_state.virtual_token_reserves as f64, false)
-                                    } else {
-                                        match jupiter_venue_for_autostart.get_token_price(&token.mint).await {
+                            let (estimated_price, is_dead_token) =
+                                match on_chain_fetcher_for_autostart
+                                    .get_bonding_curve_state(&token.mint)
+                                    .await
+                                {
+                                    Ok(curve_state) => {
+                                        if curve_state.virtual_token_reserves > 0 {
+                                            (
+                                                curve_state.virtual_sol_reserves as f64
+                                                    / curve_state.virtual_token_reserves as f64,
+                                                false,
+                                            )
+                                        } else {
+                                            match jupiter_venue_for_autostart
+                                                .get_token_price(&token.mint)
+                                                .await
+                                            {
+                                                Ok(price) => {
+                                                    info!("   📈 {} - using Jupiter price (zero curve reserves)", &token.mint[..12]);
+                                                    (price, false)
+                                                }
+                                                Err(_) => {
+                                                    warn!("   💀 {} - dead token (zero reserves, no Jupiter) - queueing immediate sell", &token.mint[..12]);
+                                                    (0.0000001, true)
+                                                }
+                                            }
+                                        }
+                                    }
+                                    Err(_) => {
+                                        match jupiter_venue_for_autostart
+                                            .get_token_price(&token.mint)
+                                            .await
+                                        {
                                             Ok(price) => {
-                                                info!("   📈 {} - using Jupiter price (zero curve reserves)", &token.mint[..12]);
+                                                info!("   📈 {} - using Jupiter price (graduated/DEX token)", &token.mint[..12]);
                                                 (price, false)
                                             }
                                             Err(_) => {
-                                                warn!("   💀 {} - dead token (zero reserves, no Jupiter) - queueing immediate sell", &token.mint[..12]);
+                                                warn!("   💀 {} - dead token (no curve, no Jupiter) - queueing immediate sell", &token.mint[..12]);
                                                 (0.0000001, true)
                                             }
                                         }
                                     }
-                                }
-                                Err(_) => {
-                                    match jupiter_venue_for_autostart.get_token_price(&token.mint).await {
-                                        Ok(price) => {
-                                            info!("   📈 {} - using Jupiter price (graduated/DEX token)", &token.mint[..12]);
-                                            (price, false)
-                                        }
-                                        Err(_) => {
-                                            warn!("   💀 {} - dead token (no curve, no Jupiter) - queueing immediate sell", &token.mint[..12]);
-                                            (0.0000001, true)
-                                        }
-                                    }
-                                }
-                            };
+                                };
 
                             let exit_config = if is_dead_token {
                                 crate::execution::ExitConfig::for_dead_token()
@@ -573,7 +707,8 @@ async fn main() -> anyhow::Result<()> {
                             };
 
                             // Use current risk config for discovered position entry estimates
-                            let max_position_sol = risk_config_for_autostart.read().await.max_position_sol;
+                            let max_position_sol =
+                                risk_config_for_autostart.read().await.max_position_sol;
                             let raw_estimated_entry = token.balance * estimated_price;
                             let estimated_entry_sol = if raw_estimated_entry > max_position_sol {
                                 // Estimated value exceeds max position - cap at max (likely price moved)
@@ -585,12 +720,15 @@ async fn main() -> anyhow::Result<()> {
                                 raw_estimated_entry
                             };
 
-                            match position_manager_for_autostart.create_discovered_position_with_config(
-                                token,
-                                estimated_price,
-                                estimated_entry_sol,
-                                exit_config,
-                            ).await {
+                            match position_manager_for_autostart
+                                .create_discovered_position_with_config(
+                                    token,
+                                    estimated_price,
+                                    estimated_entry_sol,
+                                    exit_config,
+                                )
+                                .await
+                            {
                                 Ok(position) => {
                                     positions_created += 1;
                                     info!(
@@ -603,17 +741,27 @@ async fn main() -> anyhow::Result<()> {
                                     );
                                 }
                                 Err(e) => {
-                                    warn!("   ❌ {} - failed to create position: {}", &token.mint[..12], e);
+                                    warn!(
+                                        "   ❌ {} - failed to create position: {}",
+                                        &token.mint[..12],
+                                        e
+                                    );
                                 }
                             }
                         }
                     }
 
                     if !result.orphaned_positions.is_empty() {
-                        info!("⚠️ Found {} orphaned positions (no longer in wallet)", result.orphaned_positions.len());
+                        info!(
+                            "⚠️ Found {} orphaned positions (no longer in wallet)",
+                            result.orphaned_positions.len()
+                        );
                     }
 
-                    info!("✅ Wallet reconciliation complete: {} tracked positions", result.tracked_positions);
+                    info!(
+                        "✅ Wallet reconciliation complete: {} tracked positions",
+                        result.tracked_positions
+                    );
                 }
                 Err(e) => {
                     warn!("⚠️ Failed to reconcile wallet positions: {}", e);
@@ -625,15 +773,19 @@ async fn main() -> anyhow::Result<()> {
 
         // Start periodic balance refresh for capital manager
         if let Some(wallet_addr) = dev_signer_for_autostart.get_address() {
-            capital_manager_for_autostart.start_balance_refresh(
-                rpc_url_for_balance,
-                wallet_addr.to_string(),
-                60, // Refresh every 60 seconds
-            ).await;
+            capital_manager_for_autostart
+                .start_balance_refresh(
+                    rpc_url_for_balance,
+                    wallet_addr.to_string(),
+                    60, // Refresh every 60 seconds
+                )
+                .await;
         }
 
         // Start periodic wallet reconciliation (every 10 seconds) to catch orphaned tokens
-        let periodic_wallet = dev_signer_for_autostart.get_address().map(|s| s.to_string());
+        let periodic_wallet = dev_signer_for_autostart
+            .get_address()
+            .map(|s| s.to_string());
         let periodic_helius = helius_das_for_autostart.clone();
         let periodic_position_manager = position_manager_for_autostart.clone();
         let periodic_on_chain = on_chain_fetcher_for_autostart.clone();
@@ -652,36 +804,50 @@ async fn main() -> anyhow::Result<()> {
 
                     info!("🔄 [Periodic] Running wallet reconciliation...");
 
-                    match periodic_helius.get_token_accounts_by_owner(&wallet_address).await {
+                    match periodic_helius
+                        .get_token_accounts_by_owner(&wallet_address)
+                        .await
+                    {
                         Ok(token_accounts) => {
-                            let wallet_tokens: Vec<crate::execution::WalletTokenHolding> = token_accounts
-                                .into_iter()
-                                .map(|account| crate::execution::WalletTokenHolding {
-                                    mint: account.mint,
-                                    symbol: None,
-                                    balance: account.ui_amount,
-                                    decimals: account.decimals,
-                                })
-                                .collect();
+                            let wallet_tokens: Vec<crate::execution::WalletTokenHolding> =
+                                token_accounts
+                                    .into_iter()
+                                    .map(|account| crate::execution::WalletTokenHolding {
+                                        mint: account.mint,
+                                        symbol: None,
+                                        balance: account.ui_amount,
+                                        decimals: account.decimals,
+                                    })
+                                    .collect();
 
-                            let result = periodic_position_manager.reconcile_wallet_tokens(&wallet_tokens).await;
+                            let result = periodic_position_manager
+                                .reconcile_wallet_tokens(&wallet_tokens)
+                                .await;
 
                             // Mark orphaned positions
                             for position_id in &result.orphaned_positions {
-                                if let Err(e) = periodic_position_manager.mark_position_orphaned(*position_id).await {
-                                    warn!("[Periodic] Failed to mark position {} as orphaned: {}", position_id, e);
+                                if let Err(e) = periodic_position_manager
+                                    .mark_position_orphaned(*position_id)
+                                    .await
+                                {
+                                    warn!(
+                                        "[Periodic] Failed to mark position {} as orphaned: {}",
+                                        position_id, e
+                                    );
                                 }
                             }
 
                             // Configurable dust threshold (defaults match MIN_DUST_VALUE_SOL in position_monitor)
-                            let dust_balance_threshold: f64 = std::env::var("RECONCILE_DUST_BALANCE_THRESHOLD")
-                                .ok()
-                                .and_then(|v| v.parse().ok())
-                                .unwrap_or(0.001); // 0.001 tokens (decimal-adjusted)
-                            let dust_sol_value_threshold: f64 = std::env::var("RECONCILE_DUST_SOL_VALUE_THRESHOLD")
-                                .ok()
-                                .and_then(|v| v.parse().ok())
-                                .unwrap_or(0.0001); // 0.0001 SOL
+                            let dust_balance_threshold: f64 =
+                                std::env::var("RECONCILE_DUST_BALANCE_THRESHOLD")
+                                    .ok()
+                                    .and_then(|v| v.parse().ok())
+                                    .unwrap_or(0.001); // 0.001 tokens (decimal-adjusted)
+                            let dust_sol_value_threshold: f64 =
+                                std::env::var("RECONCILE_DUST_SOL_VALUE_THRESHOLD")
+                                    .ok()
+                                    .and_then(|v| v.parse().ok())
+                                    .unwrap_or(0.0001); // 0.0001 SOL
 
                             // Create positions for discovered tokens
                             for token in &result.discovered_tokens {
@@ -702,7 +868,8 @@ async fn main() -> anyhow::Result<()> {
                                 {
                                     let recent = periodic_recent_mints.read().await;
                                     if let Some(buy_time) = recent.get(&token.mint) {
-                                        let age_secs = (chrono::Utc::now() - *buy_time).num_seconds();
+                                        let age_secs =
+                                            (chrono::Utc::now() - *buy_time).num_seconds();
                                         if age_secs < 60 {
                                             info!("[Periodic] ⏭️ Skipping {} - recently bought by executor {}s ago", &token.mint[..12], age_secs);
                                             continue;
@@ -710,12 +877,22 @@ async fn main() -> anyhow::Result<()> {
                                     }
                                 }
 
-                                let (estimated_price, is_dead_token) = match periodic_on_chain.get_bonding_curve_state(&token.mint).await {
+                                let (estimated_price, is_dead_token) = match periodic_on_chain
+                                    .get_bonding_curve_state(&token.mint)
+                                    .await
+                                {
                                     Ok(curve_state) => {
                                         if curve_state.virtual_token_reserves > 0 {
-                                            (curve_state.virtual_sol_reserves as f64 / curve_state.virtual_token_reserves as f64, false)
+                                            (
+                                                curve_state.virtual_sol_reserves as f64
+                                                    / curve_state.virtual_token_reserves as f64,
+                                                false,
+                                            )
                                         } else {
-                                            match periodic_jupiter.get_token_price(&token.mint).await {
+                                            match periodic_jupiter
+                                                .get_token_price(&token.mint)
+                                                .await
+                                            {
                                                 Ok(price) => {
                                                     info!("[Periodic] 📈 {} - using Jupiter price (zero curve reserves)", &token.mint[..12]);
                                                     (price, false)
@@ -743,7 +920,10 @@ async fn main() -> anyhow::Result<()> {
 
                                 // SOL-value-based dust check (more accurate than token balance alone)
                                 let estimated_sol_value = token.balance * estimated_price;
-                                if !is_dead_token && estimated_sol_value < dust_sol_value_threshold && estimated_sol_value > 0.0 {
+                                if !is_dead_token
+                                    && estimated_sol_value < dust_sol_value_threshold
+                                    && estimated_sol_value > 0.0
+                                {
                                     tracing::debug!(
                                         "[Periodic] Skipping {} - SOL value {:.6} below dust threshold {:.6}",
                                         &token.mint[..12], estimated_sol_value, dust_sol_value_threshold
@@ -758,19 +938,23 @@ async fn main() -> anyhow::Result<()> {
                                 };
 
                                 // Use current risk config for discovered position entry estimates
-                                let max_position_sol = periodic_risk_config.read().await.max_position_sol;
+                                let max_position_sol =
+                                    periodic_risk_config.read().await.max_position_sol;
                                 let raw_estimated_entry = estimated_sol_value;
 
                                 // Validate entry amount - skip positions with unreasonable values
                                 const MIN_TRACKABLE_ENTRY_SOL: f64 = 0.001; // 0.001 SOL minimum
-                                let estimated_entry_sol = if raw_estimated_entry > max_position_sol {
+                                let estimated_entry_sol = if raw_estimated_entry > max_position_sol
+                                {
                                     // Estimated value exceeds max position - cap at max (likely price moved)
                                     warn!(
                                         "[Periodic] {} estimated value {:.4} SOL exceeds max {:.4} SOL - capping",
                                         &token.mint[..12], raw_estimated_entry, max_position_sol
                                     );
                                     max_position_sol
-                                } else if raw_estimated_entry < MIN_TRACKABLE_ENTRY_SOL && !is_dead_token {
+                                } else if raw_estimated_entry < MIN_TRACKABLE_ENTRY_SOL
+                                    && !is_dead_token
+                                {
                                     // Too small to track meaningfully - skip unless it's a dead token salvage
                                     info!(
                                         "[Periodic] ⏭️ Skipping {} - estimated value {:.6} SOL below tracking minimum {:.4} SOL",
@@ -782,12 +966,15 @@ async fn main() -> anyhow::Result<()> {
                                     raw_estimated_entry
                                 };
 
-                                match periodic_position_manager.create_discovered_position_with_config(
-                                    token,
-                                    estimated_price,
-                                    estimated_entry_sol,
-                                    exit_config,
-                                ).await {
+                                match periodic_position_manager
+                                    .create_discovered_position_with_config(
+                                        token,
+                                        estimated_price,
+                                        estimated_entry_sol,
+                                        exit_config,
+                                    )
+                                    .await
+                                {
                                     Ok(position) => {
                                         info!(
                                             "[Periodic] ✅ Created position for orphaned token {} - SL:{:?}%/TP:{:?}%",
@@ -797,12 +984,18 @@ async fn main() -> anyhow::Result<()> {
                                         );
                                     }
                                     Err(e) => {
-                                        warn!("[Periodic] ❌ Failed to create position for {}: {}", &token.mint[..12], e);
+                                        warn!(
+                                            "[Periodic] ❌ Failed to create position for {}: {}",
+                                            &token.mint[..12],
+                                            e
+                                        );
                                     }
                                 }
                             }
 
-                            if !result.discovered_tokens.is_empty() || !result.orphaned_positions.is_empty() {
+                            if !result.discovered_tokens.is_empty()
+                                || !result.orphaned_positions.is_empty()
+                            {
                                 info!(
                                     "[Periodic] 📊 Reconciliation: {} tracked, {} discovered, {} orphaned",
                                     result.tracked_positions,
@@ -827,7 +1020,10 @@ async fn main() -> anyhow::Result<()> {
         let analysis_db_pool = db_pool_for_analysis.clone();
         let analysis_event_tx = event_tx_for_analysis.clone();
 
-        if analysis_wallet.is_some() && analysis_engrams.is_configured() && analysis_consensus.is_ready().await {
+        if analysis_wallet.is_some()
+            && analysis_engrams.is_configured()
+            && analysis_consensus.is_ready().await
+        {
             tokio::spawn(async move {
                 let wallet_address = analysis_wallet.unwrap();
                 let analysis_interval = std::time::Duration::from_secs(300); // 5 minutes
@@ -846,7 +1042,8 @@ async fn main() -> anyhow::Result<()> {
                     info!("🧠 [Consensus] Starting periodic consensus analysis...");
 
                     // Gather trading metrics from database
-                    let position_repo = crate::database::PositionRepository::new(analysis_db_pool.clone());
+                    let position_repo =
+                        crate::database::PositionRepository::new(analysis_db_pool.clone());
                     let pnl_stats = match position_repo.get_pnl_stats().await {
                         Ok(stats) => stats,
                         Err(e) => {
@@ -864,7 +1061,10 @@ async fn main() -> anyhow::Result<()> {
                     }
 
                     // Gather recent errors from engrams
-                    let error_history = match analysis_engrams.get_error_history(&wallet_address, Some(20)).await {
+                    let error_history = match analysis_engrams
+                        .get_error_history(&wallet_address, Some(20))
+                        .await
+                    {
                         Ok(errors) => errors,
                         Err(e) => {
                             warn!("[Consensus] ⚠️ Failed to get error history: {}", e);
@@ -873,23 +1073,28 @@ async fn main() -> anyhow::Result<()> {
                     };
 
                     // Aggregate error counts by type
-                    let mut error_counts: std::collections::HashMap<String, (u32, String)> = std::collections::HashMap::new();
+                    let mut error_counts: std::collections::HashMap<String, (u32, String)> =
+                        std::collections::HashMap::new();
                     for error in &error_history {
                         let error_type_str = serde_json::to_string(&error.error_type)
                             .unwrap_or_else(|_| "unknown".to_string())
                             .trim_matches('"')
                             .to_string();
-                        let entry = error_counts.entry(error_type_str).or_insert((0, error.message.clone()));
+                        let entry = error_counts
+                            .entry(error_type_str)
+                            .or_insert((0, error.message.clone()));
                         entry.0 += 1;
                     }
 
                     let recent_errors: Vec<crate::consensus::ErrorSummary> = error_counts
                         .into_iter()
-                        .map(|(error_type, (count, last_message))| crate::consensus::ErrorSummary {
-                            error_type,
-                            count,
-                            last_message,
-                        })
+                        .map(
+                            |(error_type, (count, last_message))| crate::consensus::ErrorSummary {
+                                error_type,
+                                count,
+                                last_message,
+                            },
+                        )
                         .collect();
 
                     // Build analysis context
@@ -901,21 +1106,24 @@ async fn main() -> anyhow::Result<()> {
 
                     // Fetch recent closed trades with detailed context
                     let recent_trades = match position_repo.get_recent_closed_trades(15).await {
-                        Ok(trades) => trades.into_iter().map(|t| crate::consensus::DetailedTradeContext {
-                            position_id: t.position_id,
-                            token_symbol: t.token_symbol,
-                            venue: t.venue,
-                            entry_sol: t.entry_sol,
-                            exit_sol: t.exit_sol,
-                            pnl_sol: t.pnl_sol,
-                            pnl_percent: t.pnl_percent,
-                            hold_minutes: t.hold_minutes,
-                            exit_reason: t.exit_reason,
-                            stop_loss_pct: t.stop_loss_pct,
-                            take_profit_pct: t.take_profit_pct,
-                            entry_time: t.entry_time,
-                            exit_time: t.exit_time,
-                        }).collect(),
+                        Ok(trades) => trades
+                            .into_iter()
+                            .map(|t| crate::consensus::DetailedTradeContext {
+                                position_id: t.position_id,
+                                token_symbol: t.token_symbol,
+                                venue: t.venue,
+                                entry_sol: t.entry_sol,
+                                exit_sol: t.exit_sol,
+                                pnl_sol: t.pnl_sol,
+                                pnl_percent: t.pnl_percent,
+                                hold_minutes: t.hold_minutes,
+                                exit_reason: t.exit_reason,
+                                stop_loss_pct: t.stop_loss_pct,
+                                take_profit_pct: t.take_profit_pct,
+                                entry_time: t.entry_time,
+                                exit_time: t.exit_time,
+                            })
+                            .collect(),
                         Err(e) => {
                             warn!("[Consensus] ⚠️ Failed to get recent trades: {}", e);
                             Vec::new()
@@ -973,7 +1181,8 @@ async fn main() -> anyhow::Result<()> {
                                 participants: result.model_votes.clone(),
                                 topic: crate::engrams::schemas::ConversationTopic::StrategyReview,
                                 context: crate::engrams::schemas::ConversationContext {
-                                    trigger: crate::engrams::schemas::ConversationTrigger::Scheduled,
+                                    trigger:
+                                        crate::engrams::schemas::ConversationTrigger::Scheduled,
                                     trades_in_scope: Some(pnl_stats.total_trades),
                                     time_period: Some("Last 7 days".to_string()),
                                     additional_context: Some(serde_json::json!({
@@ -1007,7 +1216,10 @@ async fn main() -> anyhow::Result<()> {
                             };
 
                             // Save conversation log
-                            if let Err(e) = analysis_engrams.save_conversation_log(&wallet_address, &conversation).await {
+                            if let Err(e) = analysis_engrams
+                                .save_conversation_log(&wallet_address, &conversation)
+                                .await
+                            {
                                 warn!("[Consensus] ⚠️ Failed to save conversation log: {}", e);
                             } else {
                                 info!("[Consensus] 💾 Saved conversation log: {}", session_id);
@@ -1060,8 +1272,14 @@ async fn main() -> anyhow::Result<()> {
                                     applied_at: None,
                                 };
 
-                                if let Err(e) = analysis_engrams.save_recommendation(&wallet_address, &recommendation).await {
-                                    warn!("[Consensus] ⚠️ Failed to save recommendation '{}': {}", rec.title, e);
+                                if let Err(e) = analysis_engrams
+                                    .save_recommendation(&wallet_address, &recommendation)
+                                    .await
+                                {
+                                    warn!(
+                                        "[Consensus] ⚠️ Failed to save recommendation '{}': {}",
+                                        rec.title, e
+                                    );
                                 } else {
                                     info!("[Consensus] 💡 Saved recommendation: {} (confidence: {:.0}%)", rec.title, rec.confidence * 100.0);
                                 }
@@ -1071,7 +1289,8 @@ async fn main() -> anyhow::Result<()> {
                             let analysis_id = uuid::Uuid::new_v4();
                             let consensus_analysis = crate::engrams::schemas::ConsensusAnalysis {
                                 analysis_id,
-                                analysis_type: crate::engrams::schemas::ConsensusAnalysisType::Scheduled,
+                                analysis_type:
+                                    crate::engrams::schemas::ConsensusAnalysisType::Scheduled,
                                 time_period: "Last 7 days".to_string(),
                                 total_trades_analyzed: pnl_stats.total_trades,
                                 overall_assessment: result.overall_assessment.clone(),
@@ -1090,7 +1309,10 @@ async fn main() -> anyhow::Result<()> {
                                 created_at: chrono::Utc::now(),
                             };
 
-                            if let Err(e) = analysis_engrams.save_consensus_analysis(&wallet_address, &consensus_analysis).await {
+                            if let Err(e) = analysis_engrams
+                                .save_consensus_analysis(&wallet_address, &consensus_analysis)
+                                .await
+                            {
                                 warn!("[Consensus] ⚠️ Failed to save consensus analysis: {}", e);
                             } else {
                                 info!("[Consensus] 📊 Saved consensus analysis: {} (confidence: {:.0}%)", analysis_id, result.avg_confidence * 100.0);
@@ -1099,17 +1321,24 @@ async fn main() -> anyhow::Result<()> {
                             // Save trade analyses from the result
                             for trade_analysis in &result.trade_analyses {
                                 // Find the matching trade from recent_trades to get additional context
-                                let trade_context = context_recent_trades.iter()
-                                    .find(|t| t.position_id.to_string() == trade_analysis.position_id);
+                                let trade_context = context_recent_trades.iter().find(|t| {
+                                    t.position_id.to_string() == trade_analysis.position_id
+                                });
 
                                 let analysis = crate::engrams::schemas::TradeAnalysis {
                                     analysis_id: uuid::Uuid::new_v4(),
                                     position_id: uuid::Uuid::parse_str(&trade_analysis.position_id)
                                         .unwrap_or_else(|_| uuid::Uuid::nil()),
-                                    token_symbol: trade_context.map(|t| t.token_symbol.clone()).unwrap_or_else(|| "Unknown".to_string()),
-                                    venue: trade_context.map(|t| t.venue.clone()).unwrap_or_else(|| "pump.fun".to_string()),
+                                    token_symbol: trade_context
+                                        .map(|t| t.token_symbol.clone())
+                                        .unwrap_or_else(|| "Unknown".to_string()),
+                                    venue: trade_context
+                                        .map(|t| t.venue.clone())
+                                        .unwrap_or_else(|| "pump.fun".to_string()),
                                     pnl_sol: trade_context.map(|t| t.pnl_sol).unwrap_or(0.0),
-                                    exit_reason: trade_context.map(|t| t.exit_reason.clone()).unwrap_or_else(|| "Unknown".to_string()),
+                                    exit_reason: trade_context
+                                        .map(|t| t.exit_reason.clone())
+                                        .unwrap_or_else(|| "Unknown".to_string()),
                                     root_cause: trade_analysis.root_cause.clone(),
                                     config_issue: trade_analysis.config_issue.clone(),
                                     pattern: trade_analysis.pattern.clone(),
@@ -1118,26 +1347,38 @@ async fn main() -> anyhow::Result<()> {
                                     created_at: chrono::Utc::now(),
                                 };
 
-                                if let Err(e) = analysis_engrams.save_trade_analysis(&wallet_address, &analysis).await {
+                                if let Err(e) = analysis_engrams
+                                    .save_trade_analysis(&wallet_address, &analysis)
+                                    .await
+                                {
                                     warn!("[Consensus] ⚠️ Failed to save trade analysis: {}", e);
                                 } else {
-                                    info!("[Consensus] 🔍 Saved trade analysis for position: {}", trade_analysis.position_id);
+                                    info!(
+                                        "[Consensus] 🔍 Saved trade analysis for position: {}",
+                                        trade_analysis.position_id
+                                    );
                                 }
                             }
 
                             // Save pattern summary if present
                             if let Some(pattern_summary) = &result.pattern_summary {
-                                let stored_summary = crate::engrams::schemas::StoredPatternSummary {
-                                    summary_id: uuid::Uuid::new_v4(),
-                                    losing_patterns: pattern_summary.losing_patterns.clone(),
-                                    winning_patterns: pattern_summary.winning_patterns.clone(),
-                                    config_recommendations: pattern_summary.config_recommendations.clone(),
-                                    trades_analyzed: context_recent_trades.len() as u32,
-                                    time_period: "Last 7 days".to_string(),
-                                    created_at: chrono::Utc::now(),
-                                };
+                                let stored_summary =
+                                    crate::engrams::schemas::StoredPatternSummary {
+                                        summary_id: uuid::Uuid::new_v4(),
+                                        losing_patterns: pattern_summary.losing_patterns.clone(),
+                                        winning_patterns: pattern_summary.winning_patterns.clone(),
+                                        config_recommendations: pattern_summary
+                                            .config_recommendations
+                                            .clone(),
+                                        trades_analyzed: context_recent_trades.len() as u32,
+                                        time_period: "Last 7 days".to_string(),
+                                        created_at: chrono::Utc::now(),
+                                    };
 
-                                if let Err(e) = analysis_engrams.save_pattern_summary(&wallet_address, &stored_summary).await {
+                                if let Err(e) = analysis_engrams
+                                    .save_pattern_summary(&wallet_address, &stored_summary)
+                                    .await
+                                {
                                     warn!("[Consensus] ⚠️ Failed to save pattern summary: {}", e);
                                 } else {
                                     info!("[Consensus] 📈 Saved pattern summary with {} losing and {} winning patterns",
@@ -1150,7 +1391,9 @@ async fn main() -> anyhow::Result<()> {
                             // Emit event for frontend real-time update
                             let event = crate::events::ArbEvent::new(
                                 "consensus.analysis_complete",
-                                crate::events::EventSource::Agent(crate::events::AgentType::StrategyEngine),
+                                crate::events::EventSource::Agent(
+                                    crate::events::AgentType::StrategyEngine,
+                                ),
                                 "arb.consensus.analysis",
                                 serde_json::json!({
                                     "session_id": session_id,
@@ -1173,7 +1416,9 @@ async fn main() -> anyhow::Result<()> {
             });
             info!("✅ Periodic consensus analysis started (every 5 minutes)");
         } else {
-            info!("ℹ️ Periodic consensus analysis skipped (wallet/engrams/consensus not configured)");
+            info!(
+                "ℹ️ Periodic consensus analysis skipped (wallet/engrams/consensus not configured)"
+            );
         }
 
         // Start daily metrics scheduler (runs at 00:05 UTC)
@@ -1185,7 +1430,8 @@ async fn main() -> anyhow::Result<()> {
                     position_repo_for_metrics,
                     engrams_client_for_metrics,
                     wallet_address,
-                ).await;
+                )
+                .await;
             });
             info!("✅ Daily metrics scheduler started (runs at 00:05 UTC)");
         } else {
@@ -1238,7 +1484,9 @@ async fn main() -> anyhow::Result<()> {
         const INFLIGHT_TIMEOUT_SECS: u64 = 60;
 
         loop {
-            let pending_exits = position_manager_for_shutdown.get_pending_exit_signals().await;
+            let pending_exits = position_manager_for_shutdown
+                .get_pending_exit_signals()
+                .await;
             let open_positions = position_manager_for_shutdown.get_open_positions().await;
             let has_priority_exits = position_manager_for_shutdown.has_priority_exits().await;
 
@@ -1258,7 +1506,8 @@ async fn main() -> anyhow::Result<()> {
 
             info!(
                 "   ⏳ Waiting for {} pending exits, {} open positions...",
-                pending_exits.len(), open_positions.len()
+                pending_exits.len(),
+                open_positions.len()
             );
             tokio::time::sleep(std::time::Duration::from_secs(2)).await;
         }
@@ -1302,10 +1551,22 @@ fn create_router(state: server::AppState) -> Router {
         .route("/scanner/contenders", get(scanner::get_contenders))
         .route("/scanner/process", post(scanner::process_signals))
         // Behavioral Strategies (scanner-driven)
-        .route("/scanner/strategies", get(scanner::list_behavioral_strategies))
-        .route("/scanner/strategies/:name", get(scanner::get_behavioral_strategy))
-        .route("/scanner/strategies/:name/toggle", post(scanner::toggle_behavioral_strategy))
-        .route("/scanner/strategies/toggle-all", post(scanner::toggle_all_behavioral_strategies))
+        .route(
+            "/scanner/strategies",
+            get(scanner::list_behavioral_strategies),
+        )
+        .route(
+            "/scanner/strategies/:name",
+            get(scanner::get_behavioral_strategy),
+        )
+        .route(
+            "/scanner/strategies/:name/toggle",
+            post(scanner::toggle_behavioral_strategy),
+        )
+        .route(
+            "/scanner/strategies/toggle-all",
+            post(scanner::toggle_all_behavioral_strategies),
+        )
         // Edges (Opportunities)
         .route("/edges", get(edges::list_edges))
         .route("/edges/atomic", get(edges::list_atomic_edges))
@@ -1319,15 +1580,36 @@ fn create_router(state: server::AppState) -> Router {
         .route("/strategies", get(strategies::list_strategies))
         .route("/strategies", post(strategies::create_strategy))
         .route("/strategies/:id", get(strategies::get_strategy))
-        .route("/strategies/:id", axum::routing::put(strategies::update_strategy))
-        .route("/strategies/:id", axum::routing::delete(strategies::delete_strategy))
+        .route(
+            "/strategies/:id",
+            axum::routing::put(strategies::update_strategy),
+        )
+        .route(
+            "/strategies/:id",
+            axum::routing::delete(strategies::delete_strategy),
+        )
         .route("/strategies/:id/toggle", post(strategies::toggle_strategy))
-        .route("/strategies/:id/risk-profile", post(strategies::set_risk_profile))
+        .route(
+            "/strategies/:id/risk-profile",
+            post(strategies::set_risk_profile),
+        )
         .route("/strategies/:id/kill", post(strategies::kill_strategy))
-        .route("/strategies/:id/momentum", post(strategies::toggle_strategy_momentum))
-        .route("/strategies/:id/reset-stats", post(strategies::reset_strategy_stats))
-        .route("/strategies/batch-toggle", post(strategies::batch_toggle_strategies))
-        .route("/strategies/save-to-engrams", post(strategies::save_strategies_to_engrams))
+        .route(
+            "/strategies/:id/momentum",
+            post(strategies::toggle_strategy_momentum),
+        )
+        .route(
+            "/strategies/:id/reset-stats",
+            post(strategies::reset_strategy_stats),
+        )
+        .route(
+            "/strategies/batch-toggle",
+            post(strategies::batch_toggle_strategies),
+        )
+        .route(
+            "/strategies/save-to-engrams",
+            post(strategies::save_strategies_to_engrams),
+        )
         // Trades
         .route("/trades", get(trades::list_trades))
         .route("/trades/stats", get(trades::get_trade_stats))
@@ -1336,76 +1618,205 @@ fn create_router(state: server::AppState) -> Router {
         // Bonding Curves (pump.fun, moonshot)
         .route("/curves/tokens", get(curves::list_curve_tokens))
         .route("/curves/health", get(curves::get_venues_health))
-        .route("/curves/graduation-candidates", get(curves::list_graduation_candidates))
-        .route("/curves/cross-venue-arb", get(curves::detect_cross_venue_arb))
-        .route("/curves/:mint/progress", get(curves::get_graduation_progress))
+        .route(
+            "/curves/graduation-candidates",
+            get(curves::list_graduation_candidates),
+        )
+        .route(
+            "/curves/cross-venue-arb",
+            get(curves::detect_cross_venue_arb),
+        )
+        .route(
+            "/curves/:mint/progress",
+            get(curves::get_graduation_progress),
+        )
         .route("/curves/:mint/holders", get(curves::get_holder_stats))
         .route("/curves/:mint/quote", post(curves::get_curve_quote))
-        .route("/curves/:mint/parameters", get(curves::get_curve_parameters))
+        .route(
+            "/curves/:mint/parameters",
+            get(curves::get_curve_parameters),
+        )
         .route("/curves/:mint/state", get(curves::get_on_chain_state))
         .route("/curves/:mint/buy", post(curves::buy_curve_token))
         .route("/curves/:mint/sell", post(curves::sell_curve_token))
-        .route("/curves/:mint/post-graduation-pool", get(curves::get_post_graduation_pool))
+        .route(
+            "/curves/:mint/post-graduation-pool",
+            get(curves::get_post_graduation_pool),
+        )
         .route("/curves/:mint/addresses", get(curves::get_curve_addresses))
         // Curve Metrics & Scoring
         .route("/curves/:mint/metrics", get(curves::get_curve_metrics))
-        .route("/curves/:mint/holder-analysis", get(curves::get_holder_analysis))
+        .route(
+            "/curves/:mint/holder-analysis",
+            get(curves::get_holder_analysis),
+        )
         .route("/curves/:mint/score", get(curves::get_opportunity_score))
         .route("/curves/:mint/market-data", get(curves::get_market_data))
-        .route("/curves/top-opportunities", get(curves::get_top_opportunities))
+        .route(
+            "/curves/top-opportunities",
+            get(curves::get_top_opportunities),
+        )
         .route("/curves/scoring-config", get(curves::get_scoring_config))
         // Graduation Tracker (Token Watchlist with Engram Persistence)
         // Graduation Sniper (Auto-sell positions on graduation)
         .route("/sniper/stats", get(sniper_handlers::get_sniper_stats))
-        .route("/sniper/positions", get(sniper_handlers::list_snipe_positions))
-        .route("/sniper/positions", post(sniper_handlers::add_snipe_position))
-        .route("/sniper/positions/:mint", axum::routing::delete(sniper_handlers::remove_snipe_position))
-        .route("/sniper/positions/:mint/sell", post(sniper_handlers::manual_sell_position))
+        .route(
+            "/sniper/positions",
+            get(sniper_handlers::list_snipe_positions),
+        )
+        .route(
+            "/sniper/positions",
+            post(sniper_handlers::add_snipe_position),
+        )
+        .route(
+            "/sniper/positions/:mint",
+            axum::routing::delete(sniper_handlers::remove_snipe_position),
+        )
+        .route(
+            "/sniper/positions/:mint/sell",
+            post(sniper_handlers::manual_sell_position),
+        )
         .route("/sniper/start", post(sniper_handlers::start_sniper))
         .route("/sniper/stop", post(sniper_handlers::stop_sniper))
         .route("/sniper/config", get(sniper_handlers::get_sniper_config))
-        .route("/sniper/config", axum::routing::put(sniper_handlers::update_sniper_config))
+        .route(
+            "/sniper/config",
+            axum::routing::put(sniper_handlers::update_sniper_config),
+        )
         // Research/DD
         .route("/research/ingest", post(research_handlers::ingest_url))
-        .route("/research/extract", post(research_handlers::extract_strategy_from_text))
-        .route("/research/discoveries", get(research_handlers::list_discoveries))
-        .route("/research/discoveries/:id", get(research_handlers::get_discovery))
-        .route("/research/discoveries/:id/approve", post(research_handlers::approve_discovery))
-        .route("/research/discoveries/:id/reject", post(research_handlers::reject_discovery))
+        .route(
+            "/research/extract",
+            post(research_handlers::extract_strategy_from_text),
+        )
+        .route(
+            "/research/discoveries",
+            get(research_handlers::list_discoveries),
+        )
+        .route(
+            "/research/discoveries/:id",
+            get(research_handlers::get_discovery),
+        )
+        .route(
+            "/research/discoveries/:id/approve",
+            post(research_handlers::approve_discovery),
+        )
+        .route(
+            "/research/discoveries/:id/reject",
+            post(research_handlers::reject_discovery),
+        )
         .route("/research/backtest", post(research_handlers::run_backtest))
-        .route("/research/backtest/:id", get(research_handlers::get_backtest_result))
+        .route(
+            "/research/backtest/:id",
+            get(research_handlers::get_backtest_result),
+        )
         .route("/research/sources", get(research_handlers::list_sources))
         .route("/research/sources", post(research_handlers::add_source))
         .route("/research/sources/:id", get(research_handlers::get_source))
-        .route("/research/sources/:id", axum::routing::delete(research_handlers::delete_source))
-        .route("/research/sources/:id/toggle", post(research_handlers::toggle_source))
+        .route(
+            "/research/sources/:id",
+            axum::routing::delete(research_handlers::delete_source),
+        )
+        .route(
+            "/research/sources/:id/toggle",
+            post(research_handlers::toggle_source),
+        )
         .route("/research/alerts", get(research_handlers::list_alerts))
         .route("/research/stats", get(research_handlers::get_monitor_stats))
-        .route("/research/monitor", post(research_handlers::monitor_account))
+        .route(
+            "/research/monitor",
+            post(research_handlers::monitor_account),
+        )
         // Consensus (Multi-LLM voting)
-        .route("/consensus", get(consensus_handlers::list_consensus_history))
-        .route("/consensus/stats", get(consensus_handlers::get_consensus_stats))
-        .route("/consensus/models", get(consensus_handlers::list_available_models))
-        .route("/consensus/request", post(consensus_handlers::request_consensus))
-        .route("/consensus/config", get(consensus_handlers::get_consensus_config))
-        .route("/consensus/config", axum::routing::put(consensus_handlers::update_consensus_config))
-        .route("/consensus/config/reset", post(consensus_handlers::reset_consensus_config))
-        .route("/consensus/conversations", get(consensus_handlers::list_conversations))
-        .route("/consensus/conversations/:id", get(consensus_handlers::get_conversation_detail))
-        .route("/consensus/recommendations", get(consensus_handlers::list_recommendations))
-        .route("/consensus/recommendations/:id/status", axum::routing::put(consensus_handlers::update_recommendation_status))
-        .route("/consensus/learning", get(consensus_handlers::get_learning_summary))
+        .route(
+            "/consensus",
+            get(consensus_handlers::list_consensus_history),
+        )
+        .route(
+            "/consensus/stats",
+            get(consensus_handlers::get_consensus_stats),
+        )
+        .route(
+            "/consensus/models",
+            get(consensus_handlers::list_available_models),
+        )
+        .route(
+            "/consensus/request",
+            post(consensus_handlers::request_consensus),
+        )
+        .route(
+            "/consensus/config",
+            get(consensus_handlers::get_consensus_config),
+        )
+        .route(
+            "/consensus/config",
+            axum::routing::put(consensus_handlers::update_consensus_config),
+        )
+        .route(
+            "/consensus/config/reset",
+            post(consensus_handlers::reset_consensus_config),
+        )
+        .route(
+            "/consensus/conversations",
+            get(consensus_handlers::list_conversations),
+        )
+        .route(
+            "/consensus/conversations/:id",
+            get(consensus_handlers::get_conversation_detail),
+        )
+        .route(
+            "/consensus/recommendations",
+            get(consensus_handlers::list_recommendations),
+        )
+        .route(
+            "/consensus/recommendations/:id/status",
+            axum::routing::put(consensus_handlers::update_recommendation_status),
+        )
+        .route(
+            "/consensus/learning",
+            get(consensus_handlers::get_learning_summary),
+        )
         .route("/consensus/engrams", get(consensus_handlers::list_engrams))
-        .route("/consensus/engrams/:key", get(consensus_handlers::get_engram_detail))
-        .route("/consensus/models/discovery", get(consensus_handlers::get_model_discovery_status))
-        .route("/consensus/models/refresh", post(consensus_handlers::refresh_models))
-        .route("/consensus/models/discovered", get(consensus_handlers::get_discovered_models))
-        .route("/consensus/trade-analyses", get(consensus_handlers::list_trade_analyses))
-        .route("/consensus/patterns", get(consensus_handlers::get_pattern_summary))
-        .route("/consensus/analysis-summary", get(consensus_handlers::get_analysis_summary))
-        .route("/consensus/scheduler", get(consensus_handlers::get_consensus_scheduler_status))
-        .route("/consensus/scheduler", post(consensus_handlers::toggle_consensus_scheduler))
-        .route("/consensus/:id", get(consensus_handlers::get_consensus_detail))
+        .route(
+            "/consensus/engrams/:key",
+            get(consensus_handlers::get_engram_detail),
+        )
+        .route(
+            "/consensus/models/discovery",
+            get(consensus_handlers::get_model_discovery_status),
+        )
+        .route(
+            "/consensus/models/refresh",
+            post(consensus_handlers::refresh_models),
+        )
+        .route(
+            "/consensus/models/discovered",
+            get(consensus_handlers::get_discovered_models),
+        )
+        .route(
+            "/consensus/trade-analyses",
+            get(consensus_handlers::list_trade_analyses),
+        )
+        .route(
+            "/consensus/patterns",
+            get(consensus_handlers::get_pattern_summary),
+        )
+        .route(
+            "/consensus/analysis-summary",
+            get(consensus_handlers::get_analysis_summary),
+        )
+        .route(
+            "/consensus/scheduler",
+            get(consensus_handlers::get_consensus_scheduler_status),
+        )
+        .route(
+            "/consensus/scheduler",
+            post(consensus_handlers::toggle_consensus_scheduler),
+        )
+        .route(
+            "/consensus/:id",
+            get(consensus_handlers::get_consensus_detail),
+        )
         // KOL Tracking + Copy Trading
         .route("/kol", get(kol::list_kols))
         .route("/kol", post(kol::add_kol))
@@ -1426,34 +1837,64 @@ fn create_router(state: server::AppState) -> Router {
         .route("/kol/discovery/stop", post(kol::stop_discovery))
         .route("/kol/discovery/scan", post(kol::scan_for_kols_now))
         .route("/kol/discovery/discovered", get(kol::list_discovered_kols))
-        .route("/kol/discovery/promote/:wallet_address", post(kol::promote_discovered_kol))
+        .route(
+            "/kol/discovery/promote/:wallet_address",
+            post(kol::promote_discovered_kol),
+        )
         // Threat Detection
         .route("/threat/check/:mint", get(threat_handlers::check_token))
-        .route("/threat/wallet/:address", get(threat_handlers::check_wallet))
+        .route(
+            "/threat/wallet/:address",
+            get(threat_handlers::check_wallet),
+        )
         .route("/threat/blocked", get(threat_handlers::list_blocked))
-        .route("/threat/blocked/:address", axum::routing::delete(threat_handlers::remove_from_blocklist))
-        .route("/threat/blocked/:address/status", get(threat_handlers::is_blocked))
+        .route(
+            "/threat/blocked/:address",
+            axum::routing::delete(threat_handlers::remove_from_blocklist),
+        )
+        .route(
+            "/threat/blocked/:address/status",
+            get(threat_handlers::is_blocked),
+        )
         .route("/threat/whitelist", get(threat_handlers::list_whitelisted))
         .route("/threat/whitelist", post(threat_handlers::whitelist_entity))
-        .route("/threat/whitelist/:address", axum::routing::delete(threat_handlers::remove_from_whitelist))
-        .route("/threat/whitelist/:address/status", get(threat_handlers::is_whitelisted))
+        .route(
+            "/threat/whitelist/:address",
+            axum::routing::delete(threat_handlers::remove_from_whitelist),
+        )
+        .route(
+            "/threat/whitelist/:address/status",
+            get(threat_handlers::is_whitelisted),
+        )
         .route("/threat/watch", get(threat_handlers::list_watched))
         .route("/threat/watch", post(threat_handlers::add_watch))
         .route("/threat/report", post(threat_handlers::report_threat))
         .route("/threat/alerts", get(threat_handlers::get_alerts))
-        .route("/threat/score/:mint/history", get(threat_handlers::get_score_history))
+        .route(
+            "/threat/score/:mint/history",
+            get(threat_handlers::get_score_history),
+        )
         .route("/threat/stats", get(threat_handlers::get_stats))
         // Engrams (Pattern Learning)
         .route("/engram", post(engram_handlers::create_engram))
         .route("/engram/search", get(engram_handlers::search_engrams))
         .route("/engram/patterns", post(engram_handlers::find_patterns))
         .route("/engram/avoidance", post(engram_handlers::create_avoidance))
-        .route("/engram/avoidance/:entity_type/:address", get(engram_handlers::check_avoidance))
+        .route(
+            "/engram/avoidance/:entity_type/:address",
+            get(engram_handlers::check_avoidance),
+        )
         .route("/engram/pattern", post(engram_handlers::create_pattern))
         .route("/engram/stats", get(engram_handlers::get_harvester_stats))
-        .route("/engram/insights", get(engram_handlers::get_learning_insights))
+        .route(
+            "/engram/insights",
+            get(engram_handlers::get_learning_insights),
+        )
         .route("/engram/:key", get(engram_handlers::get_engram))
-        .route("/engram/:key", axum::routing::delete(engram_handlers::delete_engram))
+        .route(
+            "/engram/:key",
+            axum::routing::delete(engram_handlers::delete_engram),
+        )
         // Swarm Management
         .route("/swarm/status", get(swarm::get_swarm_status))
         .route("/swarm/health", get(swarm::get_swarm_health))
@@ -1464,21 +1905,36 @@ fn create_router(state: server::AppState) -> Router {
         .route("/swarm/heartbeat", post(swarm::record_heartbeat))
         .route("/swarm/failure", post(swarm::report_failure))
         .route("/swarm/circuit-breakers", get(swarm::list_circuit_breakers))
-        .route("/swarm/circuit-breakers/:name/reset", post(swarm::reset_circuit_breaker))
-        .route("/swarm/circuit-breakers/reset-all", post(swarm::reset_all_circuit_breakers))
+        .route(
+            "/swarm/circuit-breakers/:name/reset",
+            post(swarm::reset_circuit_breaker),
+        )
+        .route(
+            "/swarm/circuit-breakers/reset-all",
+            post(swarm::reset_all_circuit_breakers),
+        )
         // Wallet (Turnkey delegation + dev mode)
         .route("/wallet/status", get(wallet_handlers::get_wallet_status))
         .route("/wallet/setup", post(wallet_handlers::setup_wallet))
         .route("/wallet/policy", post(wallet_handlers::update_policy))
         .route("/wallet/balance", get(wallet_handlers::get_balance))
-        .route("/wallet/disconnect", post(wallet_handlers::disconnect_wallet))
+        .route(
+            "/wallet/disconnect",
+            post(wallet_handlers::disconnect_wallet),
+        )
         .route("/wallet/usage", get(wallet_handlers::get_daily_usage))
         .route("/wallet/test-sign", post(wallet_handlers::test_sign))
         .route("/wallet/sign", post(wallet_handlers::sign_transaction))
         .route("/wallet/dev-mode", get(wallet_handlers::get_dev_mode))
-        .route("/wallet/dev-connect", post(wallet_handlers::connect_dev_wallet))
+        .route(
+            "/wallet/dev-connect",
+            post(wallet_handlers::connect_dev_wallet),
+        )
         .route("/wallet/capital", get(wallet_handlers::get_capital_usage))
-        .route("/wallet/capital/sync", post(wallet_handlers::sync_capital_balance))
+        .route(
+            "/wallet/capital/sync",
+            post(wallet_handlers::sync_capital_balance),
+        )
         // Settings
         .route("/settings", get(settings::get_all_settings))
         .route("/settings/risk", get(settings::get_risk_settings))
@@ -1488,62 +1944,182 @@ fn create_router(state: server::AppState) -> Router {
         // Config (Risk Level Presets)
         .route("/config/risk", get(config_handlers::get_risk_level))
         .route("/config/risk", post(config_handlers::set_risk_level))
-        .route("/config/risk/custom", post(config_handlers::set_custom_risk))
+        .route(
+            "/config/risk/custom",
+            post(config_handlers::set_custom_risk),
+        )
         // Webhooks (Helius)
-        .route("/webhooks/status", get(webhook_handlers::get_webhook_status))
-        .route("/webhooks/register", post(webhook_handlers::register_webhook))
+        .route(
+            "/webhooks/status",
+            get(webhook_handlers::get_webhook_status),
+        )
+        .route(
+            "/webhooks/register",
+            post(webhook_handlers::register_webhook),
+        )
         .route("/webhooks", get(webhook_handlers::list_webhooks))
-        .route("/webhooks", axum::routing::delete(webhook_handlers::delete_webhook))
-        .route("/webhooks/helius", post(webhook_handlers::receive_helius_webhook))
-        .route("/webhooks/events", get(webhook_handlers::get_recent_webhook_events))
+        .route(
+            "/webhooks",
+            axum::routing::delete(webhook_handlers::delete_webhook),
+        )
+        .route(
+            "/webhooks/helius",
+            post(webhook_handlers::receive_helius_webhook),
+        )
+        .route(
+            "/webhooks/events",
+            get(webhook_handlers::get_recent_webhook_events),
+        )
         // Helius Integration (⚡ LaserStream, Priority Fee, Sender, DAS)
         .route("/helius/status", get(helius_handlers::get_helius_status))
-        .route("/helius/laserstream", get(helius_handlers::get_laserstream_status))
-        .route("/helius/priority-fees", get(helius_handlers::get_priority_fees))
-        .route("/helius/priority-fees/cached", get(helius_handlers::get_cached_priority_fees))
-        .route("/helius/sender/stats", get(helius_handlers::get_sender_stats))
+        .route(
+            "/helius/laserstream",
+            get(helius_handlers::get_laserstream_status),
+        )
+        .route(
+            "/helius/priority-fees",
+            get(helius_handlers::get_priority_fees),
+        )
+        .route(
+            "/helius/priority-fees/cached",
+            get(helius_handlers::get_cached_priority_fees),
+        )
+        .route(
+            "/helius/sender/stats",
+            get(helius_handlers::get_sender_stats),
+        )
         .route("/helius/sender/ping", post(helius_handlers::ping_sender))
-        .route("/helius/sender/send", post(helius_handlers::send_transaction))
+        .route(
+            "/helius/sender/send",
+            post(helius_handlers::send_transaction),
+        )
         .route("/helius/das/lookup", post(helius_handlers::das_lookup))
-        .route("/helius/das/assets", get(helius_handlers::das_assets_by_owner))
+        .route(
+            "/helius/das/assets",
+            get(helius_handlers::das_assets_by_owner),
+        )
         .route("/helius/config", get(helius_handlers::get_helius_config))
-        .route("/helius/config", axum::routing::put(helius_handlers::update_helius_config))
+        .route(
+            "/helius/config",
+            axum::routing::put(helius_handlers::update_helius_config),
+        )
         // Positions (Exit Management)
         .route("/positions", get(position_handlers::get_positions))
-        .route("/positions/history", get(position_handlers::get_position_history))
+        .route(
+            "/positions/history",
+            get(position_handlers::get_position_history),
+        )
         .route("/positions/exposure", get(position_handlers::get_exposure))
-        .route("/positions/pnl-summary", get(position_handlers::get_pnl_summary))
+        .route(
+            "/positions/pnl-summary",
+            get(position_handlers::get_pnl_summary),
+        )
         .route("/positions/pnl-reset", post(position_handlers::reset_pnl))
-        .route("/positions/pnl-reset", get(position_handlers::get_pnl_reset))
-        .route("/positions/reconcile", post(position_handlers::reconcile_wallet))
-        .route("/positions/monitor/status", get(position_handlers::get_monitor_status))
-        .route("/positions/monitor/start", post(position_handlers::start_monitor))
-        .route("/positions/monitor/stop", post(position_handlers::stop_monitor))
-        .route("/positions/emergency-close", post(position_handlers::emergency_close_all))
-        .route("/positions/sell-all", post(position_handlers::sell_all_wallet_tokens))
-        .route("/positions/force-clear", post(position_handlers::force_clear_all_positions))
-        .route("/positions/exit-config", axum::routing::put(position_handlers::update_all_positions_exit_config))
+        .route(
+            "/positions/pnl-reset",
+            get(position_handlers::get_pnl_reset),
+        )
+        .route(
+            "/positions/reconcile",
+            post(position_handlers::reconcile_wallet),
+        )
+        .route(
+            "/positions/monitor/status",
+            get(position_handlers::get_monitor_status),
+        )
+        .route(
+            "/positions/monitor/start",
+            post(position_handlers::start_monitor),
+        )
+        .route(
+            "/positions/monitor/stop",
+            post(position_handlers::stop_monitor),
+        )
+        .route(
+            "/positions/emergency-close",
+            post(position_handlers::emergency_close_all),
+        )
+        .route(
+            "/positions/sell-all",
+            post(position_handlers::sell_all_wallet_tokens),
+        )
+        .route(
+            "/positions/force-clear",
+            post(position_handlers::force_clear_all_positions),
+        )
+        .route(
+            "/positions/exit-config",
+            axum::routing::put(position_handlers::update_all_positions_exit_config),
+        )
         .route("/positions/:id", get(position_handlers::get_position))
-        .route("/positions/:id/close", post(position_handlers::close_position))
-        .route("/positions/:id/exit-config", axum::routing::put(position_handlers::update_position_exit_config))
-        .route("/positions/:id/auto-exit", axum::routing::patch(position_handlers::toggle_position_auto_exit))
-        .route("/positions/auto-exit-stats", get(position_handlers::get_auto_exit_stats))
+        .route(
+            "/positions/:id/close",
+            post(position_handlers::close_position),
+        )
+        .route(
+            "/positions/:id/exit-config",
+            axum::routing::put(position_handlers::update_position_exit_config),
+        )
+        .route(
+            "/positions/:id/auto-exit",
+            axum::routing::patch(position_handlers::toggle_position_auto_exit),
+        )
+        .route(
+            "/positions/auto-exit-stats",
+            get(position_handlers::get_auto_exit_stats),
+        )
         // Approvals (Execution Controls)
         .route("/approvals", get(approval_handlers::list_approvals))
-        .route("/approvals/pending", get(approval_handlers::list_pending_approvals))
-        .route("/approvals/cleanup", post(approval_handlers::cleanup_expired))
+        .route(
+            "/approvals/pending",
+            get(approval_handlers::list_pending_approvals),
+        )
+        .route(
+            "/approvals/cleanup",
+            post(approval_handlers::cleanup_expired),
+        )
         .route("/approvals/:id", get(approval_handlers::get_approval))
-        .route("/approvals/:id/approve", post(approval_handlers::approve_approval))
-        .route("/approvals/:id/reject", post(approval_handlers::reject_approval))
-        .route("/approvals/hecate-recommendation", post(approval_handlers::add_hecate_recommendation))
-        .route("/execution/config", get(approval_handlers::get_execution_config))
-        .route("/execution/config", axum::routing::put(approval_handlers::update_execution_config))
-        .route("/execution/toggle", post(approval_handlers::toggle_execution))
+        .route(
+            "/approvals/:id/approve",
+            post(approval_handlers::approve_approval),
+        )
+        .route(
+            "/approvals/:id/reject",
+            post(approval_handlers::reject_approval),
+        )
+        .route(
+            "/approvals/hecate-recommendation",
+            post(approval_handlers::add_hecate_recommendation),
+        )
+        .route(
+            "/execution/config",
+            get(approval_handlers::get_execution_config),
+        )
+        .route(
+            "/execution/config",
+            axum::routing::put(approval_handlers::update_execution_config),
+        )
+        .route(
+            "/execution/toggle",
+            post(approval_handlers::toggle_execution),
+        )
         // Autonomous Executor (Auto-execution for autonomous strategies)
-        .route("/executor/stats", get(autonomous_handlers::get_autonomous_executor_stats))
-        .route("/executor/executions", get(autonomous_handlers::list_autonomous_executions))
-        .route("/executor/start", post(autonomous_handlers::start_autonomous_executor))
-        .route("/executor/stop", post(autonomous_handlers::stop_autonomous_executor))
+        .route(
+            "/executor/stats",
+            get(autonomous_handlers::get_autonomous_executor_stats),
+        )
+        .route(
+            "/executor/executions",
+            get(autonomous_handlers::list_autonomous_executions),
+        )
+        .route(
+            "/executor/start",
+            post(autonomous_handlers::start_autonomous_executor),
+        )
+        .route(
+            "/executor/stop",
+            post(autonomous_handlers::stop_autonomous_executor),
+        )
         // SSE Streams
         .route("/scanner/stream", get(sse::scanner_stream))
         .route("/edges/stream", get(sse::edges_stream))

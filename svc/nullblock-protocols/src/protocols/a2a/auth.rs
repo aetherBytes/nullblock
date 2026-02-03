@@ -7,8 +7,8 @@ use axum::{
 use tracing::{info, warn};
 
 use crate::auth::{
-    extract_bearer_token, extract_api_key, extract_service_token,
-    validate_api_key, validate_bearer_token, validate_service_token, AuthConfig,
+    extract_api_key, extract_bearer_token, extract_service_token, validate_api_key,
+    validate_bearer_token, validate_service_token, AuthConfig,
 };
 
 pub async fn auth_middleware(
@@ -17,7 +17,7 @@ pub async fn auth_middleware(
     next: Next,
 ) -> Result<Response, StatusCode> {
     let config = AuthConfig::default();
-    
+
     let require_a2a_auth = std::env::var("REQUIRE_A2A_AUTH")
         .unwrap_or_else(|_| "false".to_string())
         .parse()
@@ -52,7 +52,10 @@ pub async fn auth_middleware(
         if let Some(bearer_token) = extract_bearer_token(&headers) {
             match validate_bearer_token(&bearer_token) {
                 Ok(auth_ctx) => {
-                    info!("✅ A2A: Bearer token auth successful: {:?}", auth_ctx.identity);
+                    info!(
+                        "✅ A2A: Bearer token auth successful: {:?}",
+                        auth_ctx.identity
+                    );
                     return Ok(next.run(request).await);
                 }
                 Err(e) => {
@@ -64,7 +67,10 @@ pub async fn auth_middleware(
     }
 
     if require_a2a_auth || config.require_auth {
-        warn!("❌ A2A: No valid authentication provided for: {}", request.uri());
+        warn!(
+            "❌ A2A: No valid authentication provided for: {}",
+            request.uri()
+        );
         return Err(StatusCode::UNAUTHORIZED);
     }
 

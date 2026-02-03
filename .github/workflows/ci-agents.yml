@@ -1,0 +1,23 @@
+name: CI - Agents
+
+on:
+  pull_request:
+    paths:
+      - 'svc/nullblock-agents/**'
+      - 'lib/**'
+  push:
+    branches: [main]
+    paths:
+      - 'svc/nullblock-agents/**'
+      - 'lib/**'
+
+jobs:
+  ci:
+    uses: ./.github/workflows/rust-service.yml
+    with:
+      service-name: nullblock-agents
+      service-path: svc/nullblock-agents
+      service-port: 9003
+      ecs-service: nullblock-agents
+      run-deploy: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+    secrets: inherit

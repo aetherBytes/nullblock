@@ -106,10 +106,9 @@ impl TransactionSimulator {
             )));
         }
 
-        let result: SimulateResponse = response
-            .json()
-            .await
-            .map_err(|e| AppError::ExternalApi(format!("Failed to parse simulation response: {}", e)))?;
+        let result: SimulateResponse = response.json().await.map_err(|e| {
+            AppError::ExternalApi(format!("Failed to parse simulation response: {}", e))
+        })?;
 
         if let Some(error) = result.error {
             return Ok(SimulationResult {
@@ -137,7 +136,10 @@ impl TransactionSimulator {
             let (profit, atomicity, guaranteed) = self.analyze_simulation_logs(&logs);
 
             let error = if !success {
-                Some(format!("Transaction simulation failed: {:?}", sim_result.value.err))
+                Some(format!(
+                    "Transaction simulation failed: {:?}",
+                    sim_result.value.err
+                ))
             } else {
                 None
             };
@@ -195,7 +197,13 @@ impl TransactionSimulator {
             // Try to extract profit from logs (format: "profit: 12345")
             if log.contains("profit:") {
                 if let Some(profit_str) = log.split("profit:").nth(1) {
-                    if let Ok(p) = profit_str.trim().split_whitespace().next().unwrap_or("0").parse::<i64>() {
+                    if let Ok(p) = profit_str
+                        .trim()
+                        .split_whitespace()
+                        .next()
+                        .unwrap_or("0")
+                        .parse::<i64>()
+                    {
                         profit = Some(p);
                     }
                 }

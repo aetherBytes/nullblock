@@ -58,7 +58,9 @@ impl ExternalMcpProvider {
         Ok(())
     }
 
-    fn load_external_configs(&self) -> Result<Vec<McpServerConfig>, Box<dyn std::error::Error + Send + Sync>> {
+    fn load_external_configs(
+        &self,
+    ) -> Result<Vec<McpServerConfig>, Box<dyn std::error::Error + Send + Sync>> {
         let mut configs = Vec::new();
 
         if Path::new(CONFIG_FILE_PATH).exists() {
@@ -83,7 +85,10 @@ impl ExternalMcpProvider {
         Ok(configs)
     }
 
-    fn load_from_file(&self, path: &str) -> Result<Vec<McpServerConfig>, Box<dyn std::error::Error + Send + Sync>> {
+    fn load_from_file(
+        &self,
+        path: &str,
+    ) -> Result<Vec<McpServerConfig>, Box<dyn std::error::Error + Send + Sync>> {
         let content = std::fs::read_to_string(path)?;
         let parsed: toml::Value = toml::from_str(&content)?;
 
@@ -92,7 +97,10 @@ impl ExternalMcpProvider {
         if let Some(services) = parsed.get("services").and_then(|s| s.as_table()) {
             for (name, service) in services {
                 let url = service.get("url").and_then(|u| u.as_str()).unwrap_or("");
-                let enabled = service.get("enabled").and_then(|e| e.as_bool()).unwrap_or(true);
+                let enabled = service
+                    .get("enabled")
+                    .and_then(|e| e.as_bool())
+                    .unwrap_or(true);
 
                 if url.is_empty() || !enabled {
                     continue;
@@ -106,29 +114,42 @@ impl ExternalMcpProvider {
                     if let Some(key) = auth_section.get("api_key").and_then(|k| k.as_str()) {
                         auth.api_key = Some(key.to_string());
                     }
-                    if let Some(env_var) = auth_section.get("api_key_env").and_then(|k| k.as_str()) {
+                    if let Some(env_var) = auth_section.get("api_key_env").and_then(|k| k.as_str())
+                    {
                         if let Ok(key) = std::env::var(env_var) {
                             auth.api_key = Some(key);
                         }
                     }
-                    if let Some(header) = auth_section.get("api_key_header").and_then(|h| h.as_str()) {
+                    if let Some(header) =
+                        auth_section.get("api_key_header").and_then(|h| h.as_str())
+                    {
                         auth.api_key_header = Some(header.to_string());
                     }
                     if let Some(token) = auth_section.get("bearer_token").and_then(|t| t.as_str()) {
                         auth.bearer_token = Some(token.to_string());
                     }
-                    if let Some(env_var) = auth_section.get("bearer_token_env").and_then(|t| t.as_str()) {
+                    if let Some(env_var) = auth_section
+                        .get("bearer_token_env")
+                        .and_then(|t| t.as_str())
+                    {
                         if let Ok(token) = std::env::var(env_var) {
                             auth.bearer_token = Some(token);
                         }
                     }
                 }
 
-                let description = service.get("description").and_then(|d| d.as_str()).map(String::from);
+                let description = service
+                    .get("description")
+                    .and_then(|d| d.as_str())
+                    .map(String::from);
                 let tags: Vec<String> = service
                     .get("tags")
                     .and_then(|t| t.as_array())
-                    .map(|arr| arr.iter().filter_map(|v| v.as_str().map(String::from)).collect())
+                    .map(|arr| {
+                        arr.iter()
+                            .filter_map(|v| v.as_str().map(String::from))
+                            .collect()
+                    })
                     .unwrap_or_default();
 
                 configs.push(McpServerConfig {
@@ -148,7 +169,9 @@ impl ExternalMcpProvider {
         Ok(configs)
     }
 
-    fn load_from_env(&self) -> Result<Vec<McpServerConfig>, Box<dyn std::error::Error + Send + Sync>> {
+    fn load_from_env(
+        &self,
+    ) -> Result<Vec<McpServerConfig>, Box<dyn std::error::Error + Send + Sync>> {
         let env_value = std::env::var(ENV_VAR_EXTERNAL_MCP)?;
         let configs: Vec<McpServerConfig> = serde_json::from_str(&env_value)?;
         Ok(configs)
@@ -163,7 +186,9 @@ impl ExternalMcpProvider {
         }
     }
 
-    async fn discover_tools_impl(&self) -> Result<Vec<DiscoveredTool>, Box<dyn std::error::Error + Send + Sync>> {
+    async fn discover_tools_impl(
+        &self,
+    ) -> Result<Vec<DiscoveredTool>, Box<dyn std::error::Error + Send + Sync>> {
         let registry = self.registry.read().await;
         let services = registry.list_services().await;
 
@@ -172,7 +197,10 @@ impl ExternalMcpProvider {
             return Ok(vec![]);
         }
 
-        info!("🔧 Discovering tools from {} external MCP services", services.len());
+        info!(
+            "🔧 Discovering tools from {} external MCP services",
+            services.len()
+        );
         drop(registry);
 
         let mut all_tools = Vec::new();
@@ -220,15 +248,22 @@ impl ExternalMcpProvider {
             all_tools.push(discovered_tool);
         }
 
-        info!("✅ Discovered {} tools from external MCP services", all_tools.len());
+        info!(
+            "✅ Discovered {} tools from external MCP services",
+            all_tools.len()
+        );
         Ok(all_tools)
     }
 
-    async fn discover_agents_impl(&self) -> Result<Vec<DiscoveredAgent>, Box<dyn std::error::Error + Send + Sync>> {
+    async fn discover_agents_impl(
+        &self,
+    ) -> Result<Vec<DiscoveredAgent>, Box<dyn std::error::Error + Send + Sync>> {
         Ok(vec![])
     }
 
-    async fn discover_protocols_impl(&self) -> Result<Vec<DiscoveredProtocol>, Box<dyn std::error::Error + Send + Sync>> {
+    async fn discover_protocols_impl(
+        &self,
+    ) -> Result<Vec<DiscoveredProtocol>, Box<dyn std::error::Error + Send + Sync>> {
         let registry = self.registry.read().await;
         let services = registry.list_services().await;
 
@@ -310,7 +345,10 @@ impl ExternalMcpProvider {
         self.registry.read().await.list_services().await
     }
 
-    pub async fn register_service(&self, config: McpServerConfig) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    pub async fn register_service(
+        &self,
+        config: McpServerConfig,
+    ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         let registry = self.registry.write().await;
         registry.register_with_config(config).await?;
         Ok(())
@@ -339,19 +377,51 @@ impl DiscoveryProvider for ExternalMcpProvider {
         &self.name
     }
 
-    fn discover_tools(&self) -> std::pin::Pin<Box<dyn std::future::Future<Output = Result<Vec<DiscoveredTool>, Box<dyn std::error::Error + Send + Sync>>> + Send + '_>> {
+    fn discover_tools(
+        &self,
+    ) -> std::pin::Pin<
+        Box<
+            dyn std::future::Future<
+                    Output = Result<Vec<DiscoveredTool>, Box<dyn std::error::Error + Send + Sync>>,
+                > + Send
+                + '_,
+        >,
+    > {
         Box::pin(self.discover_tools_impl())
     }
 
-    fn discover_agents(&self) -> std::pin::Pin<Box<dyn std::future::Future<Output = Result<Vec<DiscoveredAgent>, Box<dyn std::error::Error + Send + Sync>>> + Send + '_>> {
+    fn discover_agents(
+        &self,
+    ) -> std::pin::Pin<
+        Box<
+            dyn std::future::Future<
+                    Output = Result<Vec<DiscoveredAgent>, Box<dyn std::error::Error + Send + Sync>>,
+                > + Send
+                + '_,
+        >,
+    > {
         Box::pin(self.discover_agents_impl())
     }
 
-    fn discover_protocols(&self) -> std::pin::Pin<Box<dyn std::future::Future<Output = Result<Vec<DiscoveredProtocol>, Box<dyn std::error::Error + Send + Sync>>> + Send + '_>> {
+    fn discover_protocols(
+        &self,
+    ) -> std::pin::Pin<
+        Box<
+            dyn std::future::Future<
+                    Output = Result<
+                        Vec<DiscoveredProtocol>,
+                        Box<dyn std::error::Error + Send + Sync>,
+                    >,
+                > + Send
+                + '_,
+        >,
+    > {
         Box::pin(self.discover_protocols_impl())
     }
 
-    fn health(&self) -> std::pin::Pin<Box<dyn std::future::Future<Output = ProviderHealth> + Send + '_>> {
+    fn health(
+        &self,
+    ) -> std::pin::Pin<Box<dyn std::future::Future<Output = ProviderHealth> + Send + '_>> {
         Box::pin(self.health_impl())
     }
 }

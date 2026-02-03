@@ -1,10 +1,10 @@
+use chrono::{DateTime, Utc};
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
-use chrono::{DateTime, Utc};
 
-use crate::error::{AppError, AppResult};
 use super::url_ingest::IngestResult;
+use crate::error::{AppError, AppResult};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum StrategyConfidence {
@@ -156,7 +156,10 @@ impl StrategyExtractor {
         self
     }
 
-    pub async fn extract(&self, ingest_result: &IngestResult) -> AppResult<Option<ExtractedStrategy>> {
+    pub async fn extract(
+        &self,
+        ingest_result: &IngestResult,
+    ) -> AppResult<Option<ExtractedStrategy>> {
         let prompt = self.build_extraction_prompt(ingest_result);
 
         let response = self.call_llm(&prompt).await?;
@@ -213,8 +216,9 @@ Only extract strategies that have clear, actionable entry/exit conditions. Ignor
     }
 
     async fn call_llm(&self, prompt: &str) -> AppResult<String> {
-        let api_key = self.openrouter_key.as_ref()
-            .ok_or_else(|| AppError::Configuration("OpenRouter API key not configured".to_string()))?;
+        let api_key = self.openrouter_key.as_ref().ok_or_else(|| {
+            AppError::Configuration("OpenRouter API key not configured".to_string())
+        })?;
 
         let request_body = serde_json::json!({
             "model": self.model,
@@ -232,7 +236,8 @@ Only extract strategies that have clear, actionable entry/exit conditions. Ignor
             "max_tokens": 2000
         });
 
-        let response = self.client
+        let response = self
+            .client
             .post(format!("{}/chat/completions", self.openrouter_url))
             .header("Authorization", format!("Bearer {}", api_key))
             .header("Content-Type", "application/json")
@@ -250,7 +255,11 @@ Only extract strategies that have clear, actionable entry/exit conditions. Ignor
         Ok(content)
     }
 
-    fn parse_llm_response(&self, response: &str, ingest: &IngestResult) -> AppResult<Option<ExtractedStrategy>> {
+    fn parse_llm_response(
+        &self,
+        response: &str,
+        ingest: &IngestResult,
+    ) -> AppResult<Option<ExtractedStrategy>> {
         let json_str = self.extract_json_from_response(response);
 
         let parsed: LlmExtractionResponse = match serde_json::from_str(&json_str) {
@@ -264,7 +273,8 @@ Only extract strategies that have clear, actionable entry/exit conditions. Ignor
 
         let strategy_type = StrategyType::from_str(&parsed.strategy_type.unwrap_or_default());
 
-        let entry_conditions = parsed.entry_conditions
+        let entry_conditions = parsed
+            .entry_conditions
             .unwrap_or_default()
             .into_iter()
             .map(|c| Condition {
@@ -274,7 +284,8 @@ Only extract strategies that have clear, actionable entry/exit conditions. Ignor
             })
             .collect();
 
-        let exit_conditions = parsed.exit_conditions
+        let exit_conditions = parsed
+            .exit_conditions
             .unwrap_or_default()
             .into_iter()
             .map(|c| Condition {
@@ -302,7 +313,9 @@ Only extract strategies that have clear, actionable entry/exit conditions. Ignor
             id: Uuid::new_v4(),
             source_id: ingest.id,
             source_url: ingest.url.clone(),
-            name: parsed.name.unwrap_or_else(|| "Unnamed Strategy".to_string()),
+            name: parsed
+                .name
+                .unwrap_or_else(|| "Unnamed Strategy".to_string()),
             description: parsed.description.unwrap_or_default(),
             strategy_type,
             entry_conditions,
@@ -343,13 +356,14 @@ Only extract strategies that have clear, actionable entry/exit conditions. Ignor
     pub fn extract_without_llm(&self, ingest: &IngestResult) -> Option<ExtractedStrategy> {
         let content_lower = ingest.cleaned_content.to_lowercase();
 
-        let strategy_type = if content_lower.contains("pump.fun") || content_lower.contains("bonding curve") {
-            Some(StrategyType::BondingCurve)
-        } else if content_lower.contains("arbitrage") || content_lower.contains("arb ") {
-            Some(StrategyType::DexArbitrage)
-        } else {
-            None
-        };
+        let strategy_type =
+            if content_lower.contains("pump.fun") || content_lower.contains("bonding curve") {
+                Some(StrategyType::BondingCurve)
+            } else if content_lower.contains("arbitrage") || content_lower.contains("arb ") {
+                Some(StrategyType::DexArbitrage)
+            } else {
+                None
+            };
 
         let strategy_type = strategy_type?;
 
@@ -453,7 +467,11 @@ impl TextStrategyExtractor {
         }
     }
 
-    pub async fn extract_from_text(&self, description: &str, context: Option<&str>) -> AppResult<Option<ExtractedStrategy>> {
+    pub async fn extract_from_text(
+        &self,
+        description: &str,
+        context: Option<&str>,
+    ) -> AppResult<Option<ExtractedStrategy>> {
         let prompt = self.build_text_extraction_prompt(description, context);
         let response = self.call_llm(&prompt).await?;
         self.parse_llm_response(&response, description)
@@ -505,14 +523,14 @@ If the description is too vague or doesn't describe a clear trading strategy, re
 {{"found": false, "reason": "explanation"}}
 
 Be helpful - try to infer reasonable defaults from the description. If the user mentions "small positions" use 0.5 SOL, if they mention "aggressive" use higher take profits, etc."#,
-            description,
-            context_section,
+            description, context_section,
         )
     }
 
     async fn call_llm(&self, prompt: &str) -> AppResult<String> {
-        let api_key = self.openrouter_key.as_ref()
-            .ok_or_else(|| AppError::Configuration("OpenRouter API key not configured".to_string()))?;
+        let api_key = self.openrouter_key.as_ref().ok_or_else(|| {
+            AppError::Configuration("OpenRouter API key not configured".to_string())
+        })?;
 
         let request_body = serde_json::json!({
             "model": self.model,
@@ -530,7 +548,8 @@ Be helpful - try to infer reasonable defaults from the description. If the user 
             "max_tokens": 2000
         });
 
-        let response = self.client
+        let response = self
+            .client
             .post(format!("{}/chat/completions", self.openrouter_url))
             .header("Authorization", format!("Bearer {}", api_key))
             .header("Content-Type", "application/json")
@@ -548,7 +567,11 @@ Be helpful - try to infer reasonable defaults from the description. If the user 
         Ok(content)
     }
 
-    fn parse_llm_response(&self, response: &str, original_description: &str) -> AppResult<Option<ExtractedStrategy>> {
+    fn parse_llm_response(
+        &self,
+        response: &str,
+        original_description: &str,
+    ) -> AppResult<Option<ExtractedStrategy>> {
         let json_str = self.extract_json_from_response(response);
 
         let parsed: TextExtractionResponse = match serde_json::from_str(&json_str) {
@@ -562,7 +585,8 @@ Be helpful - try to infer reasonable defaults from the description. If the user 
 
         let strategy_type = StrategyType::from_str(&parsed.strategy_type.unwrap_or_default());
 
-        let entry_conditions = parsed.entry_conditions
+        let entry_conditions = parsed
+            .entry_conditions
             .unwrap_or_default()
             .into_iter()
             .map(|c| Condition {
@@ -572,7 +596,8 @@ Be helpful - try to infer reasonable defaults from the description. If the user 
             })
             .collect();
 
-        let exit_conditions = parsed.exit_conditions
+        let exit_conditions = parsed
+            .exit_conditions
             .unwrap_or_default()
             .into_iter()
             .map(|c| Condition {
@@ -601,7 +626,9 @@ Be helpful - try to infer reasonable defaults from the description. If the user 
             source_id: Uuid::new_v4(),
             source_url: "user_input".to_string(),
             name: parsed.name.unwrap_or_else(|| "Custom Strategy".to_string()),
-            description: parsed.description.unwrap_or_else(|| original_description.to_string()),
+            description: parsed
+                .description
+                .unwrap_or_else(|| original_description.to_string()),
             strategy_type,
             entry_conditions,
             exit_conditions,
@@ -670,15 +697,33 @@ mod tests {
 
     #[test]
     fn test_strategy_type_parsing() {
-        assert!(matches!(StrategyType::from_str("dex arbitrage"), StrategyType::DexArbitrage));
-        assert!(matches!(StrategyType::from_str("pump.fun curve"), StrategyType::BondingCurve));
-        assert!(matches!(StrategyType::from_str("momentum trading"), StrategyType::Momentum));
+        assert!(matches!(
+            StrategyType::from_str("dex arbitrage"),
+            StrategyType::DexArbitrage
+        ));
+        assert!(matches!(
+            StrategyType::from_str("pump.fun curve"),
+            StrategyType::BondingCurve
+        ));
+        assert!(matches!(
+            StrategyType::from_str("momentum trading"),
+            StrategyType::Momentum
+        ));
     }
 
     #[test]
     fn test_confidence_from_score() {
-        assert!(matches!(StrategyConfidence::from_score(0.9), StrategyConfidence::High));
-        assert!(matches!(StrategyConfidence::from_score(0.6), StrategyConfidence::Medium));
-        assert!(matches!(StrategyConfidence::from_score(0.3), StrategyConfidence::Low));
+        assert!(matches!(
+            StrategyConfidence::from_score(0.9),
+            StrategyConfidence::High
+        ));
+        assert!(matches!(
+            StrategyConfidence::from_score(0.6),
+            StrategyConfidence::Medium
+        ));
+        assert!(matches!(
+            StrategyConfidence::from_score(0.3),
+            StrategyConfidence::Low
+        ));
     }
 }

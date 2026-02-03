@@ -2,7 +2,7 @@ use crate::resources::wallets::chains::{
     ChainSignatureVerifier, EvmSignatureVerifier, SolanaSignatureVerifier,
 };
 use crate::resources::wallets::traits::{
-    ChallengeContext, ChainType, WalletAdapter, WalletError, WalletInfo,
+    ChainType, ChallengeContext, WalletAdapter, WalletError, WalletInfo,
 };
 
 #[derive(Debug)]
@@ -79,12 +79,14 @@ impl WalletAdapter for BitgetAdapter {
         chain: &ChainType,
     ) -> Result<bool, WalletError> {
         match chain {
-            ChainType::Evm => self
-                .evm_verifier
-                .verify_signature(message, signature, wallet_address),
-            ChainType::Solana => self
-                .solana_verifier
-                .verify_signature(message, signature, wallet_address),
+            ChainType::Evm => {
+                self.evm_verifier
+                    .verify_signature(message, signature, wallet_address)
+            }
+            ChainType::Solana => {
+                self.solana_verifier
+                    .verify_signature(message, signature, wallet_address)
+            }
         }
     }
 

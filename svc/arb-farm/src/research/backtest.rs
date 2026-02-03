@@ -1,9 +1,9 @@
+use chrono::{DateTime, Duration, Timelike, Utc};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
-use chrono::{DateTime, Utc, Duration, Timelike};
 
+use super::strategy_extract::{ConditionType, ExtractedStrategy};
 use crate::error::AppResult;
-use super::strategy_extract::{ExtractedStrategy, ConditionType};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct BacktestConfig {
@@ -118,7 +118,11 @@ impl BacktestEngine {
         self
     }
 
-    pub async fn run(&self, strategy: &ExtractedStrategy, config: BacktestConfig) -> AppResult<BacktestResult> {
+    pub async fn run(
+        &self,
+        strategy: &ExtractedStrategy,
+        config: BacktestConfig,
+    ) -> AppResult<BacktestResult> {
         let started_at = Utc::now();
 
         let data = if self.historical_data.is_empty() {
@@ -198,7 +202,11 @@ impl BacktestEngine {
         let mut entry_reason = String::new();
 
         for (i, candle) in data.iter().enumerate() {
-            let lookback = if i >= 20 { &data[i - 20..i] } else { &data[0..i] };
+            let lookback = if i >= 20 {
+                &data[i - 20..i]
+            } else {
+                &data[0..i]
+            };
 
             if !in_position {
                 if let Some(reason) = self.check_entry_conditions(strategy, candle, lookback) {
@@ -207,7 +215,9 @@ impl BacktestEngine {
                     entry_time = candle.timestamp;
                     entry_reason = reason;
                 }
-            } else if let Some(reason) = self.check_exit_conditions(strategy, candle, entry_price, lookback) {
+            } else if let Some(reason) =
+                self.check_exit_conditions(strategy, candle, entry_price, lookback)
+            {
                 let exit_price = candle.close * (1.0 - config.slippage_bps as f64 / 10000.0);
                 let position_size = config.max_position_size_sol.min(equity * 0.5);
 
@@ -218,7 +228,11 @@ impl BacktestEngine {
                 let profit_sol = position_size * net_profit_percent / 100.0;
                 let fees = position_size * fee_percent / 100.0;
 
-                let gas = if config.include_gas_costs { config.gas_cost_per_trade_sol * 2.0 } else { 0.0 };
+                let gas = if config.include_gas_costs {
+                    config.gas_cost_per_trade_sol * 2.0
+                } else {
+                    0.0
+                };
 
                 equity += profit_sol - gas;
 
@@ -270,14 +284,22 @@ impl BacktestEngine {
         for condition in &strategy.entry_conditions {
             match condition.condition_type {
                 ConditionType::PriceAbove => {
-                    if let Some(threshold) = condition.parameters.get("threshold").and_then(|v| v.as_f64()) {
+                    if let Some(threshold) = condition
+                        .parameters
+                        .get("threshold")
+                        .and_then(|v| v.as_f64())
+                    {
                         if candle.close > threshold {
                             return Some(format!("Price above {}", threshold));
                         }
                     }
                 }
                 ConditionType::PriceBelow => {
-                    if let Some(threshold) = condition.parameters.get("threshold").and_then(|v| v.as_f64()) {
+                    if let Some(threshold) = condition
+                        .parameters
+                        .get("threshold")
+                        .and_then(|v| v.as_f64())
+                    {
                         if candle.close < threshold {
                             return Some(format!("Price below {}", threshold));
                         }
@@ -285,8 +307,10 @@ impl BacktestEngine {
                 }
                 ConditionType::VolumeSpike => {
                     if !lookback.is_empty() {
-                        let avg_volume: f64 = lookback.iter().map(|c| c.volume).sum::<f64>() / lookback.len() as f64;
-                        let threshold_multiplier = condition.parameters
+                        let avg_volume: f64 =
+                            lookback.iter().map(|c| c.volume).sum::<f64>() / lookback.len() as f64;
+                        let threshold_multiplier = condition
+                            .parameters
                             .get("multiplier")
                             .and_then(|v| v.as_f64())
                             .unwrap_or(2.0);
@@ -300,7 +324,8 @@ impl BacktestEngine {
                     if !lookback.is_empty() {
                         let first_price = lookback.first().map(|c| c.close).unwrap_or(candle.close);
                         let gain = (candle.close - first_price) / first_price * 100.0;
-                        let threshold = condition.parameters
+                        let threshold = condition
+                            .parameters
                             .get("threshold")
                             .and_then(|v| v.as_f64())
                             .unwrap_or(5.0);
@@ -311,7 +336,8 @@ impl BacktestEngine {
                     }
                 }
                 ConditionType::CurveProgress => {
-                    let progress = condition.parameters
+                    let progress = condition
+                        .parameters
                         .get("threshold")
                         .and_then(|v| v.as_f64())
                         .unwrap_or(30.0);
@@ -347,24 +373,36 @@ impl BacktestEngine {
 
         if let Some(stop_loss) = strategy.risk_params.stop_loss_percent {
             if current_profit_percent <= -stop_loss {
-                return Some(format!("Stop loss hit at {}%", current_profit_percent.round()));
+                return Some(format!(
+                    "Stop loss hit at {}%",
+                    current_profit_percent.round()
+                ));
             }
         }
 
         if let Some(take_profit) = strategy.risk_params.take_profit_percent {
             if current_profit_percent >= take_profit {
-                return Some(format!("Take profit hit at {}%", current_profit_percent.round()));
+                return Some(format!(
+                    "Take profit hit at {}%",
+                    current_profit_percent.round()
+                ));
             }
         }
 
         for condition in &strategy.exit_conditions {
             match condition.condition_type {
                 ConditionType::PercentageGain => {
-                    let target = condition.parameters
+                    let target = condition
+                        .parameters
                         .get("multiplier")
                         .and_then(|v| v.as_f64())
                         .map(|m| (m - 1.0) * 100.0)
-                        .or_else(|| condition.parameters.get("threshold").and_then(|v| v.as_f64()))
+                        .or_else(|| {
+                            condition
+                                .parameters
+                                .get("threshold")
+                                .and_then(|v| v.as_f64())
+                        })
                         .unwrap_or(50.0);
 
                     if current_profit_percent >= target {
@@ -372,7 +410,8 @@ impl BacktestEngine {
                     }
                 }
                 ConditionType::PercentageLoss => {
-                    let threshold = condition.parameters
+                    let threshold = condition
+                        .parameters
                         .get("threshold")
                         .and_then(|v| v.as_f64())
                         .unwrap_or(10.0);
@@ -382,7 +421,8 @@ impl BacktestEngine {
                     }
                 }
                 ConditionType::CurveProgress => {
-                    let exit_progress = condition.parameters
+                    let exit_progress = condition
+                        .parameters
                         .get("threshold")
                         .and_then(|v| v.as_f64())
                         .unwrap_or(80.0);
@@ -403,7 +443,11 @@ impl BacktestEngine {
         None
     }
 
-    fn calculate_summary(&self, trades: &[SimulatedTrade], initial_capital: f64) -> BacktestSummary {
+    fn calculate_summary(
+        &self,
+        trades: &[SimulatedTrade],
+        initial_capital: f64,
+    ) -> BacktestSummary {
         let total_trades = trades.len() as u32;
         let winning_trades = trades.iter().filter(|t| t.profit_sol > 0.0).count() as u32;
         let losing_trades = trades.iter().filter(|t| t.profit_sol < 0.0).count() as u32;
@@ -417,11 +461,13 @@ impl BacktestEngine {
         let total_profit_sol: f64 = trades.iter().map(|t| t.profit_sol).sum();
         let total_profit_percent = total_profit_sol / initial_capital * 100.0;
 
-        let gross_profits: f64 = trades.iter()
+        let gross_profits: f64 = trades
+            .iter()
             .filter(|t| t.profit_sol > 0.0)
             .map(|t| t.profit_sol)
             .sum();
-        let gross_losses: f64 = trades.iter()
+        let gross_losses: f64 = trades
+            .iter()
             .filter(|t| t.profit_sol < 0.0)
             .map(|t| t.profit_sol.abs())
             .sum();
@@ -471,9 +517,8 @@ impl BacktestEngine {
         }
 
         let mean: f64 = returns.iter().sum::<f64>() / returns.len() as f64;
-        let variance: f64 = returns.iter()
-            .map(|r| (r - mean).powi(2))
-            .sum::<f64>() / returns.len() as f64;
+        let variance: f64 =
+            returns.iter().map(|r| (r - mean).powi(2)).sum::<f64>() / returns.len() as f64;
         let std_dev = variance.sqrt();
 
         if std_dev > 0.0 {
@@ -483,11 +528,18 @@ impl BacktestEngine {
         }
     }
 
-    fn calculate_metrics(&self, trades: &[SimulatedTrade], equity_curve: &[EquityPoint], period_days: u32) -> BacktestMetrics {
+    fn calculate_metrics(
+        &self,
+        trades: &[SimulatedTrade],
+        equity_curve: &[EquityPoint],
+        period_days: u32,
+    ) -> BacktestMetrics {
         let avg_duration: f64 = if !trades.is_empty() {
-            trades.iter()
+            trades
+                .iter()
                 .map(|t| (t.exit_time - t.entry_time).num_minutes() as f64)
-                .sum::<f64>() / trades.len() as f64
+                .sum::<f64>()
+                / trades.len() as f64
         } else {
             0.0
         };
@@ -504,11 +556,13 @@ impl BacktestEngine {
             0.0
         };
 
-        let best_trade = trades.iter()
+        let best_trade = trades
+            .iter()
             .map(|t| t.profit_percent)
             .fold(f64::NEG_INFINITY, f64::max);
 
-        let worst_trade = trades.iter()
+        let worst_trade = trades
+            .iter()
             .map(|t| t.profit_percent)
             .fold(f64::INFINITY, f64::min);
 
@@ -516,7 +570,8 @@ impl BacktestEngine {
 
         let avg_trades_per_day = trades.len() as f64 / period_days.max(1) as f64;
 
-        let max_drawdown = equity_curve.iter()
+        let max_drawdown = equity_curve
+            .iter()
             .map(|e| e.drawdown_percent)
             .fold(0.0, f64::max);
 
@@ -534,15 +589,15 @@ impl BacktestEngine {
             0.0
         };
 
-        let negative_returns: Vec<f64> = trades.iter()
+        let negative_returns: Vec<f64> = trades
+            .iter()
             .filter(|t| t.profit_percent < 0.0)
             .map(|t| t.profit_percent)
             .collect();
 
         let downside_deviation = if !negative_returns.is_empty() {
-            let variance: f64 = negative_returns.iter()
-                .map(|r| r.powi(2))
-                .sum::<f64>() / negative_returns.len() as f64;
+            let variance: f64 = negative_returns.iter().map(|r| r.powi(2)).sum::<f64>()
+                / negative_returns.len() as f64;
             variance.sqrt()
         } else {
             0.0
@@ -558,8 +613,16 @@ impl BacktestEngine {
             avg_trade_duration_minutes: avg_duration,
             avg_profit_per_trade_sol: avg_profit_sol,
             avg_profit_per_trade_percent: avg_profit_percent,
-            best_trade_profit_percent: if best_trade.is_finite() { best_trade } else { 0.0 },
-            worst_trade_loss_percent: if worst_trade.is_finite() { worst_trade } else { 0.0 },
+            best_trade_profit_percent: if best_trade.is_finite() {
+                best_trade
+            } else {
+                0.0
+            },
+            worst_trade_loss_percent: if worst_trade.is_finite() {
+                worst_trade
+            } else {
+                0.0
+            },
             longest_winning_streak: win_streak,
             longest_losing_streak: lose_streak,
             avg_trades_per_day,

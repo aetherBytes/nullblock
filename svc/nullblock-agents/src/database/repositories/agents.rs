@@ -1,9 +1,9 @@
 #![allow(dead_code)]
 
-use sqlx::PgPool;
-use uuid::Uuid;
 use anyhow::Result;
 use chrono::Utc;
+use sqlx::PgPool;
+use uuid::Uuid;
 
 use crate::database::models::AgentEntity;
 
@@ -16,7 +16,13 @@ impl AgentRepository {
         Self { pool }
     }
 
-    pub async fn create(&self, name: &str, agent_type: &str, description: Option<&str>, capabilities: &[String]) -> Result<AgentEntity> {
+    pub async fn create(
+        &self,
+        name: &str,
+        agent_type: &str,
+        description: Option<&str>,
+        capabilities: &[String],
+    ) -> Result<AgentEntity> {
         let agent_id = Uuid::new_v4();
         let now = Utc::now();
 
@@ -29,7 +35,7 @@ impl AgentRepository {
             )
             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
             RETURNING *
-            "#
+            "#,
         )
         .bind(agent_id)
         .bind(name)
@@ -50,19 +56,21 @@ impl AgentRepository {
     }
 
     pub async fn get_by_id(&self, agent_id: &Uuid) -> Result<Option<AgentEntity>> {
-        let agent = sqlx::query_as::<_, AgentEntity>(
-            "SELECT * FROM agents WHERE id = $1"
-        )
-        .bind(agent_id)
-        .fetch_optional(&self.pool)
-        .await?;
+        let agent = sqlx::query_as::<_, AgentEntity>("SELECT * FROM agents WHERE id = $1")
+            .bind(agent_id)
+            .fetch_optional(&self.pool)
+            .await?;
 
         Ok(agent)
     }
 
-    pub async fn get_by_name_and_type(&self, name: &str, agent_type: &str) -> Result<Option<AgentEntity>> {
+    pub async fn get_by_name_and_type(
+        &self,
+        name: &str,
+        agent_type: &str,
+    ) -> Result<Option<AgentEntity>> {
         let agent = sqlx::query_as::<_, AgentEntity>(
-            "SELECT * FROM agents WHERE name = $1 AND agent_type = $2"
+            "SELECT * FROM agents WHERE name = $1 AND agent_type = $2",
         )
         .bind(name)
         .bind(agent_type)
@@ -72,7 +80,11 @@ impl AgentRepository {
         Ok(agent)
     }
 
-    pub async fn list(&self, agent_type_filter: Option<&str>, status_filter: Option<&str>) -> Result<Vec<AgentEntity>> {
+    pub async fn list(
+        &self,
+        agent_type_filter: Option<&str>,
+        status_filter: Option<&str>,
+    ) -> Result<Vec<AgentEntity>> {
         let mut query_builder = sqlx::QueryBuilder::new("SELECT * FROM agents WHERE 1=1");
 
         if let Some(agent_type) = agent_type_filter {
@@ -93,7 +105,11 @@ impl AgentRepository {
         Ok(agents)
     }
 
-    pub async fn update_health_status(&self, agent_id: &Uuid, health_status: &str) -> Result<Option<AgentEntity>> {
+    pub async fn update_health_status(
+        &self,
+        agent_id: &Uuid,
+        health_status: &str,
+    ) -> Result<Option<AgentEntity>> {
         let now = Utc::now();
 
         let agent = sqlx::query_as::<_, AgentEntity>(
@@ -104,7 +120,7 @@ impl AgentRepository {
                 updated_at = $4
             WHERE id = $1
             RETURNING *
-            "#
+            "#,
         )
         .bind(agent_id)
         .bind(health_status)
@@ -116,7 +132,11 @@ impl AgentRepository {
         Ok(agent)
     }
 
-    pub async fn update_performance_metrics(&self, agent_id: &Uuid, metrics: &serde_json::Value) -> Result<Option<AgentEntity>> {
+    pub async fn update_performance_metrics(
+        &self,
+        agent_id: &Uuid,
+        metrics: &serde_json::Value,
+    ) -> Result<Option<AgentEntity>> {
         let now = Utc::now();
 
         let agent = sqlx::query_as::<_, AgentEntity>(
@@ -126,7 +146,7 @@ impl AgentRepository {
                 updated_at = $3
             WHERE id = $1
             RETURNING *
-            "#
+            "#,
         )
         .bind(agent_id)
         .bind(metrics)
@@ -138,7 +158,12 @@ impl AgentRepository {
     }
 
     // Activity tracking methods
-    pub async fn update_task_processing_stats(&self, agent_id: &Uuid, task_id: &Uuid, processing_time_ms: u64) -> Result<Option<AgentEntity>> {
+    pub async fn update_task_processing_stats(
+        &self,
+        agent_id: &Uuid,
+        task_id: &Uuid,
+        processing_time_ms: u64,
+    ) -> Result<Option<AgentEntity>> {
         let now = Utc::now();
 
         // Get current stats to calculate new average
@@ -160,7 +185,7 @@ impl AgentRepository {
                     updated_at = $7
                 WHERE id = $1
                 RETURNING *
-                "#
+                "#,
             )
             .bind(agent_id)
             .bind(task_id)
@@ -200,9 +225,8 @@ impl AgentRepository {
     }
 
     pub async fn get_agents_by_activity(&self, limit: Option<i64>) -> Result<Vec<AgentEntity>> {
-        let mut query_builder = sqlx::QueryBuilder::new(
-            "SELECT * FROM agents WHERE status = 'active'"
-        );
+        let mut query_builder =
+            sqlx::QueryBuilder::new("SELECT * FROM agents WHERE status = 'active'");
 
         query_builder.push(" ORDER BY last_action_at DESC NULLS LAST, tasks_processed_count DESC");
 

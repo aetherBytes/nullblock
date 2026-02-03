@@ -111,9 +111,7 @@ pub struct CallToolResult {
 #[serde(tag = "type")]
 pub enum ContentBlock {
     #[serde(rename = "text")]
-    Text {
-        text: String,
-    },
+    Text { text: String },
     #[serde(rename = "image")]
     Image {
         data: String,
@@ -121,9 +119,7 @@ pub enum ContentBlock {
         mime_type: String,
     },
     #[serde(rename = "resource")]
-    EmbeddedResource {
-        resource: ResourceContents,
-    },
+    EmbeddedResource { resource: ResourceContents },
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

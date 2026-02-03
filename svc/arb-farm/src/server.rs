@@ -1,33 +1,39 @@
 use sqlx::postgres::PgPoolOptions;
 use sqlx::PgPool;
-use std::sync::Arc;
 use std::sync::atomic::AtomicBool;
+use std::sync::Arc;
 use tokio::sync::{broadcast, RwLock};
 
 use crate::agents::{
+    spawn_autonomous_executor, spawn_hecate_notifier, start_autonomous_executor,
     AutonomousExecutor, CurveMetricsCollector, CurveOpportunityScorer, EngramHarvester,
-    GraduationSniper, KolDiscoveryAgent, OverseerConfig, ResilienceOverseer,
-    ScannerAgent, StrategyEngine, spawn_autonomous_executor, start_autonomous_executor,
-    spawn_hecate_notifier,
+    GraduationSniper, KolDiscoveryAgent, OverseerConfig, ResilienceOverseer, ScannerAgent,
+    StrategyEngine,
 };
-use crate::handlers::engram::init_harvester;
-use crate::handlers::swarm::{init_overseer, init_circuit_breakers};
-use crate::resilience::CircuitBreakerRegistry;
 use crate::config::Config;
 use crate::consensus::{ConsensusConfig, ConsensusEngine};
-use crate::database::{EdgeRepository, PositionRepository, StrategyRepository, TradeRepository};
-use crate::database::repositories::KolRepository;
 use crate::database::repositories::ConsensusRepository;
+use crate::database::repositories::KolRepository;
+use crate::database::{EdgeRepository, PositionRepository, StrategyRepository, TradeRepository};
 use crate::engrams::EngramsClient;
 use crate::events::{ArbEvent, EventBus};
-use crate::execution::{ApprovalManager, CapitalManager, CurveTransactionBuilder, ExecutorAgent, TransactionSimulator, TransactionBuilder, PositionMonitor, MonitorConfig, JitoClient, RealtimePositionMonitor, PositionExecutor, ExecutorConfig, PositionCommand};
-use crate::venues::curves::{HolderAnalyzer, OnChainFetcher};
 use crate::execution::risk::RiskConfig;
-use crate::helius::{HeliusClient, DasClient, HeliusSender, LaserStreamClient, priority_fee::PriorityFeeMonitor};
+use crate::execution::{
+    ApprovalManager, CapitalManager, CurveTransactionBuilder, ExecutorAgent, ExecutorConfig,
+    JitoClient, MonitorConfig, PositionCommand, PositionExecutor, PositionMonitor,
+    RealtimePositionMonitor, TransactionBuilder, TransactionSimulator,
+};
+use crate::handlers::engram::init_harvester;
+use crate::handlers::swarm::{init_circuit_breakers, init_overseer};
+use crate::helius::{
+    priority_fee::PriorityFeeMonitor, DasClient, HeliusClient, HeliusSender, LaserStreamClient,
+};
 use crate::models::KOLTracker;
+use crate::resilience::CircuitBreakerRegistry;
+use crate::venues::curves::{HolderAnalyzer, OnChainFetcher};
 use crate::venues::curves::{MoonshotVenue, PumpFunVenue};
 use crate::venues::dex::JupiterVenue;
-use crate::wallet::turnkey::{TurnkeySigner, TurnkeyConfig};
+use crate::wallet::turnkey::{TurnkeyConfig, TurnkeySigner};
 use crate::wallet::DevWalletSigner;
 use crate::webhooks::helius::HeliusWebhookClient;
 use nullblock_mcp_client::McpClient;
@@ -99,7 +105,7 @@ pub struct AppState {
 impl AppState {
     pub async fn new(config: Config) -> anyhow::Result<Self> {
         let db_pool = PgPoolOptions::new()
-            .max_connections(30)  // Consolidated with database/mod.rs
+            .max_connections(30) // Consolidated with database/mod.rs
             .acquire_timeout(std::time::Duration::from_secs(30))
             .connect(&config.database_url)
             .await?;
@@ -107,7 +113,12 @@ impl AppState {
         sqlx::query("SELECT 1")
             .execute(&db_pool)
             .await
-            .map_err(|e| anyhow::anyhow!("Database health check failed: {}. Ensure PostgreSQL is running.", e))?;
+            .map_err(|e| {
+                anyhow::anyhow!(
+                    "Database health check failed: {}. Ensure PostgreSQL is running.",
+                    e
+                )
+            })?;
 
         tracing::info!("✅ Database connection pool created and health check passed");
 
@@ -116,17 +127,34 @@ impl AppState {
         let event_bus = Arc::new(EventBus::new(event_tx.clone(), db_pool.clone()));
         tracing::info!("✅ Event bus initialized (capacity: {})", channel_capacity);
 
-        let scanner = Arc::new(ScannerAgent::new(event_tx.clone(), DEFAULT_SCAN_INTERVAL_MS));
+        let scanner = Arc::new(ScannerAgent::new(
+            event_tx.clone(),
+            DEFAULT_SCAN_INTERVAL_MS,
+        ));
 
         // Initialize venues (shared between scanner and direct access)
         let jupiter_venue = Arc::new(JupiterVenue::new(config.jupiter_api_url.clone()));
-        let pump_fun_venue = Arc::new(PumpFunVenue::new(config.pump_fun_api_url.clone(), config.dexscreener_api_url.clone()));
+        let pump_fun_venue = Arc::new(PumpFunVenue::new(
+            config.pump_fun_api_url.clone(),
+            config.dexscreener_api_url.clone(),
+        ));
         let moonshot_venue = Arc::new(MoonshotVenue::new(config.moonshot_api_url.clone()));
 
         // Add venues to scanner (cloning the Arc)
-        scanner.add_venue(Box::new(JupiterVenue::new(config.jupiter_api_url.clone()))).await;
-        scanner.add_venue(Box::new(PumpFunVenue::new(config.pump_fun_api_url.clone(), config.dexscreener_api_url.clone()))).await;
-        scanner.add_venue(Box::new(MoonshotVenue::new(config.moonshot_api_url.clone()))).await;
+        scanner
+            .add_venue(Box::new(JupiterVenue::new(config.jupiter_api_url.clone())))
+            .await;
+        scanner
+            .add_venue(Box::new(PumpFunVenue::new(
+                config.pump_fun_api_url.clone(),
+                config.dexscreener_api_url.clone(),
+            )))
+            .await;
+        scanner
+            .add_venue(Box::new(MoonshotVenue::new(
+                config.moonshot_api_url.clone(),
+            )))
+            .await;
 
         tracing::info!("✅ Scanner agent initialized with 3 venues (Jupiter, pump.fun, moonshot)");
 
@@ -196,13 +224,21 @@ impl AppState {
 
             // Use dev signer - auto-configure Turnkey with dev wallet address for status tracking
             if let Some(ref wallet_address) = config.wallet_address {
-                let dev_wallet_id = format!("dev_wallet_{}", wallet_address.chars().take(8).collect::<String>());
-                if let Err(e) = turnkey_signer.set_wallet(wallet_address.clone(), dev_wallet_id).await {
+                let dev_wallet_id = format!(
+                    "dev_wallet_{}",
+                    wallet_address.chars().take(8).collect::<String>()
+                );
+                if let Err(e) = turnkey_signer
+                    .set_wallet(wallet_address.clone(), dev_wallet_id)
+                    .await
+                {
                     tracing::warn!("⚠️ Failed to auto-configure turnkey status: {}", e);
                 }
             }
             tracing::info!("✅ Wallet signing mode: DEV (private key from env, auto-connected)");
-        } else if config.turnkey_api_public_key.is_some() && config.turnkey_api_private_key.is_some() {
+        } else if config.turnkey_api_public_key.is_some()
+            && config.turnkey_api_private_key.is_some()
+        {
             tracing::info!("✅ Wallet signing mode: PRODUCTION (Turnkey delegation)");
         } else {
             tracing::warn!("⚠️ No wallet signing configured - transactions will fail");
@@ -212,7 +248,10 @@ impl AppState {
         let mut initial_risk = RiskConfig::medium();
         initial_risk.daily_loss_limit_sol = config.default_daily_loss_limit_sol;
         let risk_config = Arc::new(RwLock::new(initial_risk));
-        tracing::info!("✅ Risk config initialized (MEDIUM profile: {:.2} SOL daily loss limit)", config.default_daily_loss_limit_sol);
+        tracing::info!(
+            "✅ Risk config initialized (MEDIUM profile: {:.2} SOL daily loss limit)",
+            config.default_daily_loss_limit_sol
+        );
 
         // Initialize Helius clients (webhook + RPC + sender + DAS)
         let helius_webhook_client = Arc::new(HeliusWebhookClient::new(
@@ -226,23 +265,25 @@ impl AppState {
         }
 
         // Initialize comprehensive Helius RPC client
-        let helius_rpc_client = Arc::new(
-            HeliusClient::new(&config).with_event_bus(event_bus.clone())
+        let helius_rpc_client =
+            Arc::new(HeliusClient::new(&config).with_event_bus(event_bus.clone()));
+        tracing::info!(
+            "✅ Helius RPC client initialized (url: {})",
+            config.helius_api_url
         );
-        tracing::info!("✅ Helius RPC client initialized (url: {})", config.helius_api_url);
 
         // Initialize Helius Sender for fast TX submission
         let helius_sender = Arc::new(HeliusSender::new(
             helius_rpc_client.clone(),
             event_bus.clone(),
         ));
-        tracing::info!("✅ Helius Sender initialized (url: {})", config.helius_sender_url);
+        tracing::info!(
+            "✅ Helius Sender initialized (url: {})",
+            config.helius_sender_url
+        );
 
         // Initialize DAS (Digital Asset Standard) client
-        let helius_das = Arc::new(DasClient::new(
-            helius_rpc_client.clone(),
-            event_bus.clone(),
-        ));
+        let helius_das = Arc::new(DasClient::new(helius_rpc_client.clone(), event_bus.clone()));
         tracing::info!("✅ Helius DAS client initialized");
 
         // Initialize Priority Fee Monitor
@@ -260,10 +301,13 @@ impl AppState {
         let strategy_engine = Arc::new(StrategyEngine::new(event_tx.clone()));
 
         // Register default strategies for each venue type (in DB first, then in memory)
-        use crate::models::{Strategy, RiskParams};
         use crate::database::repositories::strategies::CreateStrategyRecord;
+        use crate::models::{RiskParams, Strategy};
 
-        let default_wallet = config.wallet_address.clone().unwrap_or_else(|| "default".to_string());
+        let default_wallet = config
+            .wallet_address
+            .clone()
+            .unwrap_or_else(|| "default".to_string());
 
         // Helper to create or get strategy from DB
         async fn get_or_create_strategy(
@@ -285,7 +329,8 @@ impl AppState {
                         strategy_type: record.strategy_type.clone(),
                         venue_types: record.venue_types.clone(),
                         execution_mode: record.execution_mode.clone(),
-                        risk_params: serde_json::from_value(record.risk_params.clone()).unwrap_or_default(),
+                        risk_params: serde_json::from_value(record.risk_params.clone())
+                            .unwrap_or_default(),
                         is_active: record.is_active,
                         created_at: record.created_at,
                         updated_at: record.updated_at,
@@ -297,14 +342,17 @@ impl AppState {
             }
 
             // Create new
-            match strategy_repo.create(CreateStrategyRecord {
-                wallet_address: wallet_address.to_string(),
-                name: name.to_string(),
-                strategy_type: strategy_type.to_string(),
-                venue_types,
-                execution_mode: execution_mode.to_string(),
-                risk_params,
-            }).await {
+            match strategy_repo
+                .create(CreateStrategyRecord {
+                    wallet_address: wallet_address.to_string(),
+                    name: name.to_string(),
+                    strategy_type: strategy_type.to_string(),
+                    venue_types,
+                    execution_mode: execution_mode.to_string(),
+                    risk_params,
+                })
+                .await
+            {
                 Ok(record) => Some(Strategy {
                     id: record.id,
                     wallet_address: record.wallet_address,
@@ -350,31 +398,33 @@ impl AppState {
             &default_wallet,
             "graduation_snipe",
             vec!["bondingcurve".to_string(), "BondingCurve".to_string()],
-            "autonomous",  // Autonomous execution for speed
+            "autonomous", // Autonomous execution for speed
             RiskParams {
                 // Synced with global config
-                max_position_sol: 0.08,                 // Reduced from 0.3 per LLM consensus
-                daily_loss_limit_sol: 1.0,              // Matches global default
-                min_profit_bps: 25,                     // Lower profit threshold (0.25%)
-                max_slippage_bps: 300,                  // Higher slippage tolerance for speed
-                max_risk_score: 50,                     // Moderate risk tolerance
-                require_simulation: false,              // Skip simulation for speed
-                auto_execute_atomic: true,              // Auto-execute atomic ops
-                auto_execute_enabled: true,             // ON by default - snipes must be fast
-                require_consensus: false,               // No consensus for time-sensitive snipes
-                require_confirmation: false,            // No confirmation needed
-                staleness_threshold_hours: 1,          // Short staleness window
-                stop_loss_percent: Some(13.0),          // DEFENSIVE: 13% stop (widened from 10%)
-                take_profit_percent: Some(15.0),        // DEFENSIVE: 15% TP (strong momentum extends)
-                trailing_stop_percent: Some(8.0),       // DEFENSIVE: 8% trailing stop
-                time_limit_minutes: Some(5),            // DEFENSIVE: 5 min
+                max_position_sol: 0.08, // Reduced from 0.3 per LLM consensus
+                daily_loss_limit_sol: 1.0, // Matches global default
+                min_profit_bps: 25,     // Lower profit threshold (0.25%)
+                max_slippage_bps: 300,  // Higher slippage tolerance for speed
+                max_risk_score: 50,     // Moderate risk tolerance
+                require_simulation: false, // Skip simulation for speed
+                auto_execute_atomic: true, // Auto-execute atomic ops
+                auto_execute_enabled: true, // ON by default - snipes must be fast
+                require_consensus: false, // No consensus for time-sensitive snipes
+                require_confirmation: false, // No confirmation needed
+                staleness_threshold_hours: 1, // Short staleness window
+                stop_loss_percent: Some(13.0), // DEFENSIVE: 13% stop (widened from 10%)
+                take_profit_percent: Some(15.0), // DEFENSIVE: 15% TP (strong momentum extends)
+                trailing_stop_percent: Some(8.0), // DEFENSIVE: 8% trailing stop
+                time_limit_minutes: Some(5), // DEFENSIVE: 5 min
                 base_currency: "sol".to_string(),
-                max_capital_allocation_percent: 5.0,    // Conservative 5% allocation
-                concurrent_positions: Some(3),          // Up to 3 snipe positions
-                momentum_adaptive_exits: true,          // Enable for graduation snipes
-                let_winners_run: true,                  // Let winners run post-graduation
+                max_capital_allocation_percent: 5.0, // Conservative 5% allocation
+                concurrent_positions: Some(3),       // Up to 3 snipe positions
+                momentum_adaptive_exits: true,       // Enable for graduation snipes
+                let_winners_run: true,               // Let winners run post-graduation
             },
-        ).await {
+        )
+        .await
+        {
             strategy_engine.add_strategy(snipe_strategy).await;
         }
 
@@ -407,12 +457,17 @@ impl AppState {
                 momentum_adaptive_exits: false,
                 let_winners_run: false,
             },
-        ).await {
+        )
+        .await
+        {
             strategy_engine.add_strategy(raydium_strategy).await;
         }
 
         let strategy_count = strategy_engine.list_strategies().await.len();
-        tracing::info!("✅ Strategy engine initialized with {} default strategies (persisted to DB)", strategy_count);
+        tracing::info!(
+            "✅ Strategy engine initialized with {} default strategies (persisted to DB)",
+            strategy_count
+        );
 
         // AUTO-SYNC: Ensure all strategies match global RiskConfig
         // This handles the case where strategies exist in DB with old values
@@ -421,9 +476,10 @@ impl AppState {
             let strategies = strategy_engine.list_strategies().await;
             let mut synced_count = 0;
 
-            for strategy in strategies.iter().filter(|s|
-                s.strategy_type == "graduation_snipe"
-            ) {
+            for strategy in strategies
+                .iter()
+                .filter(|s| s.strategy_type == "graduation_snipe")
+            {
                 // Only sync if strategy has smaller max_position_sol than global
                 if strategy.risk_params.max_position_sol < global_config.max_position_sol {
                     let mut updated_params = strategy.risk_params.clone();
@@ -431,20 +487,29 @@ impl AppState {
                     updated_params.daily_loss_limit_sol = global_config.daily_loss_limit_sol;
 
                     // Update in-memory
-                    if let Err(e) = strategy_engine.set_risk_params(strategy.id, updated_params.clone()).await {
+                    if let Err(e) = strategy_engine
+                        .set_risk_params(strategy.id, updated_params.clone())
+                        .await
+                    {
                         tracing::warn!(strategy_id = %strategy.id, error = %e, "Failed to sync strategy on startup");
                         continue;
                     }
 
                     // Persist to database
                     use crate::database::repositories::strategies::UpdateStrategyRecord;
-                    if let Err(e) = strategy_repo.update(strategy.id, UpdateStrategyRecord {
-                        name: None,
-                        venue_types: None,
-                        execution_mode: None,
-                        risk_params: Some(updated_params),
-                        is_active: None,
-                    }).await {
+                    if let Err(e) = strategy_repo
+                        .update(
+                            strategy.id,
+                            UpdateStrategyRecord {
+                                name: None,
+                                venue_types: None,
+                                execution_mode: None,
+                                risk_params: Some(updated_params),
+                                is_active: None,
+                            },
+                        )
+                        .await
+                    {
                         tracing::warn!(strategy_id = %strategy.id, error = %e, "Failed to persist strategy sync");
                     }
 
@@ -460,7 +525,10 @@ impl AppState {
             }
 
             if synced_count > 0 {
-                tracing::info!("✅ Auto-synced {} strategies to global RiskConfig (0.3 SOL max position)", synced_count);
+                tracing::info!(
+                    "✅ Auto-synced {} strategies to global RiskConfig (0.3 SOL max position)",
+                    synced_count
+                );
             }
         }
 
@@ -477,12 +545,16 @@ impl AppState {
         // Fetch OpenRouter API key from Erebus (DB) first, fall back to env var
         let openrouter_api_key = match erebus_client.get_openrouter_key().await {
             Some(key) => {
-                tracing::info!("✅ Retrieved OpenRouter API key from Erebus (agent_api_keys table)");
+                tracing::info!(
+                    "✅ Retrieved OpenRouter API key from Erebus (agent_api_keys table)"
+                );
                 Some(key)
             }
             None => {
                 if config.openrouter_api_key.is_some() {
-                    tracing::info!("📝 Using OpenRouter API key from environment variable (fallback)");
+                    tracing::info!(
+                        "📝 Using OpenRouter API key from environment variable (fallback)"
+                    );
                 }
                 config.openrouter_api_key.clone()
             }
@@ -494,8 +566,14 @@ impl AppState {
             let discovered_models = crate::consensus::discover_best_reasoning_models(api_key).await;
 
             let base_engine = if !discovered_models.is_empty() {
-                let model_ids: Vec<String> = discovered_models.iter().map(|m| m.model_id.clone()).collect();
-                tracing::info!("✅ Discovered {} best reasoning models:", discovered_models.len());
+                let model_ids: Vec<String> = discovered_models
+                    .iter()
+                    .map(|m| m.model_id.clone())
+                    .collect();
+                tracing::info!(
+                    "✅ Discovered {} best reasoning models:",
+                    discovered_models.len()
+                );
                 for model in &discovered_models {
                     tracing::info!("   - {} (weight: {:.1})", model.display_name, model.weight);
                 }
@@ -503,31 +581,29 @@ impl AppState {
                     .with_models(model_ids)
                     .with_event_tx(event_tx.clone())
             } else {
-                ConsensusEngine::new(api_key.clone())
-                    .with_event_tx(event_tx.clone())
+                ConsensusEngine::new(api_key.clone()).with_event_tx(event_tx.clone())
             };
 
             // Try to initialize MCP client for agentic tool calling (read-only tools)
             let mcp_url = "http://localhost:9007/mcp/jsonrpc";
             let mcp_client = McpClient::new(mcp_url);
             let engine_with_mcp = match mcp_client.connect().await {
-                Ok(_) => {
-                    match mcp_client.list_tools().await {
-                        Ok(tools) => {
-                            let read_only_count = nullblock_mcp_client::filter_read_only(tools.clone()).len();
-                            tracing::info!(
-                                "✅ MCP client connected ({} tools, {} read-only for consensus)",
-                                tools.len(),
-                                read_only_count
-                            );
-                            base_engine.with_mcp_client(Arc::new(mcp_client), tools)
-                        }
-                        Err(e) => {
-                            tracing::warn!("⚠️ MCP tools fetch failed: {} - consensus will operate without tool calling", e);
-                            base_engine
-                        }
+                Ok(_) => match mcp_client.list_tools().await {
+                    Ok(tools) => {
+                        let read_only_count =
+                            nullblock_mcp_client::filter_read_only(tools.clone()).len();
+                        tracing::info!(
+                            "✅ MCP client connected ({} tools, {} read-only for consensus)",
+                            tools.len(),
+                            read_only_count
+                        );
+                        base_engine.with_mcp_client(Arc::new(mcp_client), tools)
                     }
-                }
+                    Err(e) => {
+                        tracing::warn!("⚠️ MCP tools fetch failed: {} - consensus will operate without tool calling", e);
+                        base_engine
+                    }
+                },
                 Err(e) => {
                     tracing::warn!("⚠️ MCP client connection failed: {} - consensus will operate without tool calling", e);
                     base_engine
@@ -544,9 +620,13 @@ impl AppState {
 
         if openrouter_api_key.is_some() {
             if consensus_engine.is_agentic_enabled() {
-                tracing::info!("✅ Consensus engine initialized (OpenRouter + agentic tool calling enabled)");
+                tracing::info!(
+                    "✅ Consensus engine initialized (OpenRouter + agentic tool calling enabled)"
+                );
             } else {
-                tracing::info!("✅ Consensus engine initialized (OpenRouter multi-LLM, tool calling disabled)");
+                tracing::info!(
+                    "✅ Consensus engine initialized (OpenRouter multi-LLM, tool calling disabled)"
+                );
             }
         } else {
             tracing::warn!("⚠️ OpenRouter API key not configured - consensus disabled");
@@ -562,7 +642,10 @@ impl AppState {
         // Initialize Engrams client for persistent memory
         let engrams_client = Arc::new(EngramsClient::new(config.engrams_url.clone()));
         if engrams_client.is_configured() {
-            tracing::info!("✅ Engrams client initialized (url: {})", config.engrams_url);
+            tracing::info!(
+                "✅ Engrams client initialized (url: {})",
+                config.engrams_url
+            );
         } else {
             tracing::warn!("⚠️ Engrams service URL not configured - persistence disabled");
         }
@@ -575,12 +658,17 @@ impl AppState {
         if engrams_client.is_configured() {
             let restored_count = engram_harvester.restore_from_remote().await;
             if restored_count > 0 {
-                tracing::info!("✅ Engram Harvester initialized with {} restored patterns from remote", restored_count);
+                tracing::info!(
+                    "✅ Engram Harvester initialized with {} restored patterns from remote",
+                    restored_count
+                );
             } else {
                 tracing::info!("✅ Engram Harvester initialized (no prior patterns to restore)");
             }
         } else {
-            tracing::info!("✅ Engram Harvester initialized (local-only mode - remote sync disabled)");
+            tracing::info!(
+                "✅ Engram Harvester initialized (local-only mode - remote sync disabled)"
+            );
         }
 
         init_harvester(engram_harvester);
@@ -603,7 +691,10 @@ impl AppState {
             event_bus.clone(),
         ));
         if laserstream_client.is_configured() {
-            tracing::info!("✅ LaserStream client initialized (endpoint: {})", config.helius_laserstream_url);
+            tracing::info!(
+                "✅ LaserStream client initialized (endpoint: {})",
+                config.helius_laserstream_url
+            );
             // Start reconnection monitor for auto-reconnect on disconnect
             laserstream_client.start_reconnect_monitor();
         } else {
@@ -614,13 +705,16 @@ impl AppState {
         let kol_discovery = Arc::new(
             KolDiscoveryAgent::new()
                 .with_engrams_client(engrams_client.clone())
-                .with_owner_wallet(default_wallet.clone())
+                .with_owner_wallet(default_wallet.clone()),
         );
         tracing::info!("✅ KOL Discovery Agent initialized");
 
         // Restore workflow state from engrams (persisted data from previous sessions)
         if engrams_client.is_configured() {
-            tracing::info!("🔄 Starting engrams restoration for wallet: {}", default_wallet);
+            tracing::info!(
+                "🔄 Starting engrams restoration for wallet: {}",
+                default_wallet
+            );
             let workflow_state = engrams_client.restore_workflow_state(&default_wallet).await;
 
             tracing::info!(
@@ -633,7 +727,9 @@ impl AppState {
 
             // Log each strategy from engrams
             for es in &workflow_state.strategies {
-                if let Ok(risk_params) = serde_json::from_value::<RiskParams>(es.risk_params.clone()) {
+                if let Ok(risk_params) =
+                    serde_json::from_value::<RiskParams>(es.risk_params.clone())
+                {
                     tracing::info!(
                         "  └─ Engram strategy: id={}, name={}, execution_mode={}, auto_execute_enabled={}",
                         es.strategy_id, es.name, es.execution_mode, risk_params.auto_execute_enabled
@@ -643,7 +739,9 @@ impl AppState {
 
             // Restore discovered KOLs
             if !workflow_state.discovered_kols.is_empty() {
-                kol_discovery.restore_kols(workflow_state.discovered_kols).await;
+                kol_discovery
+                    .restore_kols(workflow_state.discovered_kols)
+                    .await;
             }
 
             // Restore strategies from engrams (authoritative source for state)
@@ -657,24 +755,44 @@ impl AppState {
                                 existing.name,
                                 engram_strategy.is_active
                             );
-                            if let Err(e) = strategy_engine.toggle_strategy(strategy_id, engram_strategy.is_active).await { tracing::warn!("Failed to apply strategy update: {}", e); }
+                            if let Err(e) = strategy_engine
+                                .toggle_strategy(strategy_id, engram_strategy.is_active)
+                                .await
+                            {
+                                tracing::warn!("Failed to apply strategy update: {}", e);
+                            }
                         }
 
                         // Restore execution_mode from engrams (authoritative source)
                         if existing.execution_mode != engram_strategy.execution_mode {
                             tracing::info!(
                                 "Restoring strategy '{}' execution_mode from engrams: {} -> {}",
-                                existing.name, existing.execution_mode, engram_strategy.execution_mode
+                                existing.name,
+                                existing.execution_mode,
+                                engram_strategy.execution_mode
                             );
-                            if let Err(e) = strategy_engine.set_execution_mode(strategy_id, engram_strategy.execution_mode.clone()).await { tracing::warn!("Failed to apply strategy update: {}", e); }
+                            if let Err(e) = strategy_engine
+                                .set_execution_mode(
+                                    strategy_id,
+                                    engram_strategy.execution_mode.clone(),
+                                )
+                                .await
+                            {
+                                tracing::warn!("Failed to apply strategy update: {}", e);
+                            }
                         }
 
                         // Restore risk_params from engrams (authoritative source)
-                        if let Ok(engram_risk_params) = serde_json::from_value::<RiskParams>(engram_strategy.risk_params.clone()) {
+                        if let Ok(engram_risk_params) = serde_json::from_value::<RiskParams>(
+                            engram_strategy.risk_params.clone(),
+                        ) {
                             // Check if risk params differ (compare key fields)
-                            if existing.risk_params.max_position_sol != engram_risk_params.max_position_sol
-                                || existing.risk_params.max_risk_score != engram_risk_params.max_risk_score
-                                || existing.risk_params.auto_execute_enabled != engram_risk_params.auto_execute_enabled
+                            if existing.risk_params.max_position_sol
+                                != engram_risk_params.max_position_sol
+                                || existing.risk_params.max_risk_score
+                                    != engram_risk_params.max_risk_score
+                                || existing.risk_params.auto_execute_enabled
+                                    != engram_risk_params.auto_execute_enabled
                             {
                                 tracing::info!(
                                     "Restoring strategy '{}' risk params from engrams (max_position: {} SOL, max_risk: {}, auto_execute: {})",
@@ -683,7 +801,12 @@ impl AppState {
                                     engram_risk_params.max_risk_score,
                                     engram_risk_params.auto_execute_enabled
                                 );
-                                if let Err(e) = strategy_engine.set_risk_params(strategy_id, engram_risk_params).await { tracing::warn!("Failed to apply strategy update: {}", e); }
+                                if let Err(e) = strategy_engine
+                                    .set_risk_params(strategy_id, engram_risk_params)
+                                    .await
+                                {
+                                    tracing::warn!("Failed to apply strategy update: {}", e);
+                                }
                             }
                         }
                     } else {
@@ -695,7 +818,10 @@ impl AppState {
                             strategy_type: engram_strategy.strategy_type.clone(),
                             venue_types: engram_strategy.venue_types.clone(),
                             execution_mode: engram_strategy.execution_mode.clone(),
-                            risk_params: serde_json::from_value(engram_strategy.risk_params.clone()).unwrap_or_default(),
+                            risk_params: serde_json::from_value(
+                                engram_strategy.risk_params.clone(),
+                            )
+                            .unwrap_or_default(),
                             is_active: engram_strategy.is_active,
                             created_at: chrono::Utc::now(),
                             updated_at: chrono::Utc::now(),
@@ -751,13 +877,15 @@ impl AppState {
 
         // Reconcile curve strategies to be ACTIVE by default (unless sniper disabled)
         // This ensures sniper strategies are ready to execute immediately on startup
-        let sniper_disabled_env = std::env::var("ARBFARM_DISABLE_SNIPER").map(|v| v == "1" || v.to_lowercase() == "true").unwrap_or(false);
+        let sniper_disabled_env = std::env::var("ARBFARM_DISABLE_SNIPER")
+            .map(|v| v == "1" || v.to_lowercase() == "true")
+            .unwrap_or(false);
         let sniper_disabled_file = std::path::Path::new("/tmp/arb-no-snipe").exists();
         let sniper_disabled = sniper_disabled_env || sniper_disabled_file;
         if !sniper_disabled {
-            let strategies_to_activate: Vec<_> = strategies.iter()
-                .filter(|s| s.strategy_type == "graduation_snipe"
-                    && !s.is_active)
+            let strategies_to_activate: Vec<_> = strategies
+                .iter()
+                .filter(|s| s.strategy_type == "graduation_snipe" && !s.is_active)
                 .map(|s| s.id)
                 .collect();
 
@@ -771,46 +899,67 @@ impl AppState {
                     );
 
                     use crate::database::repositories::strategies::UpdateStrategyRecord;
-                    if let Err(e) = strategy_repo.update(strategy_id, UpdateStrategyRecord {
-                        name: None,
-                        venue_types: None,
-                        execution_mode: None,
-                        risk_params: None,
-                        is_active: Some(true),
-                    }).await {
+                    if let Err(e) = strategy_repo
+                        .update(
+                            strategy_id,
+                            UpdateStrategyRecord {
+                                name: None,
+                                venue_types: None,
+                                execution_mode: None,
+                                risk_params: None,
+                                is_active: Some(true),
+                            },
+                        )
+                        .await
+                    {
                         tracing::warn!(error = %e, "Failed to activate curve strategy");
                     } else {
-                        if let Err(e) = strategy_engine.toggle_strategy(strategy_id, true).await { tracing::warn!("Failed to apply strategy update: {}", e); }
+                        if let Err(e) = strategy_engine.toggle_strategy(strategy_id, true).await {
+                            tracing::warn!("Failed to apply strategy update: {}", e);
+                        }
 
                         // Persist to engrams so the active state survives restarts
-                        let risk_params_json = serde_json::to_value(&strategy.risk_params).unwrap_or_default();
-                        if let Err(e) = engrams_client.save_strategy_full(
-                            &default_wallet,
-                            &strategy.id.to_string(),
-                            &strategy.name,
-                            &strategy.strategy_type,
-                            &strategy.venue_types,
-                            &strategy.execution_mode,
-                            &risk_params_json,
-                            true, // is_active = true
-                        ).await {
+                        let risk_params_json =
+                            serde_json::to_value(&strategy.risk_params).unwrap_or_default();
+                        if let Err(e) = engrams_client
+                            .save_strategy_full(
+                                &default_wallet,
+                                &strategy.id.to_string(),
+                                &strategy.name,
+                                &strategy.strategy_type,
+                                &strategy.venue_types,
+                                &strategy.execution_mode,
+                                &risk_params_json,
+                                true, // is_active = true
+                            )
+                            .await
+                        {
                             tracing::warn!(error = %e, "Failed to persist curve strategy activation to engrams");
                         }
                     }
                 }
             }
         } else {
-            let reason = if sniper_disabled_env { "ARBFARM_DISABLE_SNIPER=1" } else { "/tmp/arb-no-snipe" };
-            tracing::warn!("⚠️ Sniper DISABLED ({}) - skipping curve strategy activation", reason);
+            let reason = if sniper_disabled_env {
+                "ARBFARM_DISABLE_SNIPER=1"
+            } else {
+                "/tmp/arb-no-snipe"
+            };
+            tracing::warn!(
+                "⚠️ Sniper DISABLED ({}) - skipping curve strategy activation",
+                reason
+            );
         }
 
         // Refresh strategies list after activation
         let strategies = strategy_engine.list_strategies().await;
 
         // Reconcile graduation_snipe to have auto_execute_enabled=true
-        let strategies_to_enable: Vec<_> = strategies.iter()
-            .filter(|s| s.strategy_type == "graduation_snipe"
-                && !s.risk_params.auto_execute_enabled)
+        let strategies_to_enable: Vec<_> = strategies
+            .iter()
+            .filter(|s| {
+                s.strategy_type == "graduation_snipe" && !s.risk_params.auto_execute_enabled
+            })
             .map(|s| s.id)
             .collect();
 
@@ -827,18 +976,34 @@ impl AppState {
                 updated_risk_params.auto_execute_enabled = true;
 
                 use crate::database::repositories::strategies::UpdateStrategyRecord;
-                if let Err(e) = strategy_repo.update(strategy_id, UpdateStrategyRecord {
-                    name: None,
-                    venue_types: None,
-                    execution_mode: Some("autonomous".to_string()),
-                    risk_params: Some(updated_risk_params.clone()),
-                    is_active: None,
-                }).await {
+                if let Err(e) = strategy_repo
+                    .update(
+                        strategy_id,
+                        UpdateStrategyRecord {
+                            name: None,
+                            venue_types: None,
+                            execution_mode: Some("autonomous".to_string()),
+                            risk_params: Some(updated_risk_params.clone()),
+                            is_active: None,
+                        },
+                    )
+                    .await
+                {
                     tracing::warn!(error = %e, "Failed to enable auto_execute for graduation_snipe");
                 } else {
                     // Update in-memory
-                    if let Err(e) = strategy_engine.set_risk_params(strategy_id, updated_risk_params).await { tracing::warn!("Failed to apply strategy update: {}", e); }
-                    if let Err(e) = strategy_engine.set_execution_mode(strategy_id, "autonomous".to_string()).await { tracing::warn!("Failed to apply strategy update: {}", e); }
+                    if let Err(e) = strategy_engine
+                        .set_risk_params(strategy_id, updated_risk_params)
+                        .await
+                    {
+                        tracing::warn!("Failed to apply strategy update: {}", e);
+                    }
+                    if let Err(e) = strategy_engine
+                        .set_execution_mode(strategy_id, "autonomous".to_string())
+                        .await
+                    {
+                        tracing::warn!("Failed to apply strategy update: {}", e);
+                    }
                 }
             }
         }
@@ -869,28 +1034,42 @@ impl AppState {
                 );
 
                 // Update in-memory
-                if let Err(e) = strategy_engine.set_execution_mode(strategy.id, expected_mode.to_string()).await {
+                if let Err(e) = strategy_engine
+                    .set_execution_mode(strategy.id, expected_mode.to_string())
+                    .await
+                {
                     tracing::warn!(error = %e, "Failed to update strategy execution_mode in memory");
                 }
 
                 // Update in database
                 use crate::database::repositories::strategies::UpdateStrategyRecord;
-                if let Err(e) = strategy_repo.update(strategy.id, UpdateStrategyRecord {
-                    name: None,
-                    venue_types: None,
-                    execution_mode: Some(expected_mode.to_string()),
-                    risk_params: None,
-                    is_active: None,
-                }).await {
+                if let Err(e) = strategy_repo
+                    .update(
+                        strategy.id,
+                        UpdateStrategyRecord {
+                            name: None,
+                            venue_types: None,
+                            execution_mode: Some(expected_mode.to_string()),
+                            risk_params: None,
+                            is_active: None,
+                        },
+                    )
+                    .await
+                {
                     tracing::warn!(error = %e, "Failed to persist execution_mode reconciliation to database");
                 }
             }
         }
 
         if reconciliation_count == 0 {
-            tracing::info!("✅ All strategies already have correct execution_mode (no reconciliation needed)");
+            tracing::info!(
+                "✅ All strategies already have correct execution_mode (no reconciliation needed)"
+            );
         } else {
-            tracing::info!("✅ Reconciled {} strategies' execution_mode", reconciliation_count);
+            tracing::info!(
+                "✅ Reconciled {} strategies' execution_mode",
+                reconciliation_count
+            );
         }
 
         // Log final strategy states AFTER reconciliation
@@ -908,9 +1087,9 @@ impl AppState {
 
         // Initialize Position Repository and Manager for tracking open positions and exit conditions
         let position_repo = Arc::new(PositionRepository::new(db_pool.clone()));
-        let position_manager = Arc::new(
-            crate::execution::PositionManager::with_repository(position_repo.clone())
-        );
+        let position_manager = Arc::new(crate::execution::PositionManager::with_repository(
+            position_repo.clone(),
+        ));
 
         // Initialize Consensus Repository for persisting LLM consensus decisions
         let consensus_repo = Arc::new(ConsensusRepository::new(db_pool.clone()));
@@ -925,13 +1104,21 @@ impl AppState {
         match position_manager.load_positions_from_db().await {
             Ok(count) => {
                 if count > 0 {
-                    tracing::info!("✅ Position Manager initialized with {} restored positions", count);
+                    tracing::info!(
+                        "✅ Position Manager initialized with {} restored positions",
+                        count
+                    );
                 } else {
-                    tracing::info!("✅ Position Manager initialized (no prior positions to restore)");
+                    tracing::info!(
+                        "✅ Position Manager initialized (no prior positions to restore)"
+                    );
                 }
             }
             Err(e) => {
-                tracing::warn!("⚠️ Position Manager initialized but failed to load prior positions: {}", e);
+                tracing::warn!(
+                    "⚠️ Position Manager initialized but failed to load prior positions: {}",
+                    e
+                );
             }
         }
 
@@ -949,7 +1136,10 @@ impl AppState {
 
         // Initialize Jito client for bundle submission (shared by executor and position monitor)
         let jito_client = Arc::new(JitoClient::new(config.jito_block_engine_url.clone(), None));
-        tracing::info!("✅ Jito client initialized (block engine: {})", config.jito_block_engine_url);
+        tracing::info!(
+            "✅ Jito client initialized (block engine: {})",
+            config.jito_block_engine_url
+        );
 
         // Create command channel for PositionMonitor → PositionExecutor communication
         let (command_tx, command_rx) = tokio::sync::mpsc::channel::<PositionCommand>(256);
@@ -962,14 +1152,17 @@ impl AppState {
             command_tx.clone(),
             MonitorConfig::default(),
         );
-        tracing::info!("✅ Position Monitor base initialized (curve support added after curve_builder)");
+        tracing::info!(
+            "✅ Position Monitor base initialized (curve support added after curve_builder)"
+        );
 
         // Initialize Approval Manager for execution controls
         let approval_manager = Arc::new(ApprovalManager::new(event_tx.clone()));
 
         // Sync global execution config from strategy states (persisted from previous session)
         let strategies_for_sync = strategy_engine.list_strategies().await;
-        let any_autonomous = strategies_for_sync.iter()
+        let any_autonomous = strategies_for_sync
+            .iter()
             .filter(|s| s.is_active)
             .any(|s| s.execution_mode == "autonomous" || s.risk_params.auto_execute_enabled);
         approval_manager.sync_from_strategies(any_autonomous).await;
@@ -981,48 +1174,53 @@ impl AppState {
         tracing::info!("✅ Hecate Notifier spawned (listening for approval events)");
 
         // Initialize Capital Manager for per-strategy allocation tracking
-        let capital_manager = Arc::new(
-            CapitalManager::new()
-                .with_db_pool(db_pool.clone())
-        );
+        let capital_manager = Arc::new(CapitalManager::new().with_db_pool(db_pool.clone()));
 
         // Load existing reservations from database (recovery after restart)
         match capital_manager.load_reservations_from_db().await {
             Ok(count) if count > 0 => {
-                tracing::info!("✅ Capital Manager loaded {} existing reservations from DB", count);
+                tracing::info!(
+                    "✅ Capital Manager loaded {} existing reservations from DB",
+                    count
+                );
             }
             Ok(_) => {
                 tracing::debug!("Capital Manager: no existing reservations to load");
             }
             Err(e) => {
-                tracing::warn!("⚠️ Failed to load capital reservations from DB: {} - starting fresh", e);
+                tracing::warn!(
+                    "⚠️ Failed to load capital reservations from DB: {} - starting fresh",
+                    e
+                );
             }
         }
 
         // Register each strategy with capital manager
         for strategy in strategy_engine.list_strategies().await {
             let max_positions = strategy.risk_params.concurrent_positions.unwrap_or(1);
-            capital_manager.register_strategy(
-                strategy.id,
-                strategy.risk_params.max_capital_allocation_percent,
-                max_positions,
-            ).await;
+            capital_manager
+                .register_strategy(
+                    strategy.id,
+                    strategy.risk_params.max_capital_allocation_percent,
+                    max_positions,
+                )
+                .await;
         }
-        tracing::info!("✅ Capital Manager initialized (per-strategy allocation tracking + DB persistence)");
+        tracing::info!(
+            "✅ Capital Manager initialized (per-strategy allocation tracking + DB persistence)"
+        );
 
         // Initialize on-chain fetcher and curve transaction builder for bonding curve operations
         let on_chain_fetcher = Arc::new(OnChainFetcher::new(&config.rpc_url));
         let curve_builder = Arc::new(
             CurveTransactionBuilder::new(&config.rpc_url)
-                .with_on_chain_fetcher(on_chain_fetcher.clone())
+                .with_on_chain_fetcher(on_chain_fetcher.clone()),
         );
         tracing::info!("✅ Curve execution engine initialized (on-chain state + tx builder)");
 
         // Add curve state checker to position monitor (for curve price lookups only)
-        let position_monitor = Arc::new(
-            position_monitor_base
-                .with_curve_state_checker(curve_builder.clone())
-        );
+        let position_monitor =
+            Arc::new(position_monitor_base.with_curve_state_checker(curve_builder.clone()));
         tracing::info!("✅ Position Monitor initialized with curve support (monitoring only, execution via PositionExecutor)");
 
         // Initialize PositionExecutor for centralized sell execution
@@ -1040,7 +1238,7 @@ impl AppState {
             .with_helius_client(helius_rpc_client.clone())
             .with_engrams(engrams_client.clone())
             .with_trade_repo(trade_repo.clone())
-            .with_capital_manager(capital_manager.clone())
+            .with_capital_manager(capital_manager.clone()),
         );
         tracing::info!("✅ Position Executor initialized (centralized sell execution: curve + DEX + engrams + capital)");
 
@@ -1061,11 +1259,17 @@ impl AppState {
         use crate::execution::CopyTradeExecutor;
 
         let graduation_sniper_strategy = Arc::new(GraduationSniperStrategy::new());
-        scanner.register_behavioral_strategy(graduation_sniper_strategy).await;
+        scanner
+            .register_behavioral_strategy(graduation_sniper_strategy)
+            .await;
 
         let raydium_snipe_strategy = Arc::new(RaydiumSnipeStrategy::new());
-        scanner.register_behavioral_strategy(raydium_snipe_strategy.clone()).await;
-        scanner.set_raydium_snipe_strategy(raydium_snipe_strategy).await;
+        scanner
+            .register_behavioral_strategy(raydium_snipe_strategy.clone())
+            .await;
+        scanner
+            .set_raydium_snipe_strategy(raydium_snipe_strategy)
+            .await;
         scanner.set_pump_fun_venue(pump_fun_venue.clone()).await;
         tracing::info!("✅ Behavioral strategies registered (Graduation Sniper, Raydium Snipe)");
 
@@ -1095,13 +1299,18 @@ impl AppState {
             let mut copy_config = copy_executor.get_config().await;
             copy_config.enabled = true;
             copy_executor.update_config(copy_config).await;
-            tracing::info!("✅ Copy Trade Executor initialized (ENABLED via ARBFARM_COPY_TRADING=1)");
+            tracing::info!(
+                "✅ Copy Trade Executor initialized (ENABLED via ARBFARM_COPY_TRADING=1)"
+            );
         } else {
             tracing::info!("✅ Copy Trade Executor initialized (DISABLED - observation mode)");
         }
 
         // Create Autonomous Executor (does NOT auto-start - respects user preference)
-        let default_wallet_for_executor = config.wallet_address.clone().unwrap_or_else(|| "default".to_string());
+        let default_wallet_for_executor = config
+            .wallet_address
+            .clone()
+            .unwrap_or_else(|| "default".to_string());
         let autonomous_executor = spawn_autonomous_executor(
             strategy_engine.clone(),
             curve_builder.clone(),
@@ -1119,15 +1328,22 @@ impl AppState {
         );
 
         // Connect CopyTradeExecutor to AutonomousExecutor for KOL copy trading
-        autonomous_executor.set_copy_executor(copy_executor.clone()).await;
+        autonomous_executor
+            .set_copy_executor(copy_executor.clone())
+            .await;
         tracing::info!("✅ Copy Trade Executor connected to Autonomous Executor");
 
         // Executor state: env var override > DB saved state > default (OFF)
         let executor_env_override = std::env::var("ARBFARM_ENABLE_EXECUTOR")
             .ok()
             .map(|v| v == "1" || v.to_lowercase() == "true");
-        let executor_persisted = settings_repo.get_bool("execution_enabled").await.unwrap_or(None);
-        let executor_enabled = executor_env_override.or(executor_persisted).unwrap_or(false);
+        let executor_persisted = settings_repo
+            .get_bool("execution_enabled")
+            .await
+            .unwrap_or(None);
+        let executor_enabled = executor_env_override
+            .or(executor_persisted)
+            .unwrap_or(false);
 
         if executor_enabled {
             start_autonomous_executor(autonomous_executor.clone());
@@ -1137,17 +1353,32 @@ impl AppState {
             for strategy in strategies.iter().filter(|s| s.is_active) {
                 let mut updated_params = strategy.risk_params.clone();
                 updated_params.auto_execute_enabled = true;
-                if let Err(e) = strategy_engine.set_risk_params(strategy.id, updated_params.clone()).await { tracing::warn!("Failed to apply strategy update: {}", e); }
-                if let Err(e) = strategy_engine.set_execution_mode(strategy.id, "autonomous".to_string()).await { tracing::warn!("Failed to apply strategy update: {}", e); }
+                if let Err(e) = strategy_engine
+                    .set_risk_params(strategy.id, updated_params.clone())
+                    .await
+                {
+                    tracing::warn!("Failed to apply strategy update: {}", e);
+                }
+                if let Err(e) = strategy_engine
+                    .set_execution_mode(strategy.id, "autonomous".to_string())
+                    .await
+                {
+                    tracing::warn!("Failed to apply strategy update: {}", e);
+                }
 
                 use crate::database::repositories::strategies::UpdateStrategyRecord;
-                let _ = strategy_repo.update(strategy.id, UpdateStrategyRecord {
-                    name: None,
-                    venue_types: None,
-                    execution_mode: Some("autonomous".to_string()),
-                    risk_params: Some(updated_params),
-                    is_active: None,
-                }).await;
+                let _ = strategy_repo
+                    .update(
+                        strategy.id,
+                        UpdateStrategyRecord {
+                            name: None,
+                            venue_types: None,
+                            execution_mode: Some("autonomous".to_string()),
+                            risk_params: Some(updated_params),
+                            is_active: None,
+                        },
+                    )
+                    .await;
             }
 
             if executor_env_override.is_some() {
@@ -1182,7 +1413,7 @@ impl AppState {
             .with_strategy_engine(strategy_engine.clone())
             .with_transaction_support(dev_signer.clone(), helius_sender.clone())
             .with_position_manager(position_manager.clone())
-            .with_risk_config(risk_config.clone())
+            .with_risk_config(risk_config.clone()),
         );
         tracing::info!("✅ Graduation Sniper initialized (strategy engine + Jupiter + PositionManager + RiskConfig for exit monitoring)");
 

@@ -1,21 +1,21 @@
-use std::sync::Arc;
+use chrono::Utc;
 use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::Arc;
 use std::time::Duration;
 use tokio::sync::{broadcast, mpsc, Mutex};
 use tracing::{debug, error, info, warn};
 use uuid::Uuid;
-use chrono::Utc;
 
 use crate::database::{CreateTradeRecord, TradeRepository};
-use crate::engrams::EngramsClient;
 use crate::engrams::schemas::{TransactionAction, TransactionMetadata, TransactionSummary};
+use crate::engrams::EngramsClient;
 use crate::error::{AppError, AppResult};
-use crate::events::{AgentType, ArbEvent, EventSource, topics};
+use crate::events::{topics, AgentType, ArbEvent, EventSource};
 use crate::helius::{HeliusClient, HeliusSender};
 use crate::wallet::turnkey::SignRequest;
 use crate::wallet::DevWalletSigner;
 
-use super::tx_settlement::{TxSettlement, resolve_settlement, resolve_inferred_settlement};
+use super::tx_settlement::{resolve_inferred_settlement, resolve_settlement, TxSettlement};
 
 use super::capital_manager::CapitalManager;
 use super::curve_builder::{CurveSellParams, CurveTransactionBuilder};
@@ -96,7 +96,11 @@ impl PositionExecutor {
         }
     }
 
-    pub fn with_curve_support(mut self, curve_builder: Arc<CurveTransactionBuilder>, helius_sender: Arc<HeliusSender>) -> Self {
+    pub fn with_curve_support(
+        mut self,
+        curve_builder: Arc<CurveTransactionBuilder>,
+        helius_sender: Arc<HeliusSender>,
+    ) -> Self {
         self.curve_builder = Some(curve_builder);
         self.helius_sender = Some(helius_sender);
         self
@@ -247,7 +251,10 @@ impl PositionExecutor {
     async fn clear_rate_limit(&self) {
         let mut consecutive = self.consecutive_rate_limits.write().await;
         if *consecutive > 0 {
-            debug!("Rate limit cleared after {} consecutive rate limits", *consecutive);
+            debug!(
+                "Rate limit cleared after {} consecutive rate limits",
+                *consecutive
+            );
             *consecutive = 0;
         }
 
@@ -263,14 +270,20 @@ impl PositionExecutor {
         const PROFIT_SACRIFICE_RATIO: f64 = 0.25;
 
         let is_dead_token = signal.reason == ExitReason::Salvage
-            || position.exit_config.custom_exit_instructions
+            || position
+                .exit_config
+                .custom_exit_instructions
                 .as_ref()
                 .map(|s| s.contains("DEAD TOKEN"))
                 .unwrap_or(false);
 
         if is_dead_token {
             let salvage_slippage = SALVAGE_SLIPPAGE_BPS.min(ABSOLUTE_MAX_SLIPPAGE_BPS);
-            info!("Dead token exit: using salvage slippage {}bps ({}%)", salvage_slippage, salvage_slippage as f64 / 100.0);
+            info!(
+                "Dead token exit: using salvage slippage {}bps ({}%)",
+                salvage_slippage,
+                salvage_slippage as f64 / 100.0
+            );
             return salvage_slippage;
         }
 
@@ -297,7 +310,10 @@ impl PositionExecutor {
 
         info!(
             "Slippage calc: PnL={:.2}% | base={}bps | urgency={:.1}x | final={}bps",
-            pnl_percent, calculated_slippage, urgency_multiplier, final_slippage.min(MAX_SLIPPAGE_BPS)
+            pnl_percent,
+            calculated_slippage,
+            urgency_multiplier,
+            final_slippage.min(MAX_SLIPPAGE_BPS)
         );
 
         final_slippage.min(MAX_SLIPPAGE_BPS)
@@ -350,12 +366,16 @@ impl PositionExecutor {
             },
         };
 
-        if let Err(e) = engrams_client.save_transaction_summary(wallet_address, &tx_summary).await {
+        if let Err(e) = engrams_client
+            .save_transaction_summary(wallet_address, &tx_summary)
+            .await
+        {
             warn!("Failed to save exit transaction summary engram: {}", e);
         } else {
             info!(
                 "Saved exit transaction summary engram for {} (PnL: {:.6} SOL)",
-                &tx_signature.unwrap_or("unknown")[..12.min(tx_signature.unwrap_or("unknown").len())],
+                &tx_signature.unwrap_or("unknown")
+                    [..12.min(tx_signature.unwrap_or("unknown").len())],
                 realized_pnl_sol
             );
         }
@@ -388,7 +408,11 @@ impl PositionExecutor {
             slippage_bps: Some(slippage_bps as i32),
             entry_gas_lamports: None,
             exit_gas_lamports: settlement.map(|s| s.gas_lamports as i64),
-            pnl_source: Some(settlement.map(|s| s.source.to_string()).unwrap_or_else(|| "estimated".to_string())),
+            pnl_source: Some(
+                settlement
+                    .map(|s| s.source.to_string())
+                    .unwrap_or_else(|| "estimated".to_string()),
+            ),
         };
 
         if let Err(e) = repo.create(trade_record).await {
@@ -396,14 +420,21 @@ impl PositionExecutor {
         } else {
             debug!(
                 "Saved sell trade record to arb_trades for {} (PnL: {:.6} SOL, source: {})",
-                position.token_symbol.as_deref().unwrap_or(&position.token_mint[..8]),
+                position
+                    .token_symbol
+                    .as_deref()
+                    .unwrap_or(&position.token_mint[..8]),
                 realized_pnl_sol,
                 settlement.map(|s| s.source).unwrap_or("estimated"),
             );
         }
     }
 
-    async fn resolve_sell_settlement(&self, signature: &str, user_wallet: &str) -> Option<TxSettlement> {
+    async fn resolve_sell_settlement(
+        &self,
+        signature: &str,
+        user_wallet: &str,
+    ) -> Option<TxSettlement> {
         let helius_client = self.helius_client.as_ref()?;
         let settlement = resolve_settlement(helius_client, signature, user_wallet).await;
         Some(settlement)
@@ -422,7 +453,10 @@ impl PositionExecutor {
                 if diff > 0.0001 {
                     info!(
                         "[PnL correction] {} | estimated={:.6} SOL | {}={:.6} SOL | diff={:.6} SOL",
-                        position.token_symbol.as_deref().unwrap_or(&position.token_mint[..8]),
+                        position
+                            .token_symbol
+                            .as_deref()
+                            .unwrap_or(&position.token_mint[..8]),
                         estimated_pnl,
                         s.source,
                         onchain_pnl,
@@ -446,24 +480,31 @@ impl PositionExecutor {
 
         let cas_succeeded = match position.status {
             PositionStatus::Open => {
-                self.position_manager.transition_to_pending_exit(signal.position_id).await
+                self.position_manager
+                    .transition_to_pending_exit(signal.position_id)
+                    .await
             }
-            PositionStatus::PartiallyExited => {
-                match self.position_manager.compare_and_swap_status(
+            PositionStatus::PartiallyExited => self
+                .position_manager
+                .compare_and_swap_status(
                     signal.position_id,
                     PositionStatus::PartiallyExited,
                     PositionStatus::PendingExit,
-                ).await {
-                    Ok(success) => success,
-                    Err(_) => false,
-                }
-            }
+                )
+                .await
+                .unwrap_or_default(),
             PositionStatus::PendingExit => {
-                debug!("Position {} already in PendingExit, proceeding with exit", signal.position_id);
+                debug!(
+                    "Position {} already in PendingExit, proceeding with exit",
+                    signal.position_id
+                );
                 true
             }
             PositionStatus::Closed | PositionStatus::Failed | PositionStatus::Orphaned => {
-                debug!("Position {} already closed/failed/orphaned, skipping exit", signal.position_id);
+                debug!(
+                    "Position {} already closed/failed/orphaned, skipping exit",
+                    signal.position_id
+                );
                 return Ok(());
             }
         };
@@ -486,7 +527,7 @@ impl PositionExecutor {
                     "No wallet configured for exit - cannot process exit signal"
                 );
                 return Err(AppError::Internal(
-                    "No wallet configured for exit - position exit cannot proceed".to_string()
+                    "No wallet configured for exit - position exit cannot proceed".to_string(),
                 ));
             }
         };
@@ -537,109 +578,133 @@ impl PositionExecutor {
         };
 
         if use_curve_sell {
-            return self.execute_curve_exit(&position, signal, &user_wallet, slippage).await;
+            return self
+                .execute_curve_exit(&position, signal, &user_wallet, slippage)
+                .await;
         }
 
-        let (exit_tx_base64, expected_base_out, token_amount_in, route_label) =
-            if let Some(ref curve_builder) = self.curve_builder {
-                let token_balance = self.tx_builder.get_token_balance(&user_wallet, &position.token_mint).await?;
+        let (exit_tx_base64, expected_base_out, token_amount_in, route_label) = if let Some(
+            ref curve_builder,
+        ) =
+            self.curve_builder
+        {
+            let token_balance = self
+                .tx_builder
+                .get_token_balance(&user_wallet, &position.token_mint)
+                .await?;
 
-                let token_value_sol = token_balance as f64 * signal.current_price;
-                if token_value_sol < MIN_DUST_VALUE_SOL {
-                    warn!(
+            let token_value_sol = token_balance as f64 * signal.current_price;
+            if token_value_sol < MIN_DUST_VALUE_SOL {
+                warn!(
                         "Skipping exit for {} - value {:.6} SOL below dust threshold {:.4} SOL (balance: {} tokens)",
                         position.token_symbol.as_deref().unwrap_or(&position.token_mint[..8]),
                         token_value_sol,
                         MIN_DUST_VALUE_SOL,
                         token_balance
                     );
-                    self.position_manager
-                        .close_position(
-                            signal.position_id,
-                            signal.current_price,
-                            -position.entry_amount_base,
-                            "DustBalance",
-                            None,
-                            Some(position.momentum.momentum_score),
-                        )
-                        .await?;
-                    return Ok(());
-                }
-
-                let exit_amount = if signal.exit_percent >= 100.0 {
-                    token_balance
-                } else {
-                    ((token_balance as f64) * (signal.exit_percent / 100.0)).round().min(token_balance as f64) as u64
-                };
-
-                let exit_value_sol = exit_amount as f64 * signal.current_price;
-                if exit_value_sol < MIN_DUST_VALUE_SOL {
-                    warn!(
-                        "Calculated exit value {:.6} SOL below dust threshold for {}",
-                        exit_value_sol,
-                        position.token_symbol.as_deref().unwrap_or(&position.token_mint[..8])
-                    );
-                    return Err(AppError::Execution(format!(
-                        "Exit value {:.6} SOL below dust threshold {:.4} SOL",
-                        exit_value_sol, MIN_DUST_VALUE_SOL
-                    )));
-                }
-
-                let sell_params = CurveSellParams {
-                    mint: position.token_mint.clone(),
-                    token_amount: exit_amount,
-                    slippage_bps: slippage,
-                    user_wallet: user_wallet.clone(),
-                };
-
-                info!(
-                    "Graduated token exit for {} - trying Raydium first",
-                    position.token_symbol.as_deref().unwrap_or(&position.token_mint[..8])
-                );
-
-                match curve_builder.build_raydium_sell(&sell_params).await {
-                    Ok(raydium_result) => {
-                        info!(
-                            "Built Raydium exit tx for {}: expected {} SOL, impact {:.2}%",
-                            position.token_symbol.as_deref().unwrap_or(&position.token_mint[..8]),
-                            raydium_result.expected_sol_out as f64 / 1e9,
-                            raydium_result.price_impact_percent
-                        );
-                        (
-                            raydium_result.transaction_base64,
-                            raydium_result.expected_sol_out,
-                            exit_amount,
-                            "Raydium".to_string(),
-                        )
-                    }
-                    Err(raydium_err) => {
-                        warn!(
-                            "Raydium exit failed for {}: {}, falling back to Jupiter",
-                            position.token_symbol.as_deref().unwrap_or(&position.token_mint[..8]),
-                            raydium_err
-                        );
-                        let exit_build = self.tx_builder
-                            .build_exit_swap(&position, signal, &user_wallet, slippage)
-                            .await?;
-                        (
-                            exit_build.transaction_base64,
-                            exit_build.expected_base_out,
-                            exit_build.token_amount_in,
-                            "Jupiter".to_string(),
-                        )
-                    }
-                }
-            } else {
-                let exit_build = self.tx_builder
-                    .build_exit_swap(&position, signal, &user_wallet, slippage)
+                self.position_manager
+                    .close_position(
+                        signal.position_id,
+                        signal.current_price,
+                        -position.entry_amount_base,
+                        "DustBalance",
+                        None,
+                        Some(position.momentum.momentum_score),
+                    )
                     .await?;
-                (
-                    exit_build.transaction_base64,
-                    exit_build.expected_base_out,
-                    exit_build.token_amount_in,
-                    "Jupiter".to_string(),
-                )
+                return Ok(());
+            }
+
+            let exit_amount = if signal.exit_percent >= 100.0 {
+                token_balance
+            } else {
+                ((token_balance as f64) * (signal.exit_percent / 100.0))
+                    .round()
+                    .min(token_balance as f64) as u64
             };
+
+            let exit_value_sol = exit_amount as f64 * signal.current_price;
+            if exit_value_sol < MIN_DUST_VALUE_SOL {
+                warn!(
+                    "Calculated exit value {:.6} SOL below dust threshold for {}",
+                    exit_value_sol,
+                    position
+                        .token_symbol
+                        .as_deref()
+                        .unwrap_or(&position.token_mint[..8])
+                );
+                return Err(AppError::Execution(format!(
+                    "Exit value {:.6} SOL below dust threshold {:.4} SOL",
+                    exit_value_sol, MIN_DUST_VALUE_SOL
+                )));
+            }
+
+            let sell_params = CurveSellParams {
+                mint: position.token_mint.clone(),
+                token_amount: exit_amount,
+                slippage_bps: slippage,
+                user_wallet: user_wallet.clone(),
+            };
+
+            info!(
+                "Graduated token exit for {} - trying Raydium first",
+                position
+                    .token_symbol
+                    .as_deref()
+                    .unwrap_or(&position.token_mint[..8])
+            );
+
+            match curve_builder.build_raydium_sell(&sell_params).await {
+                Ok(raydium_result) => {
+                    info!(
+                        "Built Raydium exit tx for {}: expected {} SOL, impact {:.2}%",
+                        position
+                            .token_symbol
+                            .as_deref()
+                            .unwrap_or(&position.token_mint[..8]),
+                        raydium_result.expected_sol_out as f64 / 1e9,
+                        raydium_result.price_impact_percent
+                    );
+                    (
+                        raydium_result.transaction_base64,
+                        raydium_result.expected_sol_out,
+                        exit_amount,
+                        "Raydium".to_string(),
+                    )
+                }
+                Err(raydium_err) => {
+                    warn!(
+                        "Raydium exit failed for {}: {}, falling back to Jupiter",
+                        position
+                            .token_symbol
+                            .as_deref()
+                            .unwrap_or(&position.token_mint[..8]),
+                        raydium_err
+                    );
+                    let exit_build = self
+                        .tx_builder
+                        .build_exit_swap(&position, signal, &user_wallet, slippage)
+                        .await?;
+                    (
+                        exit_build.transaction_base64,
+                        exit_build.expected_base_out,
+                        exit_build.token_amount_in,
+                        "Jupiter".to_string(),
+                    )
+                }
+            }
+        } else {
+            let exit_build = self
+                .tx_builder
+                .build_exit_swap(&position, signal, &user_wallet, slippage)
+                .await?;
+            (
+                exit_build.transaction_base64,
+                exit_build.expected_base_out,
+                exit_build.token_amount_in,
+                "Jupiter".to_string(),
+            )
+        };
 
         let sign_request = SignRequest {
             transaction_base64: exit_tx_base64.clone(),
@@ -672,7 +737,10 @@ impl PositionExecutor {
                 reason = ?signal.reason,
                 "Exit signing failed: {}", error_msg
             );
-            return Err(AppError::ExternalApi(format!("Signing failed: {}", error_msg)));
+            return Err(AppError::ExternalApi(format!(
+                "Signing failed: {}",
+                error_msg
+            )));
         }
 
         let signed_tx = match sign_result.signed_transaction_base64 {
@@ -683,7 +751,9 @@ impl PositionExecutor {
                     token = %position.token_symbol.as_deref().unwrap_or(&position.token_mint[..8]),
                     "No signed transaction returned for exit"
                 );
-                return Err(AppError::ExternalApi("No signed transaction returned".to_string()));
+                return Err(AppError::ExternalApi(
+                    "No signed transaction returned".to_string(),
+                ));
             }
         };
 
@@ -698,16 +768,21 @@ impl PositionExecutor {
                 let bundle_id = bundle_result.id.to_string();
                 info!("Exit bundle submitted: {}", bundle_id);
 
-                match self.jito_client.wait_for_bundle(&bundle_id, self.config.bundle_timeout_secs).await {
-                    Ok(status) => {
-                        match status.status {
-                            BundleState::Landed => {}
-                            BundleState::Failed | BundleState::Dropped | BundleState::Pending => {
-                                warn!("Jito bundle {} status: {:?} - trying Helius fallback", bundle_id, status.status);
-                                use_helius_fallback = true;
-                            }
+                match self
+                    .jito_client
+                    .wait_for_bundle(&bundle_id, self.config.bundle_timeout_secs)
+                    .await
+                {
+                    Ok(status) => match status.status {
+                        BundleState::Landed => {}
+                        BundleState::Failed | BundleState::Dropped | BundleState::Pending => {
+                            warn!(
+                                "Jito bundle {} status: {:?} - trying Helius fallback",
+                                bundle_id, status.status
+                            );
+                            use_helius_fallback = true;
                         }
-                    }
+                    },
                     Err(e) => {
                         warn!(
                             position_id = %signal.position_id,
@@ -733,7 +808,10 @@ impl PositionExecutor {
             if let Some(helius_sender) = &self.helius_sender {
                 info!("Sending DEX exit via Helius fallback...");
                 let confirmation_timeout = std::time::Duration::from_secs(30);
-                match helius_sender.send_and_confirm(&signed_tx, confirmation_timeout).await {
+                match helius_sender
+                    .send_and_confirm(&signed_tx, confirmation_timeout)
+                    .await
+                {
                     Ok(sig) => {
                         info!("DEX exit confirmed via Helius: {}", sig);
                         helius_signature = Some(sig);
@@ -742,11 +820,16 @@ impl PositionExecutor {
                         let error_str = e.to_string();
 
                         if error_str.contains("Timeout") || error_str.contains("timeout") {
-                            match self.tx_builder.get_token_balance(&user_wallet, &position.token_mint).await {
+                            match self
+                                .tx_builder
+                                .get_token_balance(&user_wallet, &position.token_mint)
+                                .await
+                            {
                                 Ok(balance) => {
                                     if balance < 1000 {
                                         tokio::time::sleep(Duration::from_secs(2)).await;
-                                        let recheck_balance = self.tx_builder
+                                        let recheck_balance = self
+                                            .tx_builder
                                             .get_token_balance(&user_wallet, &position.token_mint)
                                             .await
                                             .unwrap_or(0);
@@ -763,13 +846,29 @@ impl PositionExecutor {
                                             ));
                                         } else {
                                             warn!("Balance changed between checks ({} -> {}) - queuing for retry", balance, recheck_balance);
-                                            self.emit_exit_failed_event(&position, signal, "Balance inconsistent").await;
-                                            if let Err(reset_err) = self.position_manager.reset_position_status(signal.position_id).await {
-                                                error!("Failed to reset position status: {}", reset_err);
+                                            self.emit_exit_failed_event(
+                                                &position,
+                                                signal,
+                                                "Balance inconsistent",
+                                            )
+                                            .await;
+                                            if let Err(reset_err) = self
+                                                .position_manager
+                                                .reset_position_status(signal.position_id)
+                                                .await
+                                            {
+                                                error!(
+                                                    "Failed to reset position status: {}",
+                                                    reset_err
+                                                );
                                             } else {
-                                                self.position_manager.queue_priority_exit(signal.position_id).await;
+                                                self.position_manager
+                                                    .queue_priority_exit(signal.position_id)
+                                                    .await;
                                             }
-                                            return Err(AppError::ExternalApi("Balance inconsistent between checks".to_string()));
+                                            return Err(AppError::ExternalApi(
+                                                "Balance inconsistent between checks".to_string(),
+                                            ));
                                         }
                                     } else {
                                         warn!(
@@ -778,14 +877,27 @@ impl PositionExecutor {
                                             remaining_balance = balance,
                                             "Confirmation timed out and tokens still in wallet - will retry"
                                         );
-                                        self.emit_exit_failed_event(&position, signal, &error_str).await;
-                                        if let Err(reset_err) = self.position_manager.reset_position_status(signal.position_id).await {
+                                        self.emit_exit_failed_event(&position, signal, &error_str)
+                                            .await;
+                                        if let Err(reset_err) = self
+                                            .position_manager
+                                            .reset_position_status(signal.position_id)
+                                            .await
+                                        {
                                             error!(position_id = %signal.position_id, "Failed to reset position status: {}", reset_err);
                                         } else {
-                                            self.position_manager.queue_priority_exit(signal.position_id).await;
-                                            info!("Position {} queued for HIGH PRIORITY retry", signal.position_id);
+                                            self.position_manager
+                                                .queue_priority_exit(signal.position_id)
+                                                .await;
+                                            info!(
+                                                "Position {} queued for HIGH PRIORITY retry",
+                                                signal.position_id
+                                            );
                                         }
-                                        return Err(AppError::ExternalApi(format!("Sell timed out, tokens still in wallet ({})", balance)));
+                                        return Err(AppError::ExternalApi(format!(
+                                            "Sell timed out, tokens still in wallet ({})",
+                                            balance
+                                        )));
                                     }
                                 }
                                 Err(balance_err) => {
@@ -794,14 +906,27 @@ impl PositionExecutor {
                                         token = %position.token_symbol.as_deref().unwrap_or(&position.token_mint[..8]),
                                         "Could not verify balance after timeout: {} - will retry", balance_err
                                     );
-                                    self.emit_exit_failed_event(&position, signal, &error_str).await;
-                                    if let Err(reset_err) = self.position_manager.reset_position_status(signal.position_id).await {
+                                    self.emit_exit_failed_event(&position, signal, &error_str)
+                                        .await;
+                                    if let Err(reset_err) = self
+                                        .position_manager
+                                        .reset_position_status(signal.position_id)
+                                        .await
+                                    {
                                         error!(position_id = %signal.position_id, "Failed to reset position status: {}", reset_err);
                                     } else {
-                                        self.position_manager.queue_priority_exit(signal.position_id).await;
-                                        info!("Position {} queued for HIGH PRIORITY retry", signal.position_id);
+                                        self.position_manager
+                                            .queue_priority_exit(signal.position_id)
+                                            .await;
+                                        info!(
+                                            "Position {} queued for HIGH PRIORITY retry",
+                                            signal.position_id
+                                        );
                                     }
-                                    return Err(AppError::ExternalApi(format!("Sell timed out, could not verify: {}", balance_err)));
+                                    return Err(AppError::ExternalApi(format!(
+                                        "Sell timed out, could not verify: {}",
+                                        balance_err
+                                    )));
                                 }
                             }
                         } else {
@@ -810,17 +935,30 @@ impl PositionExecutor {
                                 token = %position.token_symbol.as_deref().unwrap_or(&position.token_mint[..8]),
                                 "Helius fallback also failed: {}", error_str
                             );
-                            self.emit_exit_failed_event(&position, signal, &error_str).await;
-                            if let Err(reset_err) = self.position_manager.reset_position_status(signal.position_id).await {
+                            self.emit_exit_failed_event(&position, signal, &error_str)
+                                .await;
+                            if let Err(reset_err) = self
+                                .position_manager
+                                .reset_position_status(signal.position_id)
+                                .await
+                            {
                                 error!(
                                     position_id = %signal.position_id,
                                     "Failed to reset position status: {}", reset_err
                                 );
                             } else {
-                                self.position_manager.queue_priority_exit(signal.position_id).await;
-                                info!("Position {} queued for HIGH PRIORITY retry", signal.position_id);
+                                self.position_manager
+                                    .queue_priority_exit(signal.position_id)
+                                    .await;
+                                info!(
+                                    "Position {} queued for HIGH PRIORITY retry",
+                                    signal.position_id
+                                );
                             }
-                            return Err(AppError::ExternalApi(format!("Helius fallback failed: {}", error_str)));
+                            return Err(AppError::ExternalApi(format!(
+                                "Helius fallback failed: {}",
+                                error_str
+                            )));
                         }
                     }
                 }
@@ -830,71 +968,78 @@ impl PositionExecutor {
                     token = %position.token_symbol.as_deref().unwrap_or(&position.token_mint[..8]),
                     "No Helius sender available for fallback"
                 );
-                self.emit_exit_failed_event(&position, signal, "No Helius fallback available").await;
-                return Err(AppError::ExternalApi("No Helius sender available for fallback".to_string()));
+                self.emit_exit_failed_event(&position, signal, "No Helius fallback available")
+                    .await;
+                return Err(AppError::ExternalApi(
+                    "No Helius sender available for fallback".to_string(),
+                ));
             }
         }
 
         let final_signature = helius_signature.or(sign_result.signature.clone());
         {
-                let settlement = if let Some(ref sig) = final_signature {
-                    self.resolve_sell_settlement(sig, &user_wallet).await
-                } else {
-                    None
-                };
+            let settlement = if let Some(ref sig) = final_signature {
+                self.resolve_sell_settlement(sig, &user_wallet).await
+            } else {
+                None
+            };
 
-                let exit_price = signal.current_price;
-                let pnl_percent = if position.entry_price > 0.0 {
-                    (exit_price - position.entry_price) / position.entry_price
-                } else {
-                    0.0
-                };
-                let exit_reason = format!("{:?}", signal.reason);
+            let exit_price = signal.current_price;
+            let pnl_percent = if position.entry_price > 0.0 {
+                (exit_price - position.entry_price) / position.entry_price
+            } else {
+                0.0
+            };
+            let exit_reason = format!("{:?}", signal.reason);
 
-                let effective_base = if position.remaining_amount_base > 0.0 {
-                    position.remaining_amount_base
-                } else {
-                    position.entry_amount_base
-                };
+            let effective_base = if position.remaining_amount_base > 0.0 {
+                position.remaining_amount_base
+            } else {
+                position.entry_amount_base
+            };
 
-                let is_partial_exit = signal.exit_percent < 100.0;
+            let is_partial_exit = signal.exit_percent < 100.0;
 
-                if is_partial_exit {
-                    let partial_base = effective_base * (signal.exit_percent / 100.0);
-                    let estimated_pnl = partial_base * pnl_percent;
-                    let realized_pnl_sol = self.compute_pnl_with_settlement(settlement.as_ref(), estimated_pnl, &position);
+            if is_partial_exit {
+                let partial_base = effective_base * (signal.exit_percent / 100.0);
+                let estimated_pnl = partial_base * pnl_percent;
+                let realized_pnl_sol =
+                    self.compute_pnl_with_settlement(settlement.as_ref(), estimated_pnl, &position);
 
-                    self.position_manager
-                        .record_partial_exit(
-                            signal.position_id,
-                            signal.exit_percent,
-                            exit_price,
-                            realized_pnl_sol,
-                            final_signature.clone(),
-                            &exit_reason,
-                        )
-                        .await?;
-
-                    if let Some(capital_mgr) = &self.capital_manager {
-                        if let Some(released) = capital_mgr.release_partial_capital(signal.position_id, signal.exit_percent).await {
-                            debug!(
-                                "Released {} SOL partial capital for position {} ({}% exit)",
-                                released as f64 / 1_000_000_000.0,
-                                signal.position_id,
-                                signal.exit_percent
-                            );
-                        }
-                    }
-
-                    self.emit_exit_completed_event(
-                        &position,
-                        signal,
+                self.position_manager
+                    .record_partial_exit(
+                        signal.position_id,
+                        signal.exit_percent,
+                        exit_price,
                         realized_pnl_sol,
-                        final_signature.as_deref(),
+                        final_signature.clone(),
+                        &exit_reason,
                     )
-                    .await;
+                    .await?;
 
-                    info!(
+                if let Some(capital_mgr) = &self.capital_manager {
+                    if let Some(released) = capital_mgr
+                        .release_partial_capital(signal.position_id, signal.exit_percent)
+                        .await
+                    {
+                        debug!(
+                            "Released {} SOL partial capital for position {} ({}% exit)",
+                            released as f64 / 1_000_000_000.0,
+                            signal.position_id,
+                            signal.exit_percent
+                        );
+                    }
+                }
+
+                self.emit_exit_completed_event(
+                    &position,
+                    signal,
+                    realized_pnl_sol,
+                    final_signature.as_deref(),
+                )
+                .await;
+
+                info!(
                         "Partial exit completed: {} | {}% exited | P&L: {:.6} {} ({:.2}%) | Reason: {:?} | source: {}",
                         position
                             .token_symbol
@@ -908,63 +1053,80 @@ impl PositionExecutor {
                         settlement.as_ref().map(|s| s.source).unwrap_or("estimated"),
                     );
 
-                    self.save_exit_to_engrams(
-                        &position,
-                        signal,
+                self.save_exit_to_engrams(
+                    &position,
+                    signal,
+                    realized_pnl_sol,
+                    final_signature.as_deref(),
+                    &user_wallet,
+                )
+                .await;
+
+                self.save_sell_trade_record(
+                    &position,
+                    signal,
+                    realized_pnl_sol,
+                    final_signature.as_deref(),
+                    slippage,
+                    settlement.as_ref(),
+                )
+                .await;
+            } else {
+                let estimated_pnl = effective_base * pnl_percent;
+                let realized_pnl_sol =
+                    self.compute_pnl_with_settlement(settlement.as_ref(), estimated_pnl, &position);
+
+                self.position_manager
+                    .close_position(
+                        signal.position_id,
+                        exit_price,
                         realized_pnl_sol,
-                        final_signature.as_deref(),
-                        &user_wallet,
+                        &exit_reason,
+                        final_signature.clone(),
+                        Some(position.momentum.momentum_score),
                     )
-                    .await;
+                    .await?;
 
-                    self.save_sell_trade_record(&position, signal, realized_pnl_sol, final_signature.as_deref(), slippage, settlement.as_ref()).await;
-                } else {
-                    let estimated_pnl = effective_base * pnl_percent;
-                    let realized_pnl_sol = self.compute_pnl_with_settlement(settlement.as_ref(), estimated_pnl, &position);
+                self.emit_exit_completed_event(
+                    &position,
+                    signal,
+                    realized_pnl_sol,
+                    final_signature.as_deref(),
+                )
+                .await;
 
-                    self.position_manager
-                        .close_position(
-                            signal.position_id,
-                            exit_price,
-                            realized_pnl_sol,
-                            &exit_reason,
-                            final_signature.clone(),
-                            Some(position.momentum.momentum_score),
-                        )
-                        .await?;
+                info!(
+                    "Exit completed: {} | P&L: {:.6} {} ({:.2}%) | Reason: {:?} | source: {}",
+                    position
+                        .token_symbol
+                        .as_deref()
+                        .unwrap_or(&position.token_mint[..8]),
+                    realized_pnl_sol,
+                    position.exit_config.base_currency.symbol(),
+                    pnl_percent * 100.0,
+                    signal.reason,
+                    settlement.as_ref().map(|s| s.source).unwrap_or("estimated"),
+                );
 
-                    self.emit_exit_completed_event(
-                        &position,
-                        signal,
-                        realized_pnl_sol,
-                        final_signature.as_deref(),
-                    )
-                    .await;
+                self.save_exit_to_engrams(
+                    &position,
+                    signal,
+                    realized_pnl_sol,
+                    final_signature.as_deref(),
+                    &user_wallet,
+                )
+                .await;
 
-                    info!(
-                        "Exit completed: {} | P&L: {:.6} {} ({:.2}%) | Reason: {:?} | source: {}",
-                        position
-                            .token_symbol
-                            .as_deref()
-                            .unwrap_or(&position.token_mint[..8]),
-                        realized_pnl_sol,
-                        position.exit_config.base_currency.symbol(),
-                        pnl_percent * 100.0,
-                        signal.reason,
-                        settlement.as_ref().map(|s| s.source).unwrap_or("estimated"),
-                    );
-
-                    self.save_exit_to_engrams(
-                        &position,
-                        signal,
-                        realized_pnl_sol,
-                        final_signature.as_deref(),
-                        &user_wallet,
-                    )
-                    .await;
-
-                    self.save_sell_trade_record(&position, signal, realized_pnl_sol, final_signature.as_deref(), slippage, settlement.as_ref()).await;
-                }
+                self.save_sell_trade_record(
+                    &position,
+                    signal,
+                    realized_pnl_sol,
+                    final_signature.as_deref(),
+                    slippage,
+                    settlement.as_ref(),
+                )
+                .await;
+            }
         }
 
         Ok(())
@@ -977,9 +1139,13 @@ impl PositionExecutor {
         user_wallet: &str,
         initial_slippage: u16,
     ) -> AppResult<()> {
-        let curve_builder = self.curve_builder.as_ref()
+        let curve_builder = self
+            .curve_builder
+            .as_ref()
             .ok_or_else(|| AppError::Internal("Curve builder not configured".into()))?;
-        let helius_sender = self.helius_sender.as_ref()
+        let helius_sender = self
+            .helius_sender
+            .as_ref()
             .ok_or_else(|| AppError::Internal("Helius sender not configured".into()))?;
 
         let actual_balance = curve_builder
@@ -1001,7 +1167,13 @@ impl PositionExecutor {
             };
 
             let (realized_pnl, pnl_source) = if let Some(helius) = &self.helius_client {
-                let settlement = resolve_inferred_settlement(helius, user_wallet, effective_base, Some(&position.token_mint)).await;
+                let settlement = resolve_inferred_settlement(
+                    helius,
+                    user_wallet,
+                    effective_base,
+                    Some(&position.token_mint),
+                )
+                .await;
                 let pnl = if settlement.source == "inferred-onchain" {
                     settlement.sol_delta_sol() - effective_base
                 } else {
@@ -1013,11 +1185,17 @@ impl PositionExecutor {
                 };
                 info!(
                     "[inferred PnL] {} | source={} | realized={:.6} SOL | entry={:.6} SOL",
-                    &position.token_mint[..8], settlement.source, pnl, effective_base
+                    &position.token_mint[..8],
+                    settlement.source,
+                    pnl,
+                    effective_base
                 );
                 (pnl, settlement.source)
             } else {
-                warn!("[inferred PnL] No helius client for {} — recording 0 PnL (unknown)", &position.token_mint[..8]);
+                warn!(
+                    "[inferred PnL] No helius client for {} — recording 0 PnL (unknown)",
+                    &position.token_mint[..8]
+                );
                 (0.0, "unknown")
             };
 
@@ -1092,14 +1270,20 @@ impl PositionExecutor {
                     if last_error.contains("graduated") || last_error.contains("is_complete") {
                         warn!(
                             "Token {} graduated mid-exit, switching to DEX path",
-                            position.token_symbol.as_deref().unwrap_or(&position.token_mint[..8])
+                            position
+                                .token_symbol
+                                .as_deref()
+                                .unwrap_or(&position.token_mint[..8])
                         );
 
                         match curve_builder.build_raydium_sell(&sell_params).await {
                             Ok(raydium_result) => {
                                 info!(
                                     "Built Raydium sell for graduated {}: expected {} SOL",
-                                    position.token_symbol.as_deref().unwrap_or(&position.token_mint[..8]),
+                                    position
+                                        .token_symbol
+                                        .as_deref()
+                                        .unwrap_or(&position.token_mint[..8]),
                                     raydium_result.expected_sol_out as f64 / 1e9
                                 );
                                 super::curve_builder::CurveBuildResult {
@@ -1117,25 +1301,40 @@ impl PositionExecutor {
                             Err(raydium_err) => {
                                 warn!(
                                     "Raydium failed for graduated {}: {}, falling back to Jupiter",
-                                    position.token_symbol.as_deref().unwrap_or(&position.token_mint[..8]),
+                                    position
+                                        .token_symbol
+                                        .as_deref()
+                                        .unwrap_or(&position.token_mint[..8]),
                                     raydium_err
                                 );
-                                match self.tx_builder.build_exit_swap(position, signal, user_wallet, current_slippage).await {
-                                    Ok(jupiter_result) => {
-                                        super::curve_builder::CurveBuildResult {
-                                            transaction_base64: jupiter_result.transaction_base64,
-                                            expected_tokens_out: None,
-                                            expected_sol_out: Some(jupiter_result.expected_base_out),
-                                            min_tokens_out: None,
-                                            min_sol_out: None,
-                                            price_impact_percent: jupiter_result.price_impact_bps as f64 / 100.0,
-                                            fee_lamports: 0,
-                                            compute_units: 200_000,
-                                            priority_fee_lamports: 0,
-                                        }
-                                    }
+                                match self
+                                    .tx_builder
+                                    .build_exit_swap(
+                                        position,
+                                        signal,
+                                        user_wallet,
+                                        current_slippage,
+                                    )
+                                    .await
+                                {
+                                    Ok(jupiter_result) => super::curve_builder::CurveBuildResult {
+                                        transaction_base64: jupiter_result.transaction_base64,
+                                        expected_tokens_out: None,
+                                        expected_sol_out: Some(jupiter_result.expected_base_out),
+                                        min_tokens_out: None,
+                                        min_sol_out: None,
+                                        price_impact_percent: jupiter_result.price_impact_bps
+                                            as f64
+                                            / 100.0,
+                                        fee_lamports: 0,
+                                        compute_units: 200_000,
+                                        priority_fee_lamports: 0,
+                                    },
                                     Err(jupiter_err) => {
-                                        last_error = format!("Raydium: {} | Jupiter: {}", raydium_err, jupiter_err);
+                                        last_error = format!(
+                                            "Raydium: {} | Jupiter: {}",
+                                            raydium_err, jupiter_err
+                                        );
                                         warn!("Both DEX paths failed: {}", last_error);
                                         continue;
                                     }
@@ -1192,10 +1391,16 @@ impl PositionExecutor {
                 }
             };
 
-            info!("Sending curve sell via Helius (attempt {}) - waiting for confirmation...", attempt + 1);
+            info!(
+                "Sending curve sell via Helius (attempt {}) - waiting for confirmation...",
+                attempt + 1
+            );
 
             let confirmation_timeout = Duration::from_secs(30);
-            match helius_sender.send_and_confirm(&signed_tx, confirmation_timeout).await {
+            match helius_sender
+                .send_and_confirm(&signed_tx, confirmation_timeout)
+                .await
+            {
                 Ok(signature) => {
                     let settlement = self.resolve_sell_settlement(&signature, user_wallet).await;
 
@@ -1217,7 +1422,11 @@ impl PositionExecutor {
                         };
                         let partial_base = effective_base * (signal.exit_percent / 100.0);
                         let estimated_pnl = partial_base * pnl_percent;
-                        let realized_pnl_sol = self.compute_pnl_with_settlement(settlement.as_ref(), estimated_pnl, position);
+                        let realized_pnl_sol = self.compute_pnl_with_settlement(
+                            settlement.as_ref(),
+                            estimated_pnl,
+                            position,
+                        );
 
                         self.position_manager
                             .record_partial_exit(
@@ -1231,7 +1440,10 @@ impl PositionExecutor {
                             .await?;
 
                         if let Some(capital_mgr) = &self.capital_manager {
-                            if let Some(released) = capital_mgr.release_partial_capital(signal.position_id, signal.exit_percent).await {
+                            if let Some(released) = capital_mgr
+                                .release_partial_capital(signal.position_id, signal.exit_percent)
+                                .await
+                            {
                                 debug!(
                                     "Released {} SOL partial capital for position {} ({}% exit)",
                                     released as f64 / 1_000_000_000.0,
@@ -1272,7 +1484,15 @@ impl PositionExecutor {
                         )
                         .await;
 
-                        self.save_sell_trade_record(position, signal, realized_pnl_sol, Some(&signature), current_slippage, settlement.as_ref()).await;
+                        self.save_sell_trade_record(
+                            position,
+                            signal,
+                            realized_pnl_sol,
+                            Some(&signature),
+                            current_slippage,
+                            settlement.as_ref(),
+                        )
+                        .await;
                     } else {
                         let effective_base = if position.remaining_amount_base > 0.0 {
                             position.remaining_amount_base
@@ -1280,7 +1500,11 @@ impl PositionExecutor {
                             position.entry_amount_base
                         };
                         let estimated_pnl = effective_base * pnl_percent;
-                        let realized_pnl_sol = self.compute_pnl_with_settlement(settlement.as_ref(), estimated_pnl, position);
+                        let realized_pnl_sol = self.compute_pnl_with_settlement(
+                            settlement.as_ref(),
+                            estimated_pnl,
+                            position,
+                        );
 
                         self.position_manager
                             .close_position(
@@ -1323,7 +1547,15 @@ impl PositionExecutor {
                         )
                         .await;
 
-                        self.save_sell_trade_record(position, signal, realized_pnl_sol, Some(&signature), current_slippage, settlement.as_ref()).await;
+                        self.save_sell_trade_record(
+                            position,
+                            signal,
+                            realized_pnl_sol,
+                            Some(&signature),
+                            current_slippage,
+                            settlement.as_ref(),
+                        )
+                        .await;
                     }
                     return Ok(());
                 }
@@ -1331,10 +1563,15 @@ impl PositionExecutor {
                     last_error = e.to_string();
                     let is_slippage_error = last_error.contains("6003")
                         || last_error.to_lowercase().contains("slippage");
-                    let is_timeout_error = last_error.contains("Timeout") || last_error.contains("timeout");
+                    let is_timeout_error =
+                        last_error.contains("Timeout") || last_error.contains("timeout");
 
                     if is_timeout_error {
-                        match self.tx_builder.get_token_balance(user_wallet, &position.token_mint).await {
+                        match self
+                            .tx_builder
+                            .get_token_balance(user_wallet, &position.token_mint)
+                            .await
+                        {
                             Ok(balance) => {
                                 if balance < 1000 {
                                     warn!(
@@ -1349,8 +1586,16 @@ impl PositionExecutor {
                                         position.entry_amount_base
                                     };
 
-                                    let (realized_pnl_sol, pnl_source) = if let Some(helius) = &self.helius_client {
-                                        let settlement = resolve_inferred_settlement(helius, user_wallet, effective_base, Some(&position.token_mint)).await;
+                                    let (realized_pnl_sol, pnl_source) = if let Some(helius) =
+                                        &self.helius_client
+                                    {
+                                        let settlement = resolve_inferred_settlement(
+                                            helius,
+                                            user_wallet,
+                                            effective_base,
+                                            Some(&position.token_mint),
+                                        )
+                                        .await;
                                         let pnl = if settlement.source == "inferred-onchain" {
                                             settlement.sol_delta_sol() - effective_base
                                         } else {
@@ -1377,7 +1622,8 @@ impl PositionExecutor {
                                         chrono::Utc::now().timestamp()
                                     );
 
-                                    if let Err(e) = self.position_manager
+                                    if let Err(e) = self
+                                        .position_manager
                                         .close_position(
                                             signal.position_id,
                                             exit_price,
@@ -1386,7 +1632,8 @@ impl PositionExecutor {
                                             Some(inferred_sig.clone()),
                                             Some(position.momentum.momentum_score),
                                         )
-                                        .await {
+                                        .await
+                                    {
                                         error!(
                                             "CRITICAL: Curve exit inferred successful but failed to close position {} in DB: {}",
                                             signal.position_id, e
@@ -1424,7 +1671,10 @@ impl PositionExecutor {
                                 }
                             }
                             Err(balance_err) => {
-                                warn!("Could not verify balance after curve sell timeout: {}", balance_err);
+                                warn!(
+                                    "Could not verify balance after curve sell timeout: {}",
+                                    balance_err
+                                );
                             }
                         }
                     }
@@ -1433,7 +1683,10 @@ impl PositionExecutor {
                     if is_graduated_error {
                         warn!(
                             "Error 6023 (graduated) during tx - switching to DEX path for {}",
-                            position.token_symbol.as_deref().unwrap_or(&position.token_mint[..8])
+                            position
+                                .token_symbol
+                                .as_deref()
+                                .unwrap_or(&position.token_mint[..8])
                         );
                         break;
                     }
@@ -1441,7 +1694,8 @@ impl PositionExecutor {
                     if is_slippage_error && attempt < max_retries {
                         warn!(
                             "Slippage error on attempt {}, will retry: {}",
-                            attempt + 1, last_error
+                            attempt + 1,
+                            last_error
                         );
                         continue;
                     } else {
@@ -1455,10 +1709,17 @@ impl PositionExecutor {
         if last_error.contains("6023") {
             warn!(
                 "Curve sell failed with 6023 - attempting DEX fallback for {}",
-                position.token_symbol.as_deref().unwrap_or(&position.token_mint[..8])
+                position
+                    .token_symbol
+                    .as_deref()
+                    .unwrap_or(&position.token_mint[..8])
             );
 
-            let token_balance = match self.tx_builder.get_token_balance(user_wallet, &position.token_mint).await {
+            let token_balance = match self
+                .tx_builder
+                .get_token_balance(user_wallet, &position.token_mint)
+                .await
+            {
                 Ok(b) => b,
                 Err(e) => {
                     error!("Failed to get token balance for DEX fallback: {}", e);
@@ -1468,14 +1729,18 @@ impl PositionExecutor {
 
             if token_balance == 0 {
                 warn!("Token balance is 0 - position may have been sold externally");
-                if let Err(e) = self.position_manager.close_position(
-                    signal.position_id,
-                    signal.current_price,
-                    0.0,
-                    "AlreadySold",
-                    None,
-                    Some(position.momentum.momentum_score),
-                ).await {
+                if let Err(e) = self
+                    .position_manager
+                    .close_position(
+                        signal.position_id,
+                        signal.current_price,
+                        0.0,
+                        "AlreadySold",
+                        None,
+                        Some(position.momentum.momentum_score),
+                    )
+                    .await
+                {
                     error!(
                         "CRITICAL: Failed to close already-sold position {} in database: {}",
                         signal.position_id, e
@@ -1487,7 +1752,9 @@ impl PositionExecutor {
             let exit_amount = if signal.exit_percent >= 100.0 {
                 token_balance
             } else {
-                ((token_balance as f64) * (signal.exit_percent / 100.0)).round().min(token_balance as f64) as u64
+                ((token_balance as f64) * (signal.exit_percent / 100.0))
+                    .round()
+                    .min(token_balance as f64) as u64
             };
 
             let sell_params = CurveSellParams {
@@ -1500,45 +1767,70 @@ impl PositionExecutor {
             if let Some(ref curve_builder) = self.curve_builder {
                 match curve_builder.build_raydium_sell(&sell_params).await {
                     Ok(raydium_result) => {
-                        info!("Built Raydium fallback sell: expected {} SOL", raydium_result.expected_sol_out as f64 / 1e9);
+                        info!(
+                            "Built Raydium fallback sell: expected {} SOL",
+                            raydium_result.expected_sol_out as f64 / 1e9
+                        );
 
                         let sign_request = SignRequest {
                             transaction_base64: raydium_result.transaction_base64,
                             estimated_amount_lamports: raydium_result.expected_sol_out,
                             estimated_profit_lamports: None,
                             edge_id: Some(position.edge_id),
-                            description: format!("Raydium fallback exit {}", &position.token_mint[..8]),
+                            description: format!(
+                                "Raydium fallback exit {}",
+                                &position.token_mint[..8]
+                            ),
                         };
 
                         if let Ok(sign_result) = self.signer.sign_transaction(sign_request).await {
                             if sign_result.success {
                                 if let Some(signed_tx) = sign_result.signed_transaction_base64 {
                                     if let Some(ref helius_sender) = self.helius_sender {
-                                        if let Ok(signature) = helius_sender.send_and_confirm(&signed_tx, Duration::from_secs(60)).await {
-                                            let settlement = self.resolve_sell_settlement(&signature, user_wallet).await;
+                                        if let Ok(signature) = helius_sender
+                                            .send_and_confirm(&signed_tx, Duration::from_secs(60))
+                                            .await
+                                        {
+                                            let settlement = self
+                                                .resolve_sell_settlement(&signature, user_wallet)
+                                                .await;
 
                                             let exit_price = signal.current_price;
                                             let pnl_percent = if position.entry_price > 0.0 {
-                                                (exit_price - position.entry_price) / position.entry_price
+                                                (exit_price - position.entry_price)
+                                                    / position.entry_price
                                             } else {
                                                 0.0
                                             };
-                                            let effective_base = if position.remaining_amount_base > 0.0 {
-                                                position.remaining_amount_base
-                                            } else {
-                                                position.entry_amount_base
-                                            };
+                                            let effective_base =
+                                                if position.remaining_amount_base > 0.0 {
+                                                    position.remaining_amount_base
+                                                } else {
+                                                    position.entry_amount_base
+                                                };
                                             let estimated_pnl = effective_base * pnl_percent;
-                                            let realized_pnl_sol = self.compute_pnl_with_settlement(settlement.as_ref(), estimated_pnl, position);
+                                            let realized_pnl_sol = self
+                                                .compute_pnl_with_settlement(
+                                                    settlement.as_ref(),
+                                                    estimated_pnl,
+                                                    position,
+                                                );
 
-                                            if let Err(e) = self.position_manager.close_position(
-                                                signal.position_id,
-                                                exit_price,
-                                                realized_pnl_sol,
-                                                &format!("{:?}-raydium-fallback", signal.reason),
-                                                Some(signature.clone()),
-                                                Some(position.momentum.momentum_score),
-                                            ).await {
+                                            if let Err(e) = self
+                                                .position_manager
+                                                .close_position(
+                                                    signal.position_id,
+                                                    exit_price,
+                                                    realized_pnl_sol,
+                                                    &format!(
+                                                        "{:?}-raydium-fallback",
+                                                        signal.reason
+                                                    ),
+                                                    Some(signature.clone()),
+                                                    Some(position.momentum.momentum_score),
+                                                )
+                                                .await
+                                            {
                                                 error!(
                                                     "CRITICAL: Raydium exit confirmed (sig: {}) but failed to close position {} in DB: {}",
                                                     &signature[..16], signal.position_id, e
@@ -1552,7 +1844,15 @@ impl PositionExecutor {
                                                 &signature[..16],
                                                 settlement.as_ref().map(|s| s.source).unwrap_or("estimated"),
                                             );
-                                            self.save_sell_trade_record(position, signal, realized_pnl_sol, Some(&signature), self.config.emergency_slippage_bps, settlement.as_ref()).await;
+                                            self.save_sell_trade_record(
+                                                position,
+                                                signal,
+                                                realized_pnl_sol,
+                                                Some(&signature),
+                                                self.config.emergency_slippage_bps,
+                                                settlement.as_ref(),
+                                            )
+                                            .await;
                                             return Ok(());
                                         }
                                     }
@@ -1566,7 +1866,16 @@ impl PositionExecutor {
                 }
             }
 
-            match self.tx_builder.build_exit_swap(position, signal, user_wallet, self.config.emergency_slippage_bps).await {
+            match self
+                .tx_builder
+                .build_exit_swap(
+                    position,
+                    signal,
+                    user_wallet,
+                    self.config.emergency_slippage_bps,
+                )
+                .await
+            {
                 Ok(jupiter_result) => {
                     let sign_request = SignRequest {
                         transaction_base64: jupiter_result.transaction_base64,
@@ -1580,31 +1889,46 @@ impl PositionExecutor {
                         if sign_result.success {
                             if let Some(signed_tx) = sign_result.signed_transaction_base64 {
                                 if let Some(ref helius_sender) = self.helius_sender {
-                                    if let Ok(signature) = helius_sender.send_and_confirm(&signed_tx, Duration::from_secs(60)).await {
-                                        let settlement = self.resolve_sell_settlement(&signature, user_wallet).await;
+                                    if let Ok(signature) = helius_sender
+                                        .send_and_confirm(&signed_tx, Duration::from_secs(60))
+                                        .await
+                                    {
+                                        let settlement = self
+                                            .resolve_sell_settlement(&signature, user_wallet)
+                                            .await;
 
                                         let exit_price = signal.current_price;
                                         let pnl_percent = if position.entry_price > 0.0 {
-                                            (exit_price - position.entry_price) / position.entry_price
+                                            (exit_price - position.entry_price)
+                                                / position.entry_price
                                         } else {
                                             0.0
                                         };
-                                        let effective_base = if position.remaining_amount_base > 0.0 {
+                                        let effective_base = if position.remaining_amount_base > 0.0
+                                        {
                                             position.remaining_amount_base
                                         } else {
                                             position.entry_amount_base
                                         };
                                         let estimated_pnl = effective_base * pnl_percent;
-                                        let realized_pnl_sol = self.compute_pnl_with_settlement(settlement.as_ref(), estimated_pnl, position);
+                                        let realized_pnl_sol = self.compute_pnl_with_settlement(
+                                            settlement.as_ref(),
+                                            estimated_pnl,
+                                            position,
+                                        );
 
-                                        if let Err(e) = self.position_manager.close_position(
-                                            signal.position_id,
-                                            exit_price,
-                                            realized_pnl_sol,
-                                            &format!("{:?}-jupiter-fallback", signal.reason),
-                                            Some(signature.clone()),
-                                            Some(position.momentum.momentum_score),
-                                        ).await {
+                                        if let Err(e) = self
+                                            .position_manager
+                                            .close_position(
+                                                signal.position_id,
+                                                exit_price,
+                                                realized_pnl_sol,
+                                                &format!("{:?}-jupiter-fallback", signal.reason),
+                                                Some(signature.clone()),
+                                                Some(position.momentum.momentum_score),
+                                            )
+                                            .await
+                                        {
                                             error!(
                                                 "CRITICAL: Jupiter exit confirmed (sig: {}) but failed to close position {} in DB: {}",
                                                 &signature[..16], signal.position_id, e
@@ -1618,7 +1942,15 @@ impl PositionExecutor {
                                             &signature[..16],
                                             settlement.as_ref().map(|s| s.source).unwrap_or("estimated"),
                                         );
-                                        self.save_sell_trade_record(position, signal, realized_pnl_sol, Some(&signature), self.config.emergency_slippage_bps, settlement.as_ref()).await;
+                                        self.save_sell_trade_record(
+                                            position,
+                                            signal,
+                                            realized_pnl_sol,
+                                            Some(&signature),
+                                            self.config.emergency_slippage_bps,
+                                            settlement.as_ref(),
+                                        )
+                                        .await;
                                         return Ok(());
                                     }
                                 }
@@ -1636,18 +1968,33 @@ impl PositionExecutor {
 
         error!(
             "Curve exit failed after {} attempts: {} - QUEUING HIGH PRIORITY RETRY",
-            max_retries + 1, last_error
+            max_retries + 1,
+            last_error
         );
-        self.emit_exit_failed_event(position, signal, &last_error).await;
+        self.emit_exit_failed_event(position, signal, &last_error)
+            .await;
 
-        if let Err(e) = self.position_manager.reset_position_status(signal.position_id).await {
+        if let Err(e) = self
+            .position_manager
+            .reset_position_status(signal.position_id)
+            .await
+        {
             error!("Failed to reset position status for retry: {}", e);
         } else {
-            self.position_manager.queue_priority_exit(signal.position_id).await;
-            info!("Position {} queued for HIGH PRIORITY retry after curve exit failure", signal.position_id);
+            self.position_manager
+                .queue_priority_exit(signal.position_id)
+                .await;
+            info!(
+                "Position {} queued for HIGH PRIORITY retry after curve exit failure",
+                signal.position_id
+            );
         }
 
-        Err(AppError::ExternalApi(format!("Curve exit failed after {} attempts: {}", max_retries + 1, last_error)))
+        Err(AppError::ExternalApi(format!(
+            "Curve exit failed after {} attempts: {}",
+            max_retries + 1,
+            last_error
+        )))
     }
 
     async fn emit_exit_completed_event(

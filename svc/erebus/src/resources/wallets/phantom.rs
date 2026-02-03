@@ -22,14 +22,18 @@ impl WalletProvider for PhantomWallet {
         )
     }
 
-    fn verify_signature(message: &str, signature: &str, wallet_address: &str) -> Result<bool, String> {
+    fn verify_signature(
+        message: &str,
+        signature: &str,
+        wallet_address: &str,
+    ) -> Result<bool, String> {
         // TODO: Implement proper Solana signature verification
         // This would involve:
         // 1. Convert message to bytes
         // 2. Parse signature from array format
         // 3. Verify using ed25519 cryptography
         // 4. Compare public key with wallet address
-        
+
         println!("Phantom signature verification:");
         println!("  Message: {}", message);
         println!("  Signature: {}", signature);
@@ -69,9 +73,11 @@ pub struct SolanaAccountMeta {
 impl PhantomWallet {
     pub fn validate_solana_address(address: &str) -> bool {
         // Basic Solana address validation (Base58 encoded, ~44 characters)
-        address.len() >= 32 && address.len() <= 44 && address.chars().all(|c| {
-            "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz".contains(c)
-        })
+        address.len() >= 32
+            && address.len() <= 44
+            && address
+                .chars()
+                .all(|c| "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz".contains(c))
     }
 
     pub fn get_network_info() -> Vec<NetworkInfo> {
@@ -93,8 +99,6 @@ impl PhantomWallet {
             },
         ]
     }
-
-
 }
 
 #[derive(Debug, Serialize, Deserialize)]

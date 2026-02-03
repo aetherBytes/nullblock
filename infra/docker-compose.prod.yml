@@ -1,0 +1,37 @@
+version: "3.8"
+
+services:
+  postgres-erebus:
+    image: postgres:15-alpine
+    restart: always
+    environment:
+      POSTGRES_DB: erebus
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-REDACTED_DB_PASS}
+    volumes:
+      - /data/postgres-erebus:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    command: postgres -c wal_level=logical -c max_replication_slots=4 -c max_wal_senders=4
+
+  postgres-agents:
+    image: postgres:15-alpine
+    restart: always
+    environment:
+      POSTGRES_DB: agents
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-REDACTED_DB_PASS}
+    volumes:
+      - /data/postgres-agents:/var/lib/postgresql/data
+    ports:
+      - "5441:5432"
+    command: postgres -c wal_level=logical -c max_replication_slots=4 -c max_wal_senders=4
+
+  redis:
+    image: redis:7-alpine
+    restart: always
+    volumes:
+      - /data/redis:/data
+    ports:
+      - "6379:6379"
+    command: redis-server --appendonly yes

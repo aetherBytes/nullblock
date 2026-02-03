@@ -13,43 +13,43 @@ use thiserror::Error;
 pub enum AppError {
     #[error("Agent not initialized")]
     AgentNotInitialized,
-    
+
     #[error("Agent not running")]
     AgentNotRunning,
-    
+
     #[error("Model not available: {0}")]
     ModelNotAvailable(String),
-    
+
     #[error("LLM request failed: {0}")]
     LLMRequestFailed(String),
-    
+
     #[error("Invalid model configuration: {0}")]
     InvalidModelConfig(String),
-    
+
     #[error("Conversation error: {0}")]
     ConversationError(String),
 
     #[error("Configuration error: {0}")]
     ConfigError(String),
-    
+
     #[error("Network error: {0}")]
     NetworkError(String),
-    
+
     #[error("Serialization error: {0}")]
     SerializationError(String),
-    
+
     #[error("Timeout error: {0}")]
     TimeoutError(String),
-    
+
     #[error("Authentication error: {0}")]
     AuthError(String),
-    
+
     #[error("Rate limit exceeded: {0}")]
     RateLimitError(String),
-    
+
     #[error("Internal server error: {0}")]
     InternalError(String),
-    
+
     #[error("Bad request: {0}")]
     BadRequest(String),
 
@@ -79,25 +79,28 @@ pub enum AppError {
 impl AppError {
     pub fn status_code(&self) -> StatusCode {
         match self {
-            AppError::AgentNotInitialized 
-            | AppError::AgentNotRunning => StatusCode::SERVICE_UNAVAILABLE,
-            
+            AppError::AgentNotInitialized | AppError::AgentNotRunning => {
+                StatusCode::SERVICE_UNAVAILABLE
+            }
+
             AppError::ModelNotAvailable(_)
             | AppError::InvalidModelConfig(_)
             | AppError::BadRequest(_) => StatusCode::BAD_REQUEST,
 
             AppError::TaskAlreadyActioned(_) => StatusCode::CONFLICT,
-            
+
             AppError::AuthError(_) => StatusCode::UNAUTHORIZED,
 
-            AppError::RateLimitError(_)
-            | AppError::FreeTierRateLimitExceeded { .. } => StatusCode::TOO_MANY_REQUESTS,
+            AppError::RateLimitError(_) | AppError::FreeTierRateLimitExceeded { .. } => {
+                StatusCode::TOO_MANY_REQUESTS
+            }
 
-            AppError::ApiKeyResolutionFailed(_)
-            | AppError::RateLimitCheckFailed(_) => StatusCode::SERVICE_UNAVAILABLE,
-            
+            AppError::ApiKeyResolutionFailed(_) | AppError::RateLimitCheckFailed(_) => {
+                StatusCode::SERVICE_UNAVAILABLE
+            }
+
             AppError::TimeoutError(_) => StatusCode::REQUEST_TIMEOUT,
-            
+
             AppError::LLMRequestFailed(_)
             | AppError::LLMError(_)
             | AppError::ConversationError(_)

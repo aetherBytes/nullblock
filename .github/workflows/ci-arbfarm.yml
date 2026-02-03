@@ -1,0 +1,23 @@
+name: CI - ArbFarm
+
+on:
+  pull_request:
+    paths:
+      - 'svc/arb-farm/**'
+      - 'lib/**'
+  push:
+    branches: [main]
+    paths:
+      - 'svc/arb-farm/**'
+      - 'lib/**'
+
+jobs:
+  ci:
+    uses: ./.github/workflows/rust-service.yml
+    with:
+      service-name: arb-farm
+      service-path: svc/arb-farm
+      service-port: 9007
+      ecs-service: arb-farm
+      run-deploy: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+    secrets: inherit

@@ -1,9 +1,9 @@
 #![allow(dead_code)]
 
-use sqlx::PgPool;
-use uuid::Uuid;
 use anyhow::Result;
 use chrono::{DateTime, Utc};
+use sqlx::PgPool;
+use uuid::Uuid;
 
 use crate::database::models::UserReferenceEntity;
 
@@ -44,7 +44,7 @@ impl UserReferenceRepository {
                 metadata = EXCLUDED.metadata,
                 is_active = EXCLUDED.is_active
             RETURNING *
-            "#
+            "#,
         )
         .bind(user_id)
         .bind(source_identifier)
@@ -63,7 +63,7 @@ impl UserReferenceRepository {
 
     pub async fn get_by_id(&self, user_id: &Uuid) -> Result<Option<UserReferenceEntity>> {
         let user_ref = sqlx::query_as::<_, UserReferenceEntity>(
-            "SELECT * FROM user_references WHERE id = $1 AND is_active = true"
+            "SELECT * FROM user_references WHERE id = $1 AND is_active = true",
         )
         .bind(user_id)
         .fetch_optional(&self.pool)
@@ -72,7 +72,11 @@ impl UserReferenceRepository {
         Ok(user_ref)
     }
 
-    pub async fn get_by_source(&self, source_identifier: &str, network: &str) -> Result<Option<UserReferenceEntity>> {
+    pub async fn get_by_source(
+        &self,
+        source_identifier: &str,
+        network: &str,
+    ) -> Result<Option<UserReferenceEntity>> {
         let user_ref = sqlx::query_as::<_, UserReferenceEntity>(
             "SELECT * FROM user_references WHERE source_identifier = $1 AND network = $2 AND is_active = true"
         )
@@ -86,7 +90,7 @@ impl UserReferenceRepository {
 
     pub async fn get_by_email(&self, email: &str) -> Result<Option<UserReferenceEntity>> {
         let user_ref = sqlx::query_as::<_, UserReferenceEntity>(
-            "SELECT * FROM user_references WHERE email = $1 AND is_active = true"
+            "SELECT * FROM user_references WHERE email = $1 AND is_active = true",
         )
         .bind(email)
         .fetch_optional(&self.pool)
@@ -105,7 +109,7 @@ impl UserReferenceRepository {
                 updated_at = $2
             WHERE id = $1
             RETURNING *
-            "#
+            "#,
         )
         .bind(user_id)
         .bind(now)
@@ -128,7 +132,10 @@ impl UserReferenceRepository {
         Ok(user_refs)
     }
 
-    pub async fn create(&self, user_ref: &crate::models::UserReference) -> Result<UserReferenceEntity> {
+    pub async fn create(
+        &self,
+        user_ref: &crate::models::UserReference,
+    ) -> Result<UserReferenceEntity> {
         let _now = Utc::now();
 
         let user_entity = sqlx::query_as::<_, UserReferenceEntity>(
@@ -139,7 +146,7 @@ impl UserReferenceRepository {
             )
             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
             RETURNING *
-            "#
+            "#,
         )
         .bind(user_ref.id)
         .bind(&user_ref.source_identifier)

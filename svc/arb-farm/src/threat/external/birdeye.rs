@@ -1,5 +1,5 @@
-use serde::{Deserialize, Serialize};
 use crate::error::{AppError, AppResult};
+use serde::{Deserialize, Serialize};
 
 pub struct BirdeyeClient {
     base_url: String,
@@ -90,9 +90,7 @@ impl BirdeyeClient {
             self.base_url, mint, limit
         );
 
-        let mut request = self.client
-            .get(&url)
-            .header("Accept", "application/json");
+        let mut request = self.client.get(&url).header("Accept", "application/json");
 
         if let Some(key) = &self.api_key {
             request = request.header("X-API-KEY", key);
@@ -117,9 +115,7 @@ impl BirdeyeClient {
     pub async fn get_token_info(&self, mint: &str) -> AppResult<BirdeyeTokenData> {
         let url = format!("{}/defi/token_overview?address={}", self.base_url, mint);
 
-        let mut request = self.client
-            .get(&url)
-            .header("Accept", "application/json");
+        let mut request = self.client.get(&url).header("Accept", "application/json");
 
         if let Some(key) = &self.api_key {
             request = request.header("X-API-KEY", key);
@@ -138,9 +134,8 @@ impl BirdeyeClient {
             AppError::ExternalApi(format!("Failed to parse Birdeye response: {}", e))
         })?;
 
-        data.data.ok_or_else(|| {
-            AppError::ExternalApi("Token not found in Birdeye".to_string())
-        })
+        data.data
+            .ok_or_else(|| AppError::ExternalApi("Token not found in Birdeye".to_string()))
     }
 
     pub async fn get_recent_trades(&self, mint: &str, limit: u32) -> AppResult<Vec<BirdeyeTrade>> {
@@ -149,9 +144,7 @@ impl BirdeyeClient {
             self.base_url, mint, limit
         );
 
-        let mut request = self.client
-            .get(&url)
-            .header("Accept", "application/json");
+        let mut request = self.client.get(&url).header("Accept", "application/json");
 
         if let Some(key) = &self.api_key {
             request = request.header("X-API-KEY", key);
@@ -193,11 +186,12 @@ impl BirdeyeClient {
         let top_10_concentration = (top_10_amount / total_supply) * 100.0;
         let top_20_concentration = (top_20_amount / total_supply) * 100.0;
 
-        let top_holder = holders.first().map(|h| {
-            (h.owner.clone(), (h.ui_amount / total_supply) * 100.0)
-        });
+        let top_holder = holders
+            .first()
+            .map(|h| (h.owner.clone(), (h.ui_amount / total_supply) * 100.0));
 
-        let unique_holders = holders.iter()
+        let unique_holders = holders
+            .iter()
             .map(|h| &h.owner)
             .collect::<std::collections::HashSet<_>>()
             .len();
@@ -228,25 +222,27 @@ impl BirdeyeClient {
             return WashTradingAnalysis::default();
         }
 
-        let mut address_counts: std::collections::HashMap<String, u32> = std::collections::HashMap::new();
+        let mut address_counts: std::collections::HashMap<String, u32> =
+            std::collections::HashMap::new();
         let mut round_trip_count = 0;
 
         for trade in trades {
-            *address_counts.entry(trade.from_address.clone()).or_insert(0) += 1;
+            *address_counts
+                .entry(trade.from_address.clone())
+                .or_insert(0) += 1;
             *address_counts.entry(trade.to_address.clone()).or_insert(0) += 1;
         }
 
         for (i, trade) in trades.iter().enumerate() {
             for other in trades.iter().skip(i + 1).take(20) {
-                if trade.from_address == other.to_address && trade.to_address == other.from_address {
+                if trade.from_address == other.to_address && trade.to_address == other.from_address
+                {
                     round_trip_count += 1;
                 }
             }
         }
 
-        let repeated_addresses = address_counts.values()
-            .filter(|&&count| count > 3)
-            .count();
+        let repeated_addresses = address_counts.values().filter(|&&count| count > 3).count();
 
         let total_addresses = address_counts.len();
         let repeat_ratio = if total_addresses > 0 {

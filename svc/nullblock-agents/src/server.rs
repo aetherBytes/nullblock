@@ -1,14 +1,14 @@
 use crate::{
-    agents::{HecateAgent, siren_marketing::MarketingAgent},
+    agents::{siren_marketing::MarketingAgent, HecateAgent},
     config::{ApiKeys, Config},
-    database::{Database, repositories::AgentRepository},
-    kafka::{KafkaConfig, KafkaProducer},
+    database::{repositories::AgentRepository, Database},
     error::AppResult,
+    kafka::{KafkaConfig, KafkaProducer},
     services::ErebusClient,
 };
 use std::sync::Arc;
 use tokio::sync::RwLock;
-use tracing::{info, warn, error};
+use tracing::{error, info, warn};
 
 #[derive(Clone)]
 pub struct AppState {
@@ -113,9 +113,15 @@ impl AppState {
 
         // Try to fetch agent keys from Erebus with retry logic
         for attempt in 1..=MAX_RETRIES {
-            match erebus_client.get_agent_api_key("hecate", "openrouter").await {
+            match erebus_client
+                .get_agent_api_key("hecate", "openrouter")
+                .await
+            {
                 Ok(Some(key)) => {
-                    info!("✅ Retrieved HECATE's OpenRouter API key from Erebus (attempt {})", attempt);
+                    info!(
+                        "✅ Retrieved HECATE's OpenRouter API key from Erebus (attempt {})",
+                        attempt
+                    );
                     openrouter_key = Some(key);
                     break;
                 }
@@ -132,7 +138,10 @@ impl AppState {
                         );
                         tokio::time::sleep(tokio::time::Duration::from_millis(delay)).await;
                     } else {
-                        error!("❌ Failed to fetch API key after {} attempts: {}", MAX_RETRIES, e);
+                        error!(
+                            "❌ Failed to fetch API key after {} attempts: {}",
+                            MAX_RETRIES, e
+                        );
                         warn!("⚠️ Falling back to environment variables for API keys");
                     }
                 }

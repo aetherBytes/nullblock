@@ -247,7 +247,7 @@ pub struct RateLimitStatus {
     pub allowed: bool,
     pub remaining: i32,
     pub limit: i32,
-    pub resets_at: String,  // Midnight UTC
+    pub resets_at: String, // Midnight UTC
 }
 
 #[derive(Debug, Serialize)]

@@ -1,39 +1,44 @@
 // Agent routing endpoints for Erebus
 use axum::{
-    extract::{Path, Json, Query},
+    extract::{Json, Path, Query},
+    http::{HeaderMap, StatusCode},
     response::Json as ResponseJson,
-    http::{StatusCode, HeaderMap},
 };
-use std::collections::HashMap;
 use serde_json::Value;
-use tracing::{info, error, warn};
+use std::collections::HashMap;
+use tracing::{error, info, warn};
 use uuid::Uuid;
 
-use super::proxy::{AgentProxy, AgentRequest, AgentResponse, AgentStatus, AgentErrorResponse};
+use super::proxy::{AgentErrorResponse, AgentProxy, AgentRequest, AgentResponse, AgentStatus};
 
 /// Hecate agent proxy instance - now points to Rust service
 fn get_hecate_proxy() -> AgentProxy {
-    let hecate_url = std::env::var("AGENTS_SERVICE_URL")
-        .unwrap_or_else(|_| "http://localhost:9003".to_string());
+    let hecate_url =
+        std::env::var("AGENTS_SERVICE_URL").unwrap_or_else(|_| "http://localhost:9003".to_string());
     AgentProxy::new(hecate_url)
 }
 
 /// Siren agent proxy instance - also uses the Rust service
 fn get_siren_proxy() -> AgentProxy {
-    let siren_url = std::env::var("AGENTS_SERVICE_URL")
-        .unwrap_or_else(|_| "http://localhost:9003".to_string());
+    let siren_url =
+        std::env::var("AGENTS_SERVICE_URL").unwrap_or_else(|_| "http://localhost:9003".to_string());
     AgentProxy::new(siren_url)
 }
 
 /// Extract wallet address from request headers and create user reference if needed
 async fn extract_wallet_and_create_user(headers: &HeaderMap) -> Option<Uuid> {
-    let wallet_address = headers.get("x-wallet-address")
+    let wallet_address = headers
+        .get("x-wallet-address")
         .and_then(|h| h.to_str().ok())?;
-    let wallet_chain = headers.get("x-wallet-chain")
+    let wallet_chain = headers
+        .get("x-wallet-chain")
         .and_then(|h| h.to_str().ok())
         .unwrap_or("unknown");
 
-    info!("🔍 Extracted wallet: {} on chain: {}", wallet_address, wallet_chain);
+    info!(
+        "🔍 Extracted wallet: {} on chain: {}",
+        wallet_address, wallet_chain
+    );
 
     // Call Erebus user registration API instead of direct database access
     let default_source_type = serde_json::json!({
@@ -42,9 +47,14 @@ async fn extract_wallet_and_create_user(headers: &HeaderMap) -> Option<Uuid> {
         "network": wallet_chain,
         "metadata": {}
     });
-    match call_erebus_user_registration_api(wallet_address, wallet_chain, Some(default_source_type)).await {
+    match call_erebus_user_registration_api(wallet_address, wallet_chain, Some(default_source_type))
+        .await
+    {
         Ok(user_id) => {
-            info!("✅ User reference created/updated via Erebus API: {}", user_id);
+            info!(
+                "✅ User reference created/updated via Erebus API: {}",
+                user_id
+            );
             Some(user_id)
         }
         Err(e) => {
@@ -55,9 +65,13 @@ async fn extract_wallet_and_create_user(headers: &HeaderMap) -> Option<Uuid> {
 }
 
 /// Call Erebus user registration API (replaces direct database access)
-async fn call_erebus_user_registration_api(wallet_address: &str, chain: &str, source_type: Option<serde_json::Value>) -> Result<Uuid, String> {
-    let erebus_url = std::env::var("EREBUS_BASE_URL")
-        .unwrap_or_else(|_| "http://localhost:3000".to_string());
+async fn call_erebus_user_registration_api(
+    wallet_address: &str,
+    chain: &str,
+    source_type: Option<serde_json::Value>,
+) -> Result<Uuid, String> {
+    let erebus_url =
+        std::env::var("EREBUS_BASE_URL").unwrap_or_else(|_| "http://localhost:3000".to_string());
     let client = reqwest::Client::new();
 
     let request_body = serde_json::json!({
@@ -73,7 +87,10 @@ async fn call_erebus_user_registration_api(wallet_address: &str, chain: &str, so
         "wallet_type": "unknown"
     });
 
-    info!("🌐 Calling Erebus user registration API: {}/api/users/register", erebus_url);
+    info!(
+        "🌐 Calling Erebus user registration API: {}/api/users/register",
+        erebus_url
+    );
 
     match client
         .post(&format!("{}/api/users/register", erebus_url))
@@ -85,60 +102,79 @@ async fn call_erebus_user_registration_api(wallet_address: &str, chain: &str, so
             if response.status().is_success() {
                 match response.json::<serde_json::Value>().await {
                     Ok(json_response) => {
-                        info!("📥 Erebus registration response: {}", serde_json::to_string_pretty(&json_response).unwrap_or_default());
+                        info!(
+                            "📥 Erebus registration response: {}",
+                            serde_json::to_string_pretty(&json_response).unwrap_or_default()
+                        );
 
                         // Try to extract user_id from response (could be at top level or nested)
-                        let user_id_str = json_response["user_id"].as_str()
+                        let user_id_str = json_response["user_id"]
+                            .as_str()
                             .or_else(|| json_response.get("user_id").and_then(|v| v.as_str()));
 
                         if let Some(user_id_str) = user_id_str {
                             match Uuid::parse_str(user_id_str) {
                                 Ok(user_id) => Ok(user_id),
-                                Err(e) => Err(format!("Invalid UUID in response: {}", e))
+                                Err(e) => Err(format!("Invalid UUID in response: {}", e)),
                             }
                         } else {
-                            Err(format!("No user_id in response. Response: {}", json_response))
+                            Err(format!(
+                                "No user_id in response. Response: {}",
+                                json_response
+                            ))
                         }
                     }
-                    Err(e) => Err(format!("Failed to parse response JSON: {}", e))
+                    Err(e) => Err(format!("Failed to parse response JSON: {}", e)),
                 }
             } else {
                 let error_text = response.text().await.unwrap_or_default();
                 Err(format!("Erebus API error: {}", error_text))
             }
         }
-        Err(e) => Err(format!("Failed to call Erebus API: {}", e))
+        Err(e) => Err(format!("Failed to call Erebus API: {}", e)),
     }
 }
-
 
 /// Register user endpoint - called when wallet connects
 pub async fn register_user(
     headers: HeaderMap,
-    Json(request): Json<Value>
+    Json(request): Json<Value>,
 ) -> Result<ResponseJson<Value>, (StatusCode, ResponseJson<AgentErrorResponse>)> {
     info!("👤 User registration request received");
-    info!("📝 Request payload: {}", serde_json::to_string_pretty(&request).unwrap_or_default());
+    info!(
+        "📝 Request payload: {}",
+        serde_json::to_string_pretty(&request).unwrap_or_default()
+    );
 
     // Extract wallet information from headers or request body
-    let wallet_address = headers.get("x-wallet-address")
+    let wallet_address = headers
+        .get("x-wallet-address")
         .and_then(|h| h.to_str().ok())
         .or_else(|| request["source_identifier"].as_str());
-    
-    let wallet_chain = headers.get("x-wallet-chain")
+
+    let wallet_chain = headers
+        .get("x-wallet-chain")
         .and_then(|h| h.to_str().ok())
         .or_else(|| request["chain"].as_str())
         .unwrap_or("unknown");
 
     if let Some(wallet_address) = wallet_address {
-        info!("🔍 Registering user with wallet: {} on chain: {}", wallet_address, wallet_chain);
-        
+        info!(
+            "🔍 Registering user with wallet: {} on chain: {}",
+            wallet_address, wallet_chain
+        );
+
         // Extract source_type from request
-        let source_type = request["source_type"].as_object().map(|obj| serde_json::Value::Object(obj.clone()));
-        
+        let source_type = request["source_type"]
+            .as_object()
+            .map(|obj| serde_json::Value::Object(obj.clone()));
+
         match call_erebus_user_registration_api(wallet_address, wallet_chain, source_type).await {
             Ok(user_id) => {
-                info!("✅ User registered successfully via Erebus API: {}", user_id);
+                info!(
+                    "✅ User registered successfully via Erebus API: {}",
+                    user_id
+                );
 
                 // Note: User sync to Agents database is now handled automatically by Erebus
                 // via Kafka events and database triggers - no manual sync needed
@@ -162,7 +198,10 @@ pub async fn register_user(
                     message: format!("Failed to register user via Erebus API: {}", e),
                     agent_available: true,
                 };
-                Err((StatusCode::INTERNAL_SERVER_ERROR, ResponseJson(error_response)))
+                Err((
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    ResponseJson(error_response),
+                ))
             }
         }
     } else {
@@ -180,10 +219,10 @@ pub async fn register_user(
 /// Health check for agent routing subsystem
 pub async fn agent_health() -> ResponseJson<Value> {
     info!("🏥 Agent routing health check requested");
-    
+
     let hecate_proxy = get_hecate_proxy();
     let hecate_healthy = hecate_proxy.health_check().await;
-    
+
     let health_data = serde_json::json!({
         "status": if hecate_healthy { "healthy" } else { "degraded" },
         "service": "erebus_agent_routing",
@@ -196,56 +235,81 @@ pub async fn agent_health() -> ResponseJson<Value> {
             }
         }
     });
-    
-    info!("📊 Agent health response: {}", serde_json::to_string_pretty(&health_data).unwrap_or_default());
+
+    info!(
+        "📊 Agent health response: {}",
+        serde_json::to_string_pretty(&health_data).unwrap_or_default()
+    );
     ResponseJson(health_data)
 }
 
 /// Proxy chat request to Hecate agent
-pub async fn hecate_chat(Json(request): Json<AgentRequest>) -> Result<ResponseJson<AgentResponse>, (StatusCode, ResponseJson<AgentErrorResponse>)> {
+pub async fn hecate_chat(
+    Json(request): Json<AgentRequest>,
+) -> Result<ResponseJson<AgentResponse>, (StatusCode, ResponseJson<AgentErrorResponse>)> {
     info!("💬 Hecate chat request received");
-    info!("📝 Request payload: {}", serde_json::to_string_pretty(&request).unwrap_or_default());
-    
+    info!(
+        "📝 Request payload: {}",
+        serde_json::to_string_pretty(&request).unwrap_or_default()
+    );
+
     let proxy = get_hecate_proxy();
-    
+
     match proxy.proxy_chat(request).await {
         Ok(response) => {
             info!("✅ Hecate chat response successful");
-            info!("📤 Response payload: {}", serde_json::to_string_pretty(&response).unwrap_or_default());
+            info!(
+                "📤 Response payload: {}",
+                serde_json::to_string_pretty(&response).unwrap_or_default()
+            );
             Ok(ResponseJson(response))
         }
         Err(error) => {
             error!("❌ Hecate chat request failed");
-            error!("📤 Error response: {}", serde_json::to_string_pretty(&error).unwrap_or_default());
-            
+            error!(
+                "📤 Error response: {}",
+                serde_json::to_string_pretty(&error).unwrap_or_default()
+            );
+
             let status_code = match error.code.as_str() {
                 "AGENT_UNAVAILABLE" => StatusCode::SERVICE_UNAVAILABLE,
                 "AGENT_HTTP_ERROR" => StatusCode::BAD_GATEWAY,
                 "AGENT_PARSE_ERROR" => StatusCode::BAD_GATEWAY,
                 _ => StatusCode::INTERNAL_SERVER_ERROR,
             };
-            
+
             Err((status_code, ResponseJson(error)))
         }
     }
 }
 
 /// Proxy chat request to Siren agent
-pub async fn siren_chat(Json(request): Json<AgentRequest>) -> Result<ResponseJson<AgentResponse>, (StatusCode, ResponseJson<AgentErrorResponse>)> {
+pub async fn siren_chat(
+    Json(request): Json<AgentRequest>,
+) -> Result<ResponseJson<AgentResponse>, (StatusCode, ResponseJson<AgentErrorResponse>)> {
     info!("🎭 Siren chat request received");
-    info!("📝 Request payload: {}", serde_json::to_string_pretty(&request).unwrap_or_default());
+    info!(
+        "📝 Request payload: {}",
+        serde_json::to_string_pretty(&request).unwrap_or_default()
+    );
 
     let proxy = get_siren_proxy();
 
     match proxy.proxy_siren_chat(request).await {
         Ok(response) => {
             info!("✅ Siren chat response successful");
-            info!("📤 Response payload: {}", serde_json::to_string_pretty(&response).unwrap_or_default());
+            info!(
+                "📤 Response payload: {}",
+                serde_json::to_string_pretty(&response).unwrap_or_default()
+            );
             Ok(ResponseJson(response))
         }
         Err(error) => {
             error!("❌ Siren chat request failed");
-            error!("📤 Error response: {}", serde_json::to_string_pretty(&error).unwrap_or_default());
+            error!(
+                "📤 Error response: {}",
+                serde_json::to_string_pretty(&error).unwrap_or_default()
+            );
 
             let status_code = match error.code.as_str() {
                 "AGENT_UNAVAILABLE" => StatusCode::SERVICE_UNAVAILABLE,
@@ -260,13 +324,18 @@ pub async fn siren_chat(Json(request): Json<AgentRequest>) -> Result<ResponseJso
 }
 
 /// Set Siren model selection
-pub async fn siren_set_model(Json(request): Json<Value>) -> Result<ResponseJson<Value>, (StatusCode, ResponseJson<AgentErrorResponse>)> {
+pub async fn siren_set_model(
+    Json(request): Json<Value>,
+) -> Result<ResponseJson<Value>, (StatusCode, ResponseJson<AgentErrorResponse>)> {
     info!("🎯 Siren set model request received");
-    info!("📝 Request payload: {}", serde_json::to_string_pretty(&request).unwrap_or_default());
+    info!(
+        "📝 Request payload: {}",
+        serde_json::to_string_pretty(&request).unwrap_or_default()
+    );
 
     let client = reqwest::Client::new();
-    let siren_url = std::env::var("AGENTS_SERVICE_URL")
-        .unwrap_or_else(|_| "http://localhost:9003".to_string());
+    let siren_url =
+        std::env::var("AGENTS_SERVICE_URL").unwrap_or_else(|_| "http://localhost:9003".to_string());
     let url = format!("{}/siren/set-model", siren_url);
 
     info!("🔗 Proxying set-model request to Siren: {}", url);
@@ -283,7 +352,10 @@ pub async fn siren_set_model(Json(request): Json<Value>) -> Result<ResponseJson<
                 match response.json::<serde_json::Value>().await {
                     Ok(json_response) => {
                         info!("✅ Siren model set successfully");
-                        info!("📤 Response payload: {}", serde_json::to_string_pretty(&json_response).unwrap_or_default());
+                        info!(
+                            "📤 Response payload: {}",
+                            serde_json::to_string_pretty(&json_response).unwrap_or_default()
+                        );
                         Ok(ResponseJson(json_response))
                     }
                     Err(e) => {
@@ -301,8 +373,14 @@ pub async fn siren_set_model(Json(request): Json<Value>) -> Result<ResponseJson<
                 }
             } else {
                 let status = response.status();
-                let error_text = response.text().await.unwrap_or_else(|_| "Unknown error".to_string());
-                error!("❌ Siren set-model request failed with status {}: {}", status, error_text);
+                let error_text = response
+                    .text()
+                    .await
+                    .unwrap_or_else(|_| "Unknown error".to_string());
+                error!(
+                    "❌ Siren set-model request failed with status {}: {}",
+                    status, error_text
+                );
                 Err((
                     StatusCode::BAD_GATEWAY,
                     ResponseJson(AgentErrorResponse {
@@ -330,7 +408,8 @@ pub async fn siren_set_model(Json(request): Json<Value>) -> Result<ResponseJson<
 }
 
 /// Get Hecate agent status
-pub async fn hecate_status() -> Result<ResponseJson<AgentStatus>, (StatusCode, ResponseJson<AgentErrorResponse>)> {
+pub async fn hecate_status(
+) -> Result<ResponseJson<AgentStatus>, (StatusCode, ResponseJson<AgentErrorResponse>)> {
     info!("📊 Hecate status request received");
 
     let proxy = get_hecate_proxy();
@@ -338,12 +417,18 @@ pub async fn hecate_status() -> Result<ResponseJson<AgentStatus>, (StatusCode, R
     match proxy.get_agent_status().await {
         Ok(status) => {
             info!("✅ Hecate status retrieved successfully");
-            info!("📤 Status payload: {}", serde_json::to_string_pretty(&status).unwrap_or_default());
+            info!(
+                "📤 Status payload: {}",
+                serde_json::to_string_pretty(&status).unwrap_or_default()
+            );
             Ok(ResponseJson(status))
         }
         Err(error) => {
             error!("❌ Hecate status request failed");
-            error!("📤 Error response: {}", serde_json::to_string_pretty(&error).unwrap_or_default());
+            error!(
+                "📤 Error response: {}",
+                serde_json::to_string_pretty(&error).unwrap_or_default()
+            );
 
             let status_code = match error.code.as_str() {
                 "STATUS_UNAVAILABLE" => StatusCode::SERVICE_UNAVAILABLE,
@@ -358,7 +443,8 @@ pub async fn hecate_status() -> Result<ResponseJson<AgentStatus>, (StatusCode, R
 }
 
 /// Get Siren agent status
-pub async fn siren_status() -> Result<ResponseJson<AgentStatus>, (StatusCode, ResponseJson<AgentErrorResponse>)> {
+pub async fn siren_status(
+) -> Result<ResponseJson<AgentStatus>, (StatusCode, ResponseJson<AgentErrorResponse>)> {
     info!("📊 Siren status request received");
 
     let proxy = get_siren_proxy();
@@ -366,12 +452,18 @@ pub async fn siren_status() -> Result<ResponseJson<AgentStatus>, (StatusCode, Re
     match proxy.get_siren_status().await {
         Ok(status) => {
             info!("✅ Siren status retrieved successfully");
-            info!("📤 Status payload: {}", serde_json::to_string_pretty(&status).unwrap_or_default());
+            info!(
+                "📤 Status payload: {}",
+                serde_json::to_string_pretty(&status).unwrap_or_default()
+            );
             Ok(ResponseJson(status))
         }
         Err(error) => {
             error!("❌ Siren status request failed");
-            error!("📤 Error response: {}", serde_json::to_string_pretty(&error).unwrap_or_default());
+            error!(
+                "📤 Error response: {}",
+                serde_json::to_string_pretty(&error).unwrap_or_default()
+            );
 
             let status_code = match error.code.as_str() {
                 "STATUS_UNAVAILABLE" => StatusCode::SERVICE_UNAVAILABLE,
@@ -388,11 +480,14 @@ pub async fn siren_status() -> Result<ResponseJson<AgentStatus>, (StatusCode, Re
 /// Generic agent proxy for future agents
 pub async fn agent_chat(
     Path(agent_name): Path<String>,
-    Json(request): Json<AgentRequest>
+    Json(request): Json<AgentRequest>,
 ) -> Result<ResponseJson<AgentResponse>, (StatusCode, ResponseJson<AgentErrorResponse>)> {
     info!("🤖 Generic agent chat request for: {}", agent_name);
-    info!("📝 Request payload: {}", serde_json::to_string_pretty(&request).unwrap_or_default());
-    
+    info!(
+        "📝 Request payload: {}",
+        serde_json::to_string_pretty(&request).unwrap_or_default()
+    );
+
     match agent_name.as_str() {
         "hecate" => hecate_chat(Json(request)).await,
         "siren" => siren_chat(Json(request)).await,
@@ -403,10 +498,13 @@ pub async fn agent_chat(
                 message: format!("Agent '{}' is not supported", agent_name),
                 agent_available: false,
             };
-            
+
             warn!("⚠️ Unsupported agent requested: {}", agent_name);
-            error!("📤 Error response: {}", serde_json::to_string_pretty(&error).unwrap_or_default());
-            
+            error!(
+                "📤 Error response: {}",
+                serde_json::to_string_pretty(&error).unwrap_or_default()
+            );
+
             Err((StatusCode::NOT_FOUND, ResponseJson(error)))
         }
     }
@@ -414,7 +512,7 @@ pub async fn agent_chat(
 
 /// Generic agent status for future agents
 pub async fn agent_status(
-    Path(agent_name): Path<String>
+    Path(agent_name): Path<String>,
 ) -> Result<ResponseJson<AgentStatus>, (StatusCode, ResponseJson<AgentErrorResponse>)> {
     info!("📊 Generic agent status request for: {}", agent_name);
 
@@ -430,7 +528,10 @@ pub async fn agent_status(
             };
 
             warn!("⚠️ Unsupported agent status requested: {}", agent_name);
-            error!("📤 Error response: {}", serde_json::to_string_pretty(&error).unwrap_or_default());
+            error!(
+                "📤 Error response: {}",
+                serde_json::to_string_pretty(&error).unwrap_or_default()
+            );
 
             Err((StatusCode::NOT_FOUND, ResponseJson(error)))
         }
@@ -438,177 +539,237 @@ pub async fn agent_status(
 }
 
 /// Set Hecate agent personality
-pub async fn hecate_personality(Json(request): Json<Value>) -> Result<ResponseJson<Value>, (StatusCode, ResponseJson<AgentErrorResponse>)> {
+pub async fn hecate_personality(
+    Json(request): Json<Value>,
+) -> Result<ResponseJson<Value>, (StatusCode, ResponseJson<AgentErrorResponse>)> {
     info!("⚙️ Hecate personality request received");
-    info!("📝 Request payload: {}", serde_json::to_string_pretty(&request).unwrap_or_default());
-    
+    info!(
+        "📝 Request payload: {}",
+        serde_json::to_string_pretty(&request).unwrap_or_default()
+    );
+
     let proxy = get_hecate_proxy();
-    
-    match proxy.proxy_request("personality", "POST", Some(request), None).await {
+
+    match proxy
+        .proxy_request("personality", "POST", Some(request), None)
+        .await
+    {
         Ok(response) => {
             info!("✅ Hecate personality set successfully");
-            info!("📤 Response payload: {}", serde_json::to_string_pretty(&response).unwrap_or_default());
+            info!(
+                "📤 Response payload: {}",
+                serde_json::to_string_pretty(&response).unwrap_or_default()
+            );
             Ok(ResponseJson(response))
         }
         Err(error) => {
             error!("❌ Hecate personality request failed");
-            error!("📤 Error response: {}", serde_json::to_string_pretty(&error).unwrap_or_default());
-            
+            error!(
+                "📤 Error response: {}",
+                serde_json::to_string_pretty(&error).unwrap_or_default()
+            );
+
             let status_code = match error.code.as_str() {
                 "AGENT_UNAVAILABLE" => StatusCode::SERVICE_UNAVAILABLE,
                 "AGENT_HTTP_ERROR" => StatusCode::BAD_GATEWAY,
                 "AGENT_PARSE_ERROR" => StatusCode::BAD_GATEWAY,
                 _ => StatusCode::INTERNAL_SERVER_ERROR,
             };
-            
+
             Err((status_code, ResponseJson(error)))
         }
     }
 }
 
 /// Clear Hecate conversation history
-pub async fn hecate_clear() -> Result<ResponseJson<Value>, (StatusCode, ResponseJson<AgentErrorResponse>)> {
+pub async fn hecate_clear(
+) -> Result<ResponseJson<Value>, (StatusCode, ResponseJson<AgentErrorResponse>)> {
     info!("🧹 Hecate clear conversation request received");
-    
+
     let proxy = get_hecate_proxy();
-    
+
     match proxy.proxy_request("clear", "POST", None, None).await {
         Ok(response) => {
             info!("✅ Hecate conversation cleared successfully");
-            info!("📤 Response payload: {}", serde_json::to_string_pretty(&response).unwrap_or_default());
+            info!(
+                "📤 Response payload: {}",
+                serde_json::to_string_pretty(&response).unwrap_or_default()
+            );
             Ok(ResponseJson(response))
         }
         Err(error) => {
             error!("❌ Hecate clear conversation request failed");
-            error!("📤 Error response: {}", serde_json::to_string_pretty(&error).unwrap_or_default());
-            
+            error!(
+                "📤 Error response: {}",
+                serde_json::to_string_pretty(&error).unwrap_or_default()
+            );
+
             let status_code = match error.code.as_str() {
                 "AGENT_UNAVAILABLE" => StatusCode::SERVICE_UNAVAILABLE,
                 "AGENT_HTTP_ERROR" => StatusCode::BAD_GATEWAY,
                 "AGENT_PARSE_ERROR" => StatusCode::BAD_GATEWAY,
                 _ => StatusCode::INTERNAL_SERVER_ERROR,
             };
-            
+
             Err((status_code, ResponseJson(error)))
         }
     }
 }
 
 /// Get Hecate conversation history
-pub async fn hecate_history() -> Result<ResponseJson<Value>, (StatusCode, ResponseJson<AgentErrorResponse>)> {
+pub async fn hecate_history(
+) -> Result<ResponseJson<Value>, (StatusCode, ResponseJson<AgentErrorResponse>)> {
     info!("📜 Hecate history request received");
-    
+
     let proxy = get_hecate_proxy();
-    
+
     match proxy.proxy_request("history", "GET", None, None).await {
         Ok(response) => {
             info!("✅ Hecate history retrieved successfully");
-            info!("📤 Response payload: {}", serde_json::to_string_pretty(&response).unwrap_or_default());
+            info!(
+                "📤 Response payload: {}",
+                serde_json::to_string_pretty(&response).unwrap_or_default()
+            );
             Ok(ResponseJson(response))
         }
         Err(error) => {
             error!("❌ Hecate history request failed");
-            error!("📤 Error response: {}", serde_json::to_string_pretty(&error).unwrap_or_default());
-            
+            error!(
+                "📤 Error response: {}",
+                serde_json::to_string_pretty(&error).unwrap_or_default()
+            );
+
             let status_code = match error.code.as_str() {
                 "AGENT_UNAVAILABLE" => StatusCode::SERVICE_UNAVAILABLE,
                 "AGENT_HTTP_ERROR" => StatusCode::BAD_GATEWAY,
                 "AGENT_PARSE_ERROR" => StatusCode::BAD_GATEWAY,
                 _ => StatusCode::INTERNAL_SERVER_ERROR,
             };
-            
+
             Err((status_code, ResponseJson(error)))
         }
     }
 }
 
 /// Get available models from Hecate agent
-pub async fn hecate_available_models() -> Result<ResponseJson<Value>, (StatusCode, ResponseJson<AgentErrorResponse>)> {
+pub async fn hecate_available_models(
+) -> Result<ResponseJson<Value>, (StatusCode, ResponseJson<AgentErrorResponse>)> {
     info!("🧠 Hecate available models request received");
-    
+
     let proxy = get_hecate_proxy();
-    
-    match proxy.proxy_request("available-models", "GET", None, None).await {
+
+    match proxy
+        .proxy_request("available-models", "GET", None, None)
+        .await
+    {
         Ok(response) => {
             info!("✅ Hecate available models retrieved successfully");
-            info!("📤 Response payload: {}", serde_json::to_string_pretty(&response).unwrap_or_default());
+            info!(
+                "📤 Response payload: {}",
+                serde_json::to_string_pretty(&response).unwrap_or_default()
+            );
             Ok(ResponseJson(response))
         }
         Err(error) => {
             error!("❌ Hecate available models request failed");
-            error!("📤 Error response: {}", serde_json::to_string_pretty(&error).unwrap_or_default());
-            
+            error!(
+                "📤 Error response: {}",
+                serde_json::to_string_pretty(&error).unwrap_or_default()
+            );
+
             let status_code = match error.code.as_str() {
                 "AGENT_UNAVAILABLE" => StatusCode::SERVICE_UNAVAILABLE,
                 "AGENT_HTTP_ERROR" => StatusCode::BAD_GATEWAY,
                 "AGENT_PARSE_ERROR" => StatusCode::BAD_GATEWAY,
                 _ => StatusCode::INTERNAL_SERVER_ERROR,
             };
-            
+
             Err((status_code, ResponseJson(error)))
         }
     }
 }
 
 /// Set Hecate model selection
-pub async fn hecate_set_model(Json(request): Json<Value>) -> Result<ResponseJson<Value>, (StatusCode, ResponseJson<AgentErrorResponse>)> {
+pub async fn hecate_set_model(
+    Json(request): Json<Value>,
+) -> Result<ResponseJson<Value>, (StatusCode, ResponseJson<AgentErrorResponse>)> {
     info!("🎯 Hecate set model request received");
-    info!("📝 Request payload: {}", serde_json::to_string_pretty(&request).unwrap_or_default());
-    
+    info!(
+        "📝 Request payload: {}",
+        serde_json::to_string_pretty(&request).unwrap_or_default()
+    );
+
     let proxy = get_hecate_proxy();
-    
-    match proxy.proxy_request("set-model", "POST", Some(request), None).await {
+
+    match proxy
+        .proxy_request("set-model", "POST", Some(request), None)
+        .await
+    {
         Ok(response) => {
             info!("✅ Hecate model set successfully");
-            info!("📤 Response payload: {}", serde_json::to_string_pretty(&response).unwrap_or_default());
+            info!(
+                "📤 Response payload: {}",
+                serde_json::to_string_pretty(&response).unwrap_or_default()
+            );
             Ok(ResponseJson(response))
         }
         Err(error) => {
             error!("❌ Hecate set model request failed");
-            error!("📤 Error response: {}", serde_json::to_string_pretty(&error).unwrap_or_default());
-            
+            error!(
+                "📤 Error response: {}",
+                serde_json::to_string_pretty(&error).unwrap_or_default()
+            );
+
             let status_code = match error.code.as_str() {
                 "AGENT_UNAVAILABLE" => StatusCode::SERVICE_UNAVAILABLE,
                 "AGENT_HTTP_ERROR" => StatusCode::BAD_GATEWAY,
                 "AGENT_PARSE_ERROR" => StatusCode::BAD_GATEWAY,
                 _ => StatusCode::INTERNAL_SERVER_ERROR,
             };
-            
+
             Err((status_code, ResponseJson(error)))
         }
     }
 }
 
 /// Get detailed model information from Hecate agent
-pub async fn hecate_model_info() -> Result<ResponseJson<Value>, (StatusCode, ResponseJson<AgentErrorResponse>)> {
+pub async fn hecate_model_info(
+) -> Result<ResponseJson<Value>, (StatusCode, ResponseJson<AgentErrorResponse>)> {
     info!("📋 Hecate model info request received");
-    
+
     let proxy = get_hecate_proxy();
-    
+
     match proxy.proxy_request("model-info", "GET", None, None).await {
         Ok(response) => {
             info!("✅ Hecate model info retrieved successfully");
-            info!("📤 Response payload: {}", serde_json::to_string_pretty(&response).unwrap_or_default());
+            info!(
+                "📤 Response payload: {}",
+                serde_json::to_string_pretty(&response).unwrap_or_default()
+            );
             Ok(ResponseJson(response))
         }
         Err(error) => {
             error!("❌ Hecate model info request failed");
-            error!("📤 Error response: {}", serde_json::to_string_pretty(&error).unwrap_or_default());
-            
+            error!(
+                "📤 Error response: {}",
+                serde_json::to_string_pretty(&error).unwrap_or_default()
+            );
+
             let status_code = match error.code.as_str() {
                 "AGENT_UNAVAILABLE" => StatusCode::SERVICE_UNAVAILABLE,
                 "AGENT_HTTP_ERROR" => StatusCode::BAD_GATEWAY,
                 "AGENT_PARSE_ERROR" => StatusCode::BAD_GATEWAY,
                 _ => StatusCode::INTERNAL_SERVER_ERROR,
             };
-            
+
             Err((status_code, ResponseJson(error)))
         }
     }
 }
 
 /// Get MCP tools available to Hecate agent
-pub async fn hecate_tools() -> Result<ResponseJson<Value>, (StatusCode, ResponseJson<AgentErrorResponse>)> {
+pub async fn hecate_tools(
+) -> Result<ResponseJson<Value>, (StatusCode, ResponseJson<AgentErrorResponse>)> {
     info!("🔧 Hecate tools request received");
 
     let proxy = get_hecate_proxy();
@@ -616,12 +777,18 @@ pub async fn hecate_tools() -> Result<ResponseJson<Value>, (StatusCode, Response
     match proxy.proxy_request("tools", "GET", None, None).await {
         Ok(response) => {
             info!("✅ Hecate tools retrieved successfully");
-            info!("📤 Response payload: {}", serde_json::to_string_pretty(&response).unwrap_or_default());
+            info!(
+                "📤 Response payload: {}",
+                serde_json::to_string_pretty(&response).unwrap_or_default()
+            );
             Ok(ResponseJson(response))
         }
         Err(error) => {
             error!("❌ Hecate tools request failed");
-            error!("📤 Error response: {}", serde_json::to_string_pretty(&error).unwrap_or_default());
+            error!(
+                "📤 Error response: {}",
+                serde_json::to_string_pretty(&error).unwrap_or_default()
+            );
 
             let status_code = match error.code.as_str() {
                 "AGENT_UNAVAILABLE" => StatusCode::SERVICE_UNAVAILABLE,
@@ -636,13 +803,16 @@ pub async fn hecate_tools() -> Result<ResponseJson<Value>, (StatusCode, Response
 }
 
 /// Search models via Hecate agent
-pub async fn hecate_search_models(Query(params): Query<HashMap<String, String>>) -> Result<ResponseJson<Value>, (StatusCode, ResponseJson<AgentErrorResponse>)> {
+pub async fn hecate_search_models(
+    Query(params): Query<HashMap<String, String>>,
+) -> Result<ResponseJson<Value>, (StatusCode, ResponseJson<AgentErrorResponse>)> {
     info!("🔍 Hecate search models request received");
     info!("📝 Query parameters: {:?}", params);
 
     let proxy = get_hecate_proxy();
 
-    let query_string = params.iter()
+    let query_string = params
+        .iter()
         .map(|(k, v)| format!("{}={}", k, v))
         .collect::<Vec<_>>()
         .join("&");
@@ -656,12 +826,18 @@ pub async fn hecate_search_models(Query(params): Query<HashMap<String, String>>)
     match proxy.proxy_request(&endpoint, "GET", None, None).await {
         Ok(response) => {
             info!("✅ Hecate search models retrieved successfully");
-            info!("📤 Response payload: {}", serde_json::to_string_pretty(&response).unwrap_or_default());
+            info!(
+                "📤 Response payload: {}",
+                serde_json::to_string_pretty(&response).unwrap_or_default()
+            );
             Ok(ResponseJson(response))
         }
         Err(error) => {
             error!("❌ Hecate search models request failed");
-            error!("📤 Error response: {}", serde_json::to_string_pretty(&error).unwrap_or_default());
+            error!(
+                "📤 Error response: {}",
+                serde_json::to_string_pretty(&error).unwrap_or_default()
+            );
 
             let status_code = match error.code.as_str() {
                 "AGENT_UNAVAILABLE" => StatusCode::SERVICE_UNAVAILABLE,
@@ -682,10 +858,13 @@ pub async fn hecate_search_models(Query(params): Query<HashMap<String, String>>)
 /// Create a new task (user-initiated or API/MCP-triggered)
 pub async fn create_task(
     headers: HeaderMap,
-    Json(request): Json<Value>
+    Json(request): Json<Value>,
 ) -> Result<ResponseJson<Value>, (StatusCode, ResponseJson<AgentErrorResponse>)> {
     info!("📋 Task creation request received");
-    info!("📝 Request payload: {}", serde_json::to_string_pretty(&request).unwrap_or_default());
+    info!(
+        "📝 Request payload: {}",
+        serde_json::to_string_pretty(&request).unwrap_or_default()
+    );
 
     // Extract wallet information and create user reference if needed
     let user_id = extract_wallet_and_create_user(&headers).await;
@@ -697,15 +876,24 @@ pub async fn create_task(
 
     let proxy = get_hecate_proxy();
 
-    match proxy.proxy_request("tasks", "POST", Some(request), Some(&headers)).await {
+    match proxy
+        .proxy_request("tasks", "POST", Some(request), Some(&headers))
+        .await
+    {
         Ok(response) => {
             info!("✅ Task created successfully");
-            info!("📤 Response payload: {}", serde_json::to_string_pretty(&response).unwrap_or_default());
+            info!(
+                "📤 Response payload: {}",
+                serde_json::to_string_pretty(&response).unwrap_or_default()
+            );
             Ok(ResponseJson(response))
         }
         Err(error) => {
             error!("❌ Task creation failed");
-            error!("📤 Error response: {}", serde_json::to_string_pretty(&error).unwrap_or_default());
+            error!(
+                "📤 Error response: {}",
+                serde_json::to_string_pretty(&error).unwrap_or_default()
+            );
 
             let status_code = match error.code.as_str() {
                 "AGENT_UNAVAILABLE" => StatusCode::SERVICE_UNAVAILABLE,
@@ -722,14 +910,15 @@ pub async fn create_task(
 /// Get all tasks with optional filtering
 pub async fn get_tasks(
     headers: HeaderMap,
-    Query(params): Query<HashMap<String, String>>
+    Query(params): Query<HashMap<String, String>>,
 ) -> Result<ResponseJson<Value>, (StatusCode, ResponseJson<AgentErrorResponse>)> {
     info!("📋 Get tasks request received");
     info!("📝 Query parameters: {:?}", params);
 
     let proxy = get_hecate_proxy();
 
-    let query_string = params.iter()
+    let query_string = params
+        .iter()
         .map(|(k, v)| format!("{}={}", k, v))
         .collect::<Vec<_>>()
         .join("&");
@@ -740,14 +929,20 @@ pub async fn get_tasks(
         format!("tasks?{}", query_string)
     };
 
-    match proxy.proxy_request(&endpoint, "GET", None, Some(&headers)).await {
+    match proxy
+        .proxy_request(&endpoint, "GET", None, Some(&headers))
+        .await
+    {
         Ok(response) => {
             info!("✅ Tasks retrieved successfully");
             Ok(ResponseJson(response))
         }
         Err(error) => {
             error!("❌ Get tasks request failed");
-            error!("📤 Error response: {}", serde_json::to_string_pretty(&error).unwrap_or_default());
+            error!(
+                "📤 Error response: {}",
+                serde_json::to_string_pretty(&error).unwrap_or_default()
+            );
 
             let status_code = match error.code.as_str() {
                 "AGENT_UNAVAILABLE" => StatusCode::SERVICE_UNAVAILABLE,
@@ -762,7 +957,9 @@ pub async fn get_tasks(
 }
 
 /// Get a specific task by ID
-pub async fn get_task(Path(task_id): Path<String>) -> Result<ResponseJson<Value>, (StatusCode, ResponseJson<AgentErrorResponse>)> {
+pub async fn get_task(
+    Path(task_id): Path<String>,
+) -> Result<ResponseJson<Value>, (StatusCode, ResponseJson<AgentErrorResponse>)> {
     info!("📋 Get task request received for ID: {}", task_id);
 
     let proxy = get_hecate_proxy();
@@ -775,7 +972,10 @@ pub async fn get_task(Path(task_id): Path<String>) -> Result<ResponseJson<Value>
         }
         Err(error) => {
             error!("❌ Get task request failed");
-            error!("📤 Error response: {}", serde_json::to_string_pretty(&error).unwrap_or_default());
+            error!(
+                "📤 Error response: {}",
+                serde_json::to_string_pretty(&error).unwrap_or_default()
+            );
 
             let status_code = match error.code.as_str() {
                 "AGENT_UNAVAILABLE" => StatusCode::SERVICE_UNAVAILABLE,
@@ -790,22 +990,37 @@ pub async fn get_task(Path(task_id): Path<String>) -> Result<ResponseJson<Value>
 }
 
 /// Update a task
-pub async fn update_task(Path(task_id): Path<String>, Json(request): Json<Value>) -> Result<ResponseJson<Value>, (StatusCode, ResponseJson<AgentErrorResponse>)> {
+pub async fn update_task(
+    Path(task_id): Path<String>,
+    Json(request): Json<Value>,
+) -> Result<ResponseJson<Value>, (StatusCode, ResponseJson<AgentErrorResponse>)> {
     info!("📋 Task update request received for ID: {}", task_id);
-    info!("📝 Request payload: {}", serde_json::to_string_pretty(&request).unwrap_or_default());
+    info!(
+        "📝 Request payload: {}",
+        serde_json::to_string_pretty(&request).unwrap_or_default()
+    );
 
     let proxy = get_hecate_proxy();
     let endpoint = format!("tasks/{}", task_id);
 
-    match proxy.proxy_request(&endpoint, "PUT", Some(request), None).await {
+    match proxy
+        .proxy_request(&endpoint, "PUT", Some(request), None)
+        .await
+    {
         Ok(response) => {
             info!("✅ Task updated successfully");
-            info!("📤 Response payload: {}", serde_json::to_string_pretty(&response).unwrap_or_default());
+            info!(
+                "📤 Response payload: {}",
+                serde_json::to_string_pretty(&response).unwrap_or_default()
+            );
             Ok(ResponseJson(response))
         }
         Err(error) => {
             error!("❌ Task update failed");
-            error!("📤 Error response: {}", serde_json::to_string_pretty(&error).unwrap_or_default());
+            error!(
+                "📤 Error response: {}",
+                serde_json::to_string_pretty(&error).unwrap_or_default()
+            );
 
             let status_code = match error.code.as_str() {
                 "AGENT_UNAVAILABLE" => StatusCode::SERVICE_UNAVAILABLE,
@@ -820,7 +1035,9 @@ pub async fn update_task(Path(task_id): Path<String>, Json(request): Json<Value>
 }
 
 /// Delete a task
-pub async fn delete_task(Path(task_id): Path<String>) -> Result<ResponseJson<Value>, (StatusCode, ResponseJson<AgentErrorResponse>)> {
+pub async fn delete_task(
+    Path(task_id): Path<String>,
+) -> Result<ResponseJson<Value>, (StatusCode, ResponseJson<AgentErrorResponse>)> {
     info!("📋 Task deletion request received for ID: {}", task_id);
 
     let proxy = get_hecate_proxy();
@@ -833,7 +1050,10 @@ pub async fn delete_task(Path(task_id): Path<String>) -> Result<ResponseJson<Val
         }
         Err(error) => {
             error!("❌ Task deletion failed");
-            error!("📤 Error response: {}", serde_json::to_string_pretty(&error).unwrap_or_default());
+            error!(
+                "📤 Error response: {}",
+                serde_json::to_string_pretty(&error).unwrap_or_default()
+            );
 
             let status_code = match error.code.as_str() {
                 "AGENT_UNAVAILABLE" => StatusCode::SERVICE_UNAVAILABLE,
@@ -848,7 +1068,9 @@ pub async fn delete_task(Path(task_id): Path<String>) -> Result<ResponseJson<Val
 }
 
 /// Start a task
-pub async fn start_task(Path(task_id): Path<String>) -> Result<ResponseJson<Value>, (StatusCode, ResponseJson<AgentErrorResponse>)> {
+pub async fn start_task(
+    Path(task_id): Path<String>,
+) -> Result<ResponseJson<Value>, (StatusCode, ResponseJson<AgentErrorResponse>)> {
     info!("▶️ Task start request received for ID: {}", task_id);
 
     let proxy = get_hecate_proxy();
@@ -861,7 +1083,10 @@ pub async fn start_task(Path(task_id): Path<String>) -> Result<ResponseJson<Valu
         }
         Err(error) => {
             error!("❌ Task start failed");
-            error!("📤 Error response: {}", serde_json::to_string_pretty(&error).unwrap_or_default());
+            error!(
+                "📤 Error response: {}",
+                serde_json::to_string_pretty(&error).unwrap_or_default()
+            );
 
             let status_code = match error.code.as_str() {
                 "AGENT_UNAVAILABLE" => StatusCode::SERVICE_UNAVAILABLE,
@@ -876,7 +1101,9 @@ pub async fn start_task(Path(task_id): Path<String>) -> Result<ResponseJson<Valu
 }
 
 /// Pause a task
-pub async fn pause_task(Path(task_id): Path<String>) -> Result<ResponseJson<Value>, (StatusCode, ResponseJson<AgentErrorResponse>)> {
+pub async fn pause_task(
+    Path(task_id): Path<String>,
+) -> Result<ResponseJson<Value>, (StatusCode, ResponseJson<AgentErrorResponse>)> {
     info!("⏸️ Task pause request received for ID: {}", task_id);
 
     let proxy = get_hecate_proxy();
@@ -889,7 +1116,10 @@ pub async fn pause_task(Path(task_id): Path<String>) -> Result<ResponseJson<Valu
         }
         Err(error) => {
             error!("❌ Task pause failed");
-            error!("📤 Error response: {}", serde_json::to_string_pretty(&error).unwrap_or_default());
+            error!(
+                "📤 Error response: {}",
+                serde_json::to_string_pretty(&error).unwrap_or_default()
+            );
 
             let status_code = match error.code.as_str() {
                 "AGENT_UNAVAILABLE" => StatusCode::SERVICE_UNAVAILABLE,
@@ -904,7 +1134,9 @@ pub async fn pause_task(Path(task_id): Path<String>) -> Result<ResponseJson<Valu
 }
 
 /// Resume a task
-pub async fn resume_task(Path(task_id): Path<String>) -> Result<ResponseJson<Value>, (StatusCode, ResponseJson<AgentErrorResponse>)> {
+pub async fn resume_task(
+    Path(task_id): Path<String>,
+) -> Result<ResponseJson<Value>, (StatusCode, ResponseJson<AgentErrorResponse>)> {
     info!("▶️ Task resume request received for ID: {}", task_id);
 
     let proxy = get_hecate_proxy();
@@ -917,7 +1149,10 @@ pub async fn resume_task(Path(task_id): Path<String>) -> Result<ResponseJson<Val
         }
         Err(error) => {
             error!("❌ Task resume failed");
-            error!("📤 Error response: {}", serde_json::to_string_pretty(&error).unwrap_or_default());
+            error!(
+                "📤 Error response: {}",
+                serde_json::to_string_pretty(&error).unwrap_or_default()
+            );
 
             let status_code = match error.code.as_str() {
                 "AGENT_UNAVAILABLE" => StatusCode::SERVICE_UNAVAILABLE,
@@ -932,7 +1167,9 @@ pub async fn resume_task(Path(task_id): Path<String>) -> Result<ResponseJson<Val
 }
 
 /// Cancel a task
-pub async fn cancel_task(Path(task_id): Path<String>) -> Result<ResponseJson<Value>, (StatusCode, ResponseJson<AgentErrorResponse>)> {
+pub async fn cancel_task(
+    Path(task_id): Path<String>,
+) -> Result<ResponseJson<Value>, (StatusCode, ResponseJson<AgentErrorResponse>)> {
     info!("❌ Task cancel request received for ID: {}", task_id);
 
     let proxy = get_hecate_proxy();
@@ -945,7 +1182,10 @@ pub async fn cancel_task(Path(task_id): Path<String>) -> Result<ResponseJson<Val
         }
         Err(error) => {
             error!("❌ Task cancel failed");
-            error!("📤 Error response: {}", serde_json::to_string_pretty(&error).unwrap_or_default());
+            error!(
+                "📤 Error response: {}",
+                serde_json::to_string_pretty(&error).unwrap_or_default()
+            );
 
             let status_code = match error.code.as_str() {
                 "AGENT_UNAVAILABLE" => StatusCode::SERVICE_UNAVAILABLE,
@@ -960,7 +1200,9 @@ pub async fn cancel_task(Path(task_id): Path<String>) -> Result<ResponseJson<Val
 }
 
 /// Retry a failed task
-pub async fn retry_task(Path(task_id): Path<String>) -> Result<ResponseJson<Value>, (StatusCode, ResponseJson<AgentErrorResponse>)> {
+pub async fn retry_task(
+    Path(task_id): Path<String>,
+) -> Result<ResponseJson<Value>, (StatusCode, ResponseJson<AgentErrorResponse>)> {
     info!("🔄 Task retry request received for ID: {}", task_id);
 
     let proxy = get_hecate_proxy();
@@ -973,7 +1215,10 @@ pub async fn retry_task(Path(task_id): Path<String>) -> Result<ResponseJson<Valu
         }
         Err(error) => {
             error!("❌ Task retry failed");
-            error!("📤 Error response: {}", serde_json::to_string_pretty(&error).unwrap_or_default());
+            error!(
+                "📤 Error response: {}",
+                serde_json::to_string_pretty(&error).unwrap_or_default()
+            );
 
             let status_code = match error.code.as_str() {
                 "AGENT_UNAVAILABLE" => StatusCode::SERVICE_UNAVAILABLE,
@@ -988,7 +1233,8 @@ pub async fn retry_task(Path(task_id): Path<String>) -> Result<ResponseJson<Valu
 }
 
 /// Get task queues
-pub async fn get_task_queues() -> Result<ResponseJson<Value>, (StatusCode, ResponseJson<AgentErrorResponse>)> {
+pub async fn get_task_queues(
+) -> Result<ResponseJson<Value>, (StatusCode, ResponseJson<AgentErrorResponse>)> {
     info!("📋 Get task queues request received");
 
     let proxy = get_hecate_proxy();
@@ -1000,7 +1246,10 @@ pub async fn get_task_queues() -> Result<ResponseJson<Value>, (StatusCode, Respo
         }
         Err(error) => {
             error!("❌ Get task queues failed");
-            error!("📤 Error response: {}", serde_json::to_string_pretty(&error).unwrap_or_default());
+            error!(
+                "📤 Error response: {}",
+                serde_json::to_string_pretty(&error).unwrap_or_default()
+            );
 
             let status_code = match error.code.as_str() {
                 "AGENT_UNAVAILABLE" => StatusCode::SERVICE_UNAVAILABLE,
@@ -1015,19 +1264,26 @@ pub async fn get_task_queues() -> Result<ResponseJson<Value>, (StatusCode, Respo
 }
 
 /// Get task templates
-pub async fn get_task_templates() -> Result<ResponseJson<Value>, (StatusCode, ResponseJson<AgentErrorResponse>)> {
+pub async fn get_task_templates(
+) -> Result<ResponseJson<Value>, (StatusCode, ResponseJson<AgentErrorResponse>)> {
     info!("📋 Get task templates request received");
 
     let proxy = get_hecate_proxy();
 
-    match proxy.proxy_request("tasks/templates", "GET", None, None).await {
+    match proxy
+        .proxy_request("tasks/templates", "GET", None, None)
+        .await
+    {
         Ok(response) => {
             info!("✅ Task templates retrieved successfully");
             Ok(ResponseJson(response))
         }
         Err(error) => {
             error!("❌ Get task templates failed");
-            error!("📤 Error response: {}", serde_json::to_string_pretty(&error).unwrap_or_default());
+            error!(
+                "📤 Error response: {}",
+                serde_json::to_string_pretty(&error).unwrap_or_default()
+            );
 
             let status_code = match error.code.as_str() {
                 "AGENT_UNAVAILABLE" => StatusCode::SERVICE_UNAVAILABLE,
@@ -1042,20 +1298,31 @@ pub async fn get_task_templates() -> Result<ResponseJson<Value>, (StatusCode, Re
 }
 
 /// Create task from template
-pub async fn create_task_from_template(Json(request): Json<Value>) -> Result<ResponseJson<Value>, (StatusCode, ResponseJson<AgentErrorResponse>)> {
+pub async fn create_task_from_template(
+    Json(request): Json<Value>,
+) -> Result<ResponseJson<Value>, (StatusCode, ResponseJson<AgentErrorResponse>)> {
     info!("📋 Create task from template request received");
-    info!("📝 Request payload: {}", serde_json::to_string_pretty(&request).unwrap_or_default());
+    info!(
+        "📝 Request payload: {}",
+        serde_json::to_string_pretty(&request).unwrap_or_default()
+    );
 
     let proxy = get_hecate_proxy();
 
-    match proxy.proxy_request("tasks/from-template", "POST", Some(request), None).await {
+    match proxy
+        .proxy_request("tasks/from-template", "POST", Some(request), None)
+        .await
+    {
         Ok(response) => {
             info!("✅ Task created from template successfully");
             Ok(ResponseJson(response))
         }
         Err(error) => {
             error!("❌ Create task from template failed");
-            error!("📤 Error response: {}", serde_json::to_string_pretty(&error).unwrap_or_default());
+            error!(
+                "📤 Error response: {}",
+                serde_json::to_string_pretty(&error).unwrap_or_default()
+            );
 
             let status_code = match error.code.as_str() {
                 "AGENT_UNAVAILABLE" => StatusCode::SERVICE_UNAVAILABLE,
@@ -1070,13 +1337,16 @@ pub async fn create_task_from_template(Json(request): Json<Value>) -> Result<Res
 }
 
 /// Get task statistics
-pub async fn get_task_stats(Query(params): Query<HashMap<String, String>>) -> Result<ResponseJson<Value>, (StatusCode, ResponseJson<AgentErrorResponse>)> {
+pub async fn get_task_stats(
+    Query(params): Query<HashMap<String, String>>,
+) -> Result<ResponseJson<Value>, (StatusCode, ResponseJson<AgentErrorResponse>)> {
     info!("📊 Get task stats request received");
     info!("📝 Query parameters: {:?}", params);
 
     let proxy = get_hecate_proxy();
 
-    let query_string = params.iter()
+    let query_string = params
+        .iter()
         .map(|(k, v)| format!("{}={}", k, v))
         .collect::<Vec<_>>()
         .join("&");
@@ -1094,7 +1364,10 @@ pub async fn get_task_stats(Query(params): Query<HashMap<String, String>>) -> Re
         }
         Err(error) => {
             error!("❌ Get task stats failed");
-            error!("📤 Error response: {}", serde_json::to_string_pretty(&error).unwrap_or_default());
+            error!(
+                "📤 Error response: {}",
+                serde_json::to_string_pretty(&error).unwrap_or_default()
+            );
 
             let status_code = match error.code.as_str() {
                 "AGENT_UNAVAILABLE" => StatusCode::SERVICE_UNAVAILABLE,
@@ -1109,19 +1382,26 @@ pub async fn get_task_stats(Query(params): Query<HashMap<String, String>>) -> Re
 }
 
 /// Get task notifications
-pub async fn get_task_notifications() -> Result<ResponseJson<Value>, (StatusCode, ResponseJson<AgentErrorResponse>)> {
+pub async fn get_task_notifications(
+) -> Result<ResponseJson<Value>, (StatusCode, ResponseJson<AgentErrorResponse>)> {
     info!("🔔 Get task notifications request received");
 
     let proxy = get_hecate_proxy();
 
-    match proxy.proxy_request("tasks/notifications", "GET", None, None).await {
+    match proxy
+        .proxy_request("tasks/notifications", "GET", None, None)
+        .await
+    {
         Ok(response) => {
             info!("✅ Task notifications retrieved successfully");
             Ok(ResponseJson(response))
         }
         Err(error) => {
             error!("❌ Get task notifications failed");
-            error!("📤 Error response: {}", serde_json::to_string_pretty(&error).unwrap_or_default());
+            error!(
+                "📤 Error response: {}",
+                serde_json::to_string_pretty(&error).unwrap_or_default()
+            );
 
             let status_code = match error.code.as_str() {
                 "AGENT_UNAVAILABLE" => StatusCode::SERVICE_UNAVAILABLE,
@@ -1136,8 +1416,13 @@ pub async fn get_task_notifications() -> Result<ResponseJson<Value>, (StatusCode
 }
 
 /// Mark notification as read
-pub async fn mark_notification_read(Path(notification_id): Path<String>) -> Result<ResponseJson<Value>, (StatusCode, ResponseJson<AgentErrorResponse>)> {
-    info!("🔔 Mark notification read request received for ID: {}", notification_id);
+pub async fn mark_notification_read(
+    Path(notification_id): Path<String>,
+) -> Result<ResponseJson<Value>, (StatusCode, ResponseJson<AgentErrorResponse>)> {
+    info!(
+        "🔔 Mark notification read request received for ID: {}",
+        notification_id
+    );
 
     let proxy = get_hecate_proxy();
     let endpoint = format!("tasks/notifications/{}/read", notification_id);
@@ -1149,7 +1434,10 @@ pub async fn mark_notification_read(Path(notification_id): Path<String>) -> Resu
         }
         Err(error) => {
             error!("❌ Mark notification read failed");
-            error!("📤 Error response: {}", serde_json::to_string_pretty(&error).unwrap_or_default());
+            error!(
+                "📤 Error response: {}",
+                serde_json::to_string_pretty(&error).unwrap_or_default()
+            );
 
             let status_code = match error.code.as_str() {
                 "AGENT_UNAVAILABLE" => StatusCode::SERVICE_UNAVAILABLE,
@@ -1164,21 +1452,36 @@ pub async fn mark_notification_read(Path(notification_id): Path<String>) -> Resu
 }
 
 /// Handle notification action
-pub async fn handle_notification_action(Path(notification_id): Path<String>, Json(request): Json<Value>) -> Result<ResponseJson<Value>, (StatusCode, ResponseJson<AgentErrorResponse>)> {
-    info!("🔔 Handle notification action request received for ID: {}", notification_id);
-    info!("📝 Request payload: {}", serde_json::to_string_pretty(&request).unwrap_or_default());
+pub async fn handle_notification_action(
+    Path(notification_id): Path<String>,
+    Json(request): Json<Value>,
+) -> Result<ResponseJson<Value>, (StatusCode, ResponseJson<AgentErrorResponse>)> {
+    info!(
+        "🔔 Handle notification action request received for ID: {}",
+        notification_id
+    );
+    info!(
+        "📝 Request payload: {}",
+        serde_json::to_string_pretty(&request).unwrap_or_default()
+    );
 
     let proxy = get_hecate_proxy();
     let endpoint = format!("tasks/notifications/{}/action", notification_id);
 
-    match proxy.proxy_request(&endpoint, "POST", Some(request), None).await {
+    match proxy
+        .proxy_request(&endpoint, "POST", Some(request), None)
+        .await
+    {
         Ok(response) => {
             info!("✅ Notification action handled successfully");
             Ok(ResponseJson(response))
         }
         Err(error) => {
             error!("❌ Handle notification action failed");
-            error!("📤 Error response: {}", serde_json::to_string_pretty(&error).unwrap_or_default());
+            error!(
+                "📤 Error response: {}",
+                serde_json::to_string_pretty(&error).unwrap_or_default()
+            );
 
             let status_code = match error.code.as_str() {
                 "AGENT_UNAVAILABLE" => StatusCode::SERVICE_UNAVAILABLE,
@@ -1193,13 +1496,16 @@ pub async fn handle_notification_action(Path(notification_id): Path<String>, Jso
 }
 
 /// Get task events
-pub async fn get_task_events(Query(params): Query<HashMap<String, String>>) -> Result<ResponseJson<Value>, (StatusCode, ResponseJson<AgentErrorResponse>)> {
+pub async fn get_task_events(
+    Query(params): Query<HashMap<String, String>>,
+) -> Result<ResponseJson<Value>, (StatusCode, ResponseJson<AgentErrorResponse>)> {
     info!("⚡ Get task events request received");
     info!("📝 Query parameters: {:?}", params);
 
     let proxy = get_hecate_proxy();
 
-    let query_string = params.iter()
+    let query_string = params
+        .iter()
         .map(|(k, v)| format!("{}={}", k, v))
         .collect::<Vec<_>>()
         .join("&");
@@ -1217,7 +1523,10 @@ pub async fn get_task_events(Query(params): Query<HashMap<String, String>>) -> R
         }
         Err(error) => {
             error!("❌ Get task events failed");
-            error!("📤 Error response: {}", serde_json::to_string_pretty(&error).unwrap_or_default());
+            error!(
+                "📤 Error response: {}",
+                serde_json::to_string_pretty(&error).unwrap_or_default()
+            );
 
             let status_code = match error.code.as_str() {
                 "AGENT_UNAVAILABLE" => StatusCode::SERVICE_UNAVAILABLE,
@@ -1232,20 +1541,31 @@ pub async fn get_task_events(Query(params): Query<HashMap<String, String>>) -> R
 }
 
 /// Publish task event (for automation/MCP hooks)
-pub async fn publish_task_event(Json(request): Json<Value>) -> Result<ResponseJson<Value>, (StatusCode, ResponseJson<AgentErrorResponse>)> {
+pub async fn publish_task_event(
+    Json(request): Json<Value>,
+) -> Result<ResponseJson<Value>, (StatusCode, ResponseJson<AgentErrorResponse>)> {
     info!("⚡ Publish task event request received");
-    info!("📝 Request payload: {}", serde_json::to_string_pretty(&request).unwrap_or_default());
+    info!(
+        "📝 Request payload: {}",
+        serde_json::to_string_pretty(&request).unwrap_or_default()
+    );
 
     let proxy = get_hecate_proxy();
 
-    match proxy.proxy_request("tasks/events", "POST", Some(request), None).await {
+    match proxy
+        .proxy_request("tasks/events", "POST", Some(request), None)
+        .await
+    {
         Ok(response) => {
             info!("✅ Task event published successfully");
             Ok(ResponseJson(response))
         }
         Err(error) => {
             error!("❌ Publish task event failed");
-            error!("📤 Error response: {}", serde_json::to_string_pretty(&error).unwrap_or_default());
+            error!(
+                "📤 Error response: {}",
+                serde_json::to_string_pretty(&error).unwrap_or_default()
+            );
 
             let status_code = match error.code.as_str() {
                 "AGENT_UNAVAILABLE" => StatusCode::SERVICE_UNAVAILABLE,
@@ -1260,19 +1580,26 @@ pub async fn publish_task_event(Json(request): Json<Value>) -> Result<ResponseJs
 }
 
 /// Get Hecate motivation state
-pub async fn get_motivation_state() -> Result<ResponseJson<Value>, (StatusCode, ResponseJson<AgentErrorResponse>)> {
+pub async fn get_motivation_state(
+) -> Result<ResponseJson<Value>, (StatusCode, ResponseJson<AgentErrorResponse>)> {
     info!("🧠 Get motivation state request received");
 
     let proxy = get_hecate_proxy();
 
-    match proxy.proxy_request("tasks/motivation", "GET", None, None).await {
+    match proxy
+        .proxy_request("tasks/motivation", "GET", None, None)
+        .await
+    {
         Ok(response) => {
             info!("✅ Motivation state retrieved successfully");
             Ok(ResponseJson(response))
         }
         Err(error) => {
             error!("❌ Get motivation state failed");
-            error!("📤 Error response: {}", serde_json::to_string_pretty(&error).unwrap_or_default());
+            error!(
+                "📤 Error response: {}",
+                serde_json::to_string_pretty(&error).unwrap_or_default()
+            );
 
             let status_code = match error.code.as_str() {
                 "AGENT_UNAVAILABLE" => StatusCode::SERVICE_UNAVAILABLE,
@@ -1287,20 +1614,31 @@ pub async fn get_motivation_state() -> Result<ResponseJson<Value>, (StatusCode, 
 }
 
 /// Update Hecate motivation state
-pub async fn update_motivation_state(Json(request): Json<Value>) -> Result<ResponseJson<Value>, (StatusCode, ResponseJson<AgentErrorResponse>)> {
+pub async fn update_motivation_state(
+    Json(request): Json<Value>,
+) -> Result<ResponseJson<Value>, (StatusCode, ResponseJson<AgentErrorResponse>)> {
     info!("🧠 Update motivation state request received");
-    info!("📝 Request payload: {}", serde_json::to_string_pretty(&request).unwrap_or_default());
+    info!(
+        "📝 Request payload: {}",
+        serde_json::to_string_pretty(&request).unwrap_or_default()
+    );
 
     let proxy = get_hecate_proxy();
 
-    match proxy.proxy_request("tasks/motivation", "PUT", Some(request), None).await {
+    match proxy
+        .proxy_request("tasks/motivation", "PUT", Some(request), None)
+        .await
+    {
         Ok(response) => {
             info!("✅ Motivation state updated successfully");
             Ok(ResponseJson(response))
         }
         Err(error) => {
             error!("❌ Update motivation state failed");
-            error!("📤 Error response: {}", serde_json::to_string_pretty(&error).unwrap_or_default());
+            error!(
+                "📤 Error response: {}",
+                serde_json::to_string_pretty(&error).unwrap_or_default()
+            );
 
             let status_code = match error.code.as_str() {
                 "AGENT_UNAVAILABLE" => StatusCode::SERVICE_UNAVAILABLE,
@@ -1315,20 +1653,31 @@ pub async fn update_motivation_state(Json(request): Json<Value>) -> Result<Respo
 }
 
 /// Get task suggestions based on context
-pub async fn get_task_suggestions(Json(request): Json<Value>) -> Result<ResponseJson<Value>, (StatusCode, ResponseJson<AgentErrorResponse>)> {
+pub async fn get_task_suggestions(
+    Json(request): Json<Value>,
+) -> Result<ResponseJson<Value>, (StatusCode, ResponseJson<AgentErrorResponse>)> {
     info!("💡 Get task suggestions request received");
-    info!("📝 Request payload: {}", serde_json::to_string_pretty(&request).unwrap_or_default());
+    info!(
+        "📝 Request payload: {}",
+        serde_json::to_string_pretty(&request).unwrap_or_default()
+    );
 
     let proxy = get_hecate_proxy();
 
-    match proxy.proxy_request("tasks/suggestions", "POST", Some(request), None).await {
+    match proxy
+        .proxy_request("tasks/suggestions", "POST", Some(request), None)
+        .await
+    {
         Ok(response) => {
             info!("✅ Task suggestions retrieved successfully");
             Ok(ResponseJson(response))
         }
         Err(error) => {
             error!("❌ Get task suggestions failed");
-            error!("📤 Error response: {}", serde_json::to_string_pretty(&error).unwrap_or_default());
+            error!(
+                "📤 Error response: {}",
+                serde_json::to_string_pretty(&error).unwrap_or_default()
+            );
 
             let status_code = match error.code.as_str() {
                 "AGENT_UNAVAILABLE" => StatusCode::SERVICE_UNAVAILABLE,
@@ -1343,21 +1692,33 @@ pub async fn get_task_suggestions(Json(request): Json<Value>) -> Result<Response
 }
 
 /// Learn from task outcome
-pub async fn learn_from_task(Path(task_id): Path<String>, Json(request): Json<Value>) -> Result<ResponseJson<Value>, (StatusCode, ResponseJson<AgentErrorResponse>)> {
+pub async fn learn_from_task(
+    Path(task_id): Path<String>,
+    Json(request): Json<Value>,
+) -> Result<ResponseJson<Value>, (StatusCode, ResponseJson<AgentErrorResponse>)> {
     info!("🎓 Learn from task request received for ID: {}", task_id);
-    info!("📝 Request payload: {}", serde_json::to_string_pretty(&request).unwrap_or_default());
+    info!(
+        "📝 Request payload: {}",
+        serde_json::to_string_pretty(&request).unwrap_or_default()
+    );
 
     let proxy = get_hecate_proxy();
     let endpoint = format!("tasks/{}/learn", task_id);
 
-    match proxy.proxy_request(&endpoint, "POST", Some(request), None).await {
+    match proxy
+        .proxy_request(&endpoint, "POST", Some(request), None)
+        .await
+    {
         Ok(response) => {
             info!("✅ Task learning completed successfully");
             Ok(ResponseJson(response))
         }
         Err(error) => {
             error!("❌ Learn from task failed");
-            error!("📤 Error response: {}", serde_json::to_string_pretty(&error).unwrap_or_default());
+            error!(
+                "📤 Error response: {}",
+                serde_json::to_string_pretty(&error).unwrap_or_default()
+            );
 
             let status_code = match error.code.as_str() {
                 "AGENT_UNAVAILABLE" => StatusCode::SERVICE_UNAVAILABLE,
@@ -1372,7 +1733,9 @@ pub async fn learn_from_task(Path(task_id): Path<String>, Json(request): Json<Va
 }
 
 /// Process task with Hecate agent
-pub async fn process_task(Path(task_id): Path<String>) -> Result<ResponseJson<Value>, (StatusCode, ResponseJson<AgentErrorResponse>)> {
+pub async fn process_task(
+    Path(task_id): Path<String>,
+) -> Result<ResponseJson<Value>, (StatusCode, ResponseJson<AgentErrorResponse>)> {
     info!("⚡ Process task request received for ID: {}", task_id);
 
     let proxy = get_hecate_proxy();
@@ -1381,12 +1744,18 @@ pub async fn process_task(Path(task_id): Path<String>) -> Result<ResponseJson<Va
     match proxy.proxy_request(&endpoint, "POST", None, None).await {
         Ok(response) => {
             info!("✅ Task processed successfully");
-            info!("📤 Response payload: {}", serde_json::to_string_pretty(&response).unwrap_or_default());
+            info!(
+                "📤 Response payload: {}",
+                serde_json::to_string_pretty(&response).unwrap_or_default()
+            );
             Ok(ResponseJson(response))
         }
         Err(error) => {
             error!("❌ Task processing failed");
-            error!("📤 Error response: {}", serde_json::to_string_pretty(&error).unwrap_or_default());
+            error!(
+                "📤 Error response: {}",
+                serde_json::to_string_pretty(&error).unwrap_or_default()
+            );
 
             let status_code = match error.code.as_str() {
                 "AGENT_UNAVAILABLE" => StatusCode::SERVICE_UNAVAILABLE,

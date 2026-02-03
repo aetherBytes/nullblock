@@ -2,16 +2,19 @@ use axum::{extract::State, Json};
 use serde_json::json;
 use tracing::{error, info, warn};
 
-use crate::server::AppState;
-use super::types::*;
-use super::tools::get_all_tools;
 use super::handlers::execute_tool;
+use super::tools::get_all_tools;
+use super::types::*;
+use crate::server::AppState;
 
 pub async fn handle_jsonrpc(
     State(state): State<AppState>,
     Json(request): Json<JsonRpcRequest>,
 ) -> Json<JsonRpcResponse> {
-    info!("MCP JSON-RPC request: method={}, id={:?}", request.method, request.id);
+    info!(
+        "MCP JSON-RPC request: method={}, id={:?}",
+        request.method, request.id
+    );
 
     if request.jsonrpc != JSONRPC_VERSION {
         warn!("Invalid JSON-RPC version: {}", request.jsonrpc);
@@ -34,15 +37,14 @@ pub async fn handle_jsonrpc(
             info!("Ping received");
             Ok(json!({}))
         }
-        "resources/list" => {
-            Ok(json!({ "resources": [] }))
-        }
-        "prompts/list" => {
-            Ok(json!({ "prompts": [] }))
-        }
+        "resources/list" => Ok(json!({ "resources": [] })),
+        "prompts/list" => Ok(json!({ "prompts": [] })),
         _ => {
             warn!("Unknown method: {}", request.method);
-            Err((error_codes::METHOD_NOT_FOUND, format!("Method not found: {}", request.method)))
+            Err((
+                error_codes::METHOD_NOT_FOUND,
+                format!("Method not found: {}", request.method),
+            ))
         }
     };
 
@@ -60,13 +62,23 @@ pub async fn handle_jsonrpc(
     Json(response)
 }
 
-async fn handle_initialize(params: Option<serde_json::Value>) -> Result<serde_json::Value, (i32, String)> {
+async fn handle_initialize(
+    params: Option<serde_json::Value>,
+) -> Result<serde_json::Value, (i32, String)> {
     let _init_request: InitializeRequest = match params {
         Some(p) => serde_json::from_value(p).map_err(|e| {
             error!("Failed to parse initialize request: {}", e);
-            (error_codes::INVALID_PARAMS, format!("Invalid parameters: {}", e))
+            (
+                error_codes::INVALID_PARAMS,
+                format!("Invalid parameters: {}", e),
+            )
         })?,
-        None => return Err((error_codes::INVALID_PARAMS, "Missing parameters".to_string())),
+        None => {
+            return Err((
+                error_codes::INVALID_PARAMS,
+                "Missing parameters".to_string(),
+            ))
+        }
     };
 
     let result = InitializeResult {
@@ -74,9 +86,16 @@ async fn handle_initialize(params: Option<serde_json::Value>) -> Result<serde_js
         capabilities: ServerCapabilities {
             experimental: None,
             logging: None,
-            prompts: Some(PromptsCapability { list_changed: false }),
-            resources: Some(ResourcesCapability { subscribe: false, list_changed: false }),
-            tools: Some(ToolsCapability { list_changed: false }),
+            prompts: Some(PromptsCapability {
+                list_changed: false,
+            }),
+            resources: Some(ResourcesCapability {
+                subscribe: false,
+                list_changed: false,
+            }),
+            tools: Some(ToolsCapability {
+                list_changed: false,
+            }),
         },
         server_info: Implementation {
             name: "arb-farm".to_string(),
@@ -86,13 +105,17 @@ async fn handle_initialize(params: Option<serde_json::Value>) -> Result<serde_js
         instructions: Some(
             "ArbFarm MCP server providing Solana MEV trading tools. \
             Available tool categories: scanner, edge, strategy, curve, threat, \
-            kol, research, engram, consensus, swarm, approval, and learning tools.".to_string()
+            kol, research, engram, consensus, swarm, approval, and learning tools."
+                .to_string(),
         ),
     };
 
     serde_json::to_value(result).map_err(|e| {
         error!("Failed to serialize initialize result: {}", e);
-        (error_codes::INTERNAL_ERROR, "Serialization error".to_string())
+        (
+            error_codes::INTERNAL_ERROR,
+            "Serialization error".to_string(),
+        )
     })
 }
 
@@ -104,7 +127,10 @@ async fn handle_list_tools() -> Result<serde_json::Value, (i32, String)> {
 
     serde_json::to_value(result).map_err(|e| {
         error!("Failed to serialize tools list: {}", e);
-        (error_codes::INTERNAL_ERROR, "Serialization error".to_string())
+        (
+            error_codes::INTERNAL_ERROR,
+            "Serialization error".to_string(),
+        )
     })
 }
 
@@ -115,9 +141,17 @@ async fn handle_call_tool(
     let call_request: CallToolRequest = match params {
         Some(p) => serde_json::from_value(p).map_err(|e| {
             error!("Failed to parse call tool request: {}", e);
-            (error_codes::INVALID_PARAMS, format!("Invalid parameters: {}", e))
+            (
+                error_codes::INVALID_PARAMS,
+                format!("Invalid parameters: {}", e),
+            )
         })?,
-        None => return Err((error_codes::INVALID_PARAMS, "Missing parameters".to_string())),
+        None => {
+            return Err((
+                error_codes::INVALID_PARAMS,
+                "Missing parameters".to_string(),
+            ))
+        }
     };
 
     let args = match call_request.arguments {
@@ -129,7 +163,9 @@ async fn handle_call_tool(
 
     let result = CallToolResult {
         content: vec![ContentBlock::Text {
-            text: tool_result.content.first()
+            text: tool_result
+                .content
+                .first()
                 .map(|c| c.text.clone())
                 .unwrap_or_default(),
         }],
@@ -138,6 +174,9 @@ async fn handle_call_tool(
 
     serde_json::to_value(result).map_err(|e| {
         error!("Failed to serialize tool result: {}", e);
-        (error_codes::INTERNAL_ERROR, "Serialization error".to_string())
+        (
+            error_codes::INTERNAL_ERROR,
+            "Serialization error".to_string(),
+        )
     })
 }

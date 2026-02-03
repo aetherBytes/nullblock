@@ -113,7 +113,9 @@ impl JitoClient {
             .timeout(std::time::Duration::from_secs(10))
             .send()
             .await
-            .map_err(|e| AppError::ExternalApi(format!("Jito tip accounts request failed: {}", e)))?;
+            .map_err(|e| {
+                AppError::ExternalApi(format!("Jito tip accounts request failed: {}", e))
+            })?;
 
         if !response.status().is_success() {
             return Err(AppError::ExternalApi(format!(
@@ -136,8 +138,13 @@ impl JitoClient {
             .collect())
     }
 
-    pub async fn send_bundle(&self, transactions: Vec<String>, tip_lamports: u64) -> AppResult<BundleSubmission> {
-        self.send_bundle_with_retry(transactions, tip_lamports, BUNDLE_MAX_RETRIES).await
+    pub async fn send_bundle(
+        &self,
+        transactions: Vec<String>,
+        tip_lamports: u64,
+    ) -> AppResult<BundleSubmission> {
+        self.send_bundle_with_retry(transactions, tip_lamports, BUNDLE_MAX_RETRIES)
+            .await
     }
 
     pub async fn send_bundle_with_retry(
@@ -291,10 +298,9 @@ impl JitoClient {
             )));
         }
 
-        let result: GetBundleStatusResponse = response
-            .json()
-            .await
-            .map_err(|e| AppError::ExternalApi(format!("Failed to parse status response: {}", e)))?;
+        let result: GetBundleStatusResponse = response.json().await.map_err(|e| {
+            AppError::ExternalApi(format!("Failed to parse status response: {}", e))
+        })?;
 
         if let Some(error) = result.error {
             return Err(AppError::ExternalApi(format!(
@@ -415,7 +421,8 @@ impl Default for BundleConfig {
 
 impl BundleConfig {
     pub fn calculate_tip(&self, estimated_profit_lamports: i64) -> u64 {
-        let profit_based_tip = (estimated_profit_lamports as f64 * self.tip_percentage_of_profit) as u64;
+        let profit_based_tip =
+            (estimated_profit_lamports as f64 * self.tip_percentage_of_profit) as u64;
         let tip = self.base_tip_lamports.max(profit_based_tip);
         tip.min(self.max_tip_lamports)
     }

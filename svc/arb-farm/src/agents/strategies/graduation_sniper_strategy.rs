@@ -2,9 +2,9 @@ use async_trait::async_trait;
 use std::sync::atomic::{AtomicBool, Ordering};
 use uuid::Uuid;
 
-use crate::error::AppResult;
-use crate::models::{Signal, SignalType, SignalSignificance, VenueType};
 use super::{BehavioralStrategy, VenueSnapshot};
+use crate::error::AppResult;
+use crate::models::{Signal, SignalSignificance, SignalType, VenueType};
 
 pub struct GraduationSniperStrategy {
     name: String,
@@ -58,7 +58,8 @@ impl BehavioralStrategy for GraduationSniperStrategy {
         let mut signals = Vec::new();
 
         for token in &snapshot.tokens {
-            if token.graduation_progress >= self.min_progress && token.graduation_progress <= 100.0 {
+            if token.graduation_progress >= self.min_progress && token.graduation_progress <= 100.0
+            {
                 let velocity = if token.market_cap_sol > 0.0 {
                     token.volume_24h_sol / token.market_cap_sol
                 } else {
@@ -66,7 +67,10 @@ impl BehavioralStrategy for GraduationSniperStrategy {
                 };
 
                 let volume_available = token.volume_24h_sol > 0.0;
-                if !volume_available || velocity >= self.min_velocity_threshold || token.graduation_progress >= 95.0 {
+                if !volume_available
+                    || velocity >= self.min_velocity_threshold
+                    || token.graduation_progress >= 95.0
+                {
                     let confidence = calculate_snipe_confidence(
                         token.graduation_progress,
                         velocity,

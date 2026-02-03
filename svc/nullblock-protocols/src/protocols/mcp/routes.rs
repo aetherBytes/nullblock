@@ -1,7 +1,7 @@
-use axum::{middleware, routing::post, Router};
-use crate::server::AppState;
-use super::jsonrpc::handle_jsonrpc;
 use super::auth::mcp_auth_middleware;
+use super::jsonrpc::handle_jsonrpc;
+use crate::server::AppState;
+use axum::{middleware, routing::post, Router};
 
 pub fn create_mcp_routes(state: AppState) -> Router {
     Router::new()
@@ -9,4 +9,3 @@ pub fn create_mcp_routes(state: AppState) -> Router {
         .with_state(state)
         .layer(middleware::from_fn(mcp_auth_middleware))
 }
-

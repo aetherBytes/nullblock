@@ -24,29 +24,41 @@ pub async fn health_check(State(state): State<AppState>) -> Json<HealthResponse>
                     overall_status = "unhealthy";
                     warn!("🚫 Hecate agent unhealthy: No working LLM models available");
                 } else {
-                    info!("✅ Hecate agent healthy: {} models available", models_available);
+                    info!(
+                        "✅ Hecate agent healthy: {} models available",
+                        models_available
+                    );
                 }
             }
             Err(e) => {
                 overall_status = "unhealthy";
-                components.insert("llm_service".to_string(), serde_json::json!({
-                    "status": "error",
-                    "error": e.to_string()
-                }));
+                components.insert(
+                    "llm_service".to_string(),
+                    serde_json::json!({
+                        "status": "error",
+                        "error": e.to_string()
+                    }),
+                );
                 warn!("🚫 LLM service health check failed: {}", e);
             }
         }
     } else {
         overall_status = "unhealthy";
-        components.insert("llm_service".to_string(), serde_json::json!({
-            "status": "not_initialized",
-            "message": "LLM service factory not initialized"
-        }));
+        components.insert(
+            "llm_service".to_string(),
+            serde_json::json!({
+                "status": "not_initialized",
+                "message": "LLM service factory not initialized"
+            }),
+        );
         warn!("🚫 Hecate agent unhealthy: LLM service not initialized");
     }
 
     // Add agent status
-    components.insert("agent_running".to_string(), serde_json::json!(hecate_agent.running));
+    components.insert(
+        "agent_running".to_string(),
+        serde_json::json!(hecate_agent.running),
+    );
 
     // Add validated model information
     let validated_model = hecate_agent.current_model.clone();
@@ -56,10 +68,13 @@ pub async fn health_check(State(state): State<AppState>) -> Json<HealthResponse>
         "failed_using_router"
     };
 
-    components.insert("validated_model".to_string(), serde_json::json!({
-        "model": validated_model,
-        "validation_status": validation_status
-    }));
+    components.insert(
+        "validated_model".to_string(),
+        serde_json::json!({
+            "model": validated_model,
+            "validation_status": validation_status
+        }),
+    );
 
     drop(hecate_agent);
 

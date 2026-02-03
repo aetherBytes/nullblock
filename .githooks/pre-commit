@@ -1,0 +1,42 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+STAGED_RS=$(git diff --cached --name-only --diff-filter=ACM | grep '\.rs$' || true)
+STAGED_TS=$(git diff --cached --name-only --diff-filter=ACM | grep -E '\.(ts|tsx)$' || true)
+
+if [ -z "$STAGED_RS" ] && [ -z "$STAGED_TS" ]; then
+    exit 0
+fi
+
+RUST_SERVICES=(
+    "svc/erebus"
+    "svc/arb-farm"
+    "svc/nullblock-agents"
+    "svc/nullblock-engrams"
+    "svc/nullblock-protocols"
+    "lib/nullblock-mcp-client"
+)
+
+if [ -n "$STAGED_RS" ]; then
+    AFFECTED_SVCS=()
+    for svc in "${RUST_SERVICES[@]}"; do
+        if echo "$STAGED_RS" | grep -q "^$svc/"; then
+            AFFECTED_SVCS+=("$svc")
+        fi
+    done
+
+    for svc in "${AFFECTED_SVCS[@]}"; do
+        if [ -f "$svc/Cargo.toml" ]; then
+            echo "pre-commit: checking $svc"
+            cargo fmt --manifest-path "$svc/Cargo.toml" --check
+            cargo clippy --manifest-path "$svc/Cargo.toml" -- -D clippy::correctness -D clippy::suspicious
+        fi
+    done
+fi
+
+if [ -n "$STAGED_TS" ]; then
+    if echo "$STAGED_TS" | grep -q "^svc/hecate/"; then
+        echo "pre-commit: checking svc/hecate"
+        cd svc/hecate && npx tsc --noEmit
+    fi
+fi

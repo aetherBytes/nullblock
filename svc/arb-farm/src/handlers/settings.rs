@@ -1,14 +1,9 @@
-use axum::{
-    extract::State,
-    http::StatusCode,
-    response::IntoResponse,
-    Json,
-};
+use axum::{extract::State, http::StatusCode, response::IntoResponse, Json};
 use serde::{Deserialize, Serialize};
 
-use crate::server::AppState;
-use crate::execution::risk::RiskConfig;
 use crate::database::repositories::strategies::UpdateStrategyRecord;
+use crate::execution::risk::RiskConfig;
+use crate::server::AppState;
 
 #[derive(Debug, Serialize)]
 pub struct RiskSettingsResponse {
@@ -34,9 +29,15 @@ pub struct RiskConfigDto {
     pub time_limit_minutes: u32,
 }
 
-fn default_take_profit() -> f64 { 15.0 }
-fn default_trailing_stop() -> f64 { 12.0 }
-fn default_time_limit() -> u32 { 7 }
+fn default_take_profit() -> f64 {
+    15.0
+}
+fn default_trailing_stop() -> f64 {
+    12.0
+}
+fn default_time_limit() -> u32 {
+    7
+}
 
 impl From<RiskConfig> for RiskConfigDto {
     fn from(config: RiskConfig) -> Self {
@@ -171,16 +172,17 @@ fn get_risk_presets() -> Vec<RiskPreset> {
     ]
 }
 
-pub async fn get_risk_settings(
-    State(state): State<AppState>,
-) -> impl IntoResponse {
+pub async fn get_risk_settings(State(state): State<AppState>) -> impl IntoResponse {
     let config = state.risk_config.read().await;
     let config_dto = RiskConfigDto::from(config.clone());
 
-    (StatusCode::OK, Json(RiskSettingsResponse {
-        config: config_dto,
-        presets: get_risk_presets(),
-    }))
+    (
+        StatusCode::OK,
+        Json(RiskSettingsResponse {
+            config: config_dto,
+            presets: get_risk_presets(),
+        }),
+    )
 }
 
 #[derive(Debug, Deserialize)]
@@ -204,19 +206,25 @@ pub async fn update_risk_settings(
         match presets.iter().find(|p| &p.name == preset_name) {
             Some(preset) => preset.config.clone().into(),
             None => {
-                return (StatusCode::BAD_REQUEST, Json(serde_json::json!({
-                    "success": false,
-                    "error": format!("Unknown preset: {}", preset_name),
-                })));
+                return (
+                    StatusCode::BAD_REQUEST,
+                    Json(serde_json::json!({
+                        "success": false,
+                        "error": format!("Unknown preset: {}", preset_name),
+                    })),
+                );
             }
         }
     } else if let Some(custom) = request.custom {
         custom.into()
     } else {
-        return (StatusCode::BAD_REQUEST, Json(serde_json::json!({
-            "success": false,
-            "error": "Must provide either preset or custom config",
-        })));
+        return (
+            StatusCode::BAD_REQUEST,
+            Json(serde_json::json!({
+                "success": false,
+                "error": "Must provide either preset or custom config",
+            })),
+        );
     };
 
     let wallet_max = *state.wallet_max_position_sol.read().await;
@@ -227,7 +235,9 @@ pub async fn update_risk_settings(
         let capped = new_config.max_position_sol.min(wallet_max);
         if capped < new_config.max_position_sol {
             tracing::warn!(
-                requested = new_config.max_position_sol, capped = capped, wallet_max = wallet_max,
+                requested = new_config.max_position_sol,
+                capped = capped,
+                wallet_max = wallet_max,
                 "Custom max_position_sol capped at wallet-based limit"
             );
         }
@@ -263,7 +273,8 @@ pub async fn update_risk_settings(
 
         // Only sync exit params for non-curve strategies
         // curve_arb and graduation_snipe have their own strategy-specific exit configs
-        let is_curve_strategy = strategy.strategy_type == "curve_arb" || strategy.strategy_type == "graduation_snipe";
+        let is_curve_strategy =
+            strategy.strategy_type == "curve_arb" || strategy.strategy_type == "graduation_snipe";
         if !is_curve_strategy {
             updated_params.stop_loss_percent = Some(new_config.max_drawdown_percent);
             updated_params.take_profit_percent = Some(new_config.take_profit_percent);
@@ -271,31 +282,48 @@ pub async fn update_risk_settings(
             updated_params.time_limit_minutes = Some(new_config.time_limit_minutes);
         }
 
-        if let Err(e) = state.strategy_engine.set_risk_params(strategy.id, updated_params.clone()).await {
+        if let Err(e) = state
+            .strategy_engine
+            .set_risk_params(strategy.id, updated_params.clone())
+            .await
+        {
             tracing::warn!(strategy_id = %strategy.id, error = %e, "Failed to sync strategy risk params");
             continue;
         }
 
-        if let Err(e) = state.strategy_repo.update(strategy.id, UpdateStrategyRecord {
-            name: None,
-            venue_types: None,
-            execution_mode: None,
-            risk_params: Some(updated_params),
-            is_active: None,
-        }).await {
+        if let Err(e) = state
+            .strategy_repo
+            .update(
+                strategy.id,
+                UpdateStrategyRecord {
+                    name: None,
+                    venue_types: None,
+                    execution_mode: None,
+                    risk_params: Some(updated_params),
+                    is_active: None,
+                },
+            )
+            .await
+        {
             tracing::warn!(strategy_id = %strategy.id, error = %e, "Failed to persist synced risk params");
         }
 
         synced_count += 1;
     }
 
-    tracing::info!("✅ Synced {} strategies with new risk settings (curve strategies preserve exit params)", synced_count);
+    tracing::info!(
+        "✅ Synced {} strategies with new risk settings (curve strategies preserve exit params)",
+        synced_count
+    );
 
-    (StatusCode::OK, Json(serde_json::json!({
-        "success": true,
-        "config": config_dto,
-        "synced_strategies": synced_count,
-    })))
+    (
+        StatusCode::OK,
+        Json(serde_json::json!({
+            "success": true,
+            "config": config_dto,
+            "synced_strategies": synced_count,
+        })),
+    )
 }
 
 #[derive(Debug, Serialize)]
@@ -312,9 +340,7 @@ pub struct VenueConfig {
     pub has_api_key: bool,
 }
 
-pub async fn get_venue_settings(
-    State(state): State<AppState>,
-) -> impl IntoResponse {
+pub async fn get_venue_settings(State(state): State<AppState>) -> impl IntoResponse {
     let venues = vec![
         VenueConfig {
             name: "Jupiter".to_string(),
@@ -375,9 +401,7 @@ pub struct ApiKeyStatus {
     pub required: bool,
 }
 
-pub async fn get_api_key_status(
-    State(state): State<AppState>,
-) -> impl IntoResponse {
+pub async fn get_api_key_status(State(state): State<AppState>) -> impl IntoResponse {
     let services = vec![
         ApiKeyStatus {
             name: "Helius".to_string(),
@@ -413,9 +437,7 @@ pub struct AllSettingsResponse {
     pub wallet_connected: bool,
 }
 
-pub async fn get_all_settings(
-    State(state): State<AppState>,
-) -> impl IntoResponse {
+pub async fn get_all_settings(State(state): State<AppState>) -> impl IntoResponse {
     let risk_config = state.risk_config.read().await;
     let wallet_status = state.turnkey_signer.get_status().await;
 
@@ -473,11 +495,14 @@ pub async fn get_all_settings(
         },
     ];
 
-    (StatusCode::OK, Json(AllSettingsResponse {
-        risk: RiskConfigDto::from(risk_config.clone()),
-        risk_presets: get_risk_presets(),
-        venues,
-        api_keys,
-        wallet_connected: wallet_status.is_connected,
-    }))
+    (
+        StatusCode::OK,
+        Json(AllSettingsResponse {
+            risk: RiskConfigDto::from(risk_config.clone()),
+            risk_presets: get_risk_presets(),
+            venues,
+            api_keys,
+            wallet_connected: wallet_status.is_connected,
+        }),
+    )
 }

@@ -3,10 +3,10 @@
 
 #![allow(dead_code)]
 
-use serde_json::Value;
-use tracing::{info, warn};
-use std::sync::Arc;
 use crate::resources::ExternalService;
+use serde_json::Value;
+use std::sync::Arc;
+use tracing::{info, warn};
 
 /// Integration service for connecting Crossroads with other Erebus subsystems
 /// IMPORTANT: Now uses shared ExternalService instead of HTTP calls to localhost
@@ -16,13 +16,13 @@ pub struct NullblockServiceIntegrator {
 
 impl NullblockServiceIntegrator {
     pub fn new(external_service: Arc<ExternalService>) -> Self {
-        Self {
-            external_service,
-        }
+        Self { external_service }
     }
 
     /// Discover agents via shared ExternalService
-    pub async fn discover_agents_from_service(&self) -> Result<Vec<Value>, Box<dyn std::error::Error>> {
+    pub async fn discover_agents_from_service(
+        &self,
+    ) -> Result<Vec<Value>, Box<dyn std::error::Error>> {
         info!("🤖 Discovering agents via shared ExternalService");
 
         let mut agents = Vec::new();
@@ -39,12 +39,13 @@ impl NullblockServiceIntegrator {
                         info!("✅ Successfully discovered Hecate agent");
 
                         // Determine health status - handle both "healthy" and "ready" as healthy states
-                        let raw_status = hecate_status.get("status")
+                        let raw_status = hecate_status
+                            .get("status")
                             .and_then(|s| s.as_str())
                             .unwrap_or("unknown");
                         let health_status = match raw_status {
                             "healthy" | "ready" => "healthy",
-                            _ => "unhealthy"
+                            _ => "unhealthy",
                         };
 
                         agents.push(serde_json::json!({
@@ -78,7 +79,10 @@ impl NullblockServiceIntegrator {
                 }
             }
             Ok(response) => {
-                warn!("⚠️ Hecate agent responded with status: {}", response.status());
+                warn!(
+                    "⚠️ Hecate agent responded with status: {}",
+                    response.status()
+                );
                 agents.push(serde_json::json!({
                     "name": "hecate",
                     "type": "conversational",
@@ -146,7 +150,10 @@ impl NullblockServiceIntegrator {
                 }
             }
             Ok(response) => {
-                warn!("⚠️ Siren agent responded with status: {}", response.status());
+                warn!(
+                    "⚠️ Siren agent responded with status: {}",
+                    response.status()
+                );
                 agents.push(serde_json::json!({
                     "name": "siren",
                     "type": "specialized",
@@ -171,44 +178,48 @@ impl NullblockServiceIntegrator {
             }
         }
 
-        info!("🤖 Agent discovery completed: {} agents found", agents.len());
+        info!(
+            "🤖 Agent discovery completed: {} agents found",
+            agents.len()
+        );
         Ok(agents)
     }
 
     /// Discover MCP servers via shared ExternalService
-    pub async fn discover_mcp_servers_from_service(&self) -> Result<Vec<Value>, Box<dyn std::error::Error>> {
+    pub async fn discover_mcp_servers_from_service(
+        &self,
+    ) -> Result<Vec<Value>, Box<dyn std::error::Error>> {
         info!("🌐 Discovering MCP servers via shared ExternalService");
-        
+
         // Use the shared ExternalService to call MCP directly
         match self.external_service.call_mcp("health").await {
             Ok(mcp_status) => {
                 info!("✅ Successfully discovered MCP servers via ExternalService");
-                let mcp_servers = vec![
-                    serde_json::json!({
-                        "name": "nullblock-mcp",
-                        "endpoint": "http://localhost:8001",
-                        "protocol_version": "1.0",
-                        "capabilities": ["resources", "tools", "prompts"],
-                        "status": "available",
-                        "mcp_status": mcp_status,
-                        "note": "Available via shared ExternalService - no HTTP overhead"
-                    })
-                ];
+                let mcp_servers = vec![serde_json::json!({
+                    "name": "nullblock-mcp",
+                    "endpoint": "http://localhost:8001",
+                    "protocol_version": "1.0",
+                    "capabilities": ["resources", "tools", "prompts"],
+                    "status": "available",
+                    "mcp_status": mcp_status,
+                    "note": "Available via shared ExternalService - no HTTP overhead"
+                })];
                 Ok(mcp_servers)
             }
             Err(e) => {
-                warn!("⚠️ Failed to discover MCP servers via ExternalService: {}", e);
+                warn!(
+                    "⚠️ Failed to discover MCP servers via ExternalService: {}",
+                    e
+                );
                 // Return mock data as fallback
-                let mcp_servers = vec![
-                    serde_json::json!({
-                        "name": "nullblock-mcp",
-                        "endpoint": "http://localhost:8001",
-                        "protocol_version": "1.0",
-                        "capabilities": ["resources", "tools", "prompts"],
-                        "status": "unavailable",
-                        "note": "Using fallback data due to service unavailability"
-                    })
-                ];
+                let mcp_servers = vec![serde_json::json!({
+                    "name": "nullblock-mcp",
+                    "endpoint": "http://localhost:8001",
+                    "protocol_version": "1.0",
+                    "capabilities": ["resources", "tools", "prompts"],
+                    "status": "unavailable",
+                    "note": "Using fallback data due to service unavailability"
+                })];
                 Ok(mcp_servers)
             }
         }
@@ -216,33 +227,36 @@ impl NullblockServiceIntegrator {
 
     /// Discover workflows - returns placeholder data
     /// Note: Workflow orchestration has been integrated into the Agents service
-    pub async fn discover_workflows_from_service(&self) -> Result<Vec<Value>, Box<dyn std::error::Error>> {
+    pub async fn discover_workflows_from_service(
+        &self,
+    ) -> Result<Vec<Value>, Box<dyn std::error::Error>> {
         info!("🔄 Discovering workflows (integrated into Agents service)");
 
         // Workflows are now handled by the Agents service via task management
-        let workflows = vec![
-            serde_json::json!({
-                "name": "task-workflow",
-                "description": "Task-based workflow via Agents service",
-                "status": "integrated",
-                "note": "Workflows are now managed through the task system in nullblock-agents"
-            })
-        ];
+        let workflows = vec![serde_json::json!({
+            "name": "task-workflow",
+            "description": "Task-based workflow via Agents service",
+            "status": "integrated",
+            "note": "Workflows are now managed through the task system in nullblock-agents"
+        })];
         Ok(workflows)
     }
 
     /// Check health of services using shared ExternalService
     pub async fn check_services_health(&self) -> Value {
         info!("🏥 Checking health of services via shared ExternalService");
-        
+
         // Use the shared ExternalService to check all services health
         self.external_service.check_all_services_health().await
     }
 
     /// Register an agent with Hecate via shared ExternalService
-    pub async fn register_agent_with_hecate(&self, agent_data: Value) -> Result<Value, Box<dyn std::error::Error>> {
+    pub async fn register_agent_with_hecate(
+        &self,
+        agent_data: Value,
+    ) -> Result<Value, Box<dyn std::error::Error>> {
         info!("🎯 Registering agent with Hecate via shared ExternalService");
-        
+
         // Use the shared ExternalService to call Hecate directly
         match self.external_service.call_hecate("register").await {
             Ok(registration_response) => {
@@ -267,7 +281,7 @@ impl NullblockServiceIntegrator {
     /// Get Hecate agent marketplace capabilities via shared ExternalService
     pub async fn get_hecate_marketplace_info(&self) -> Value {
         info!("📋 Fetching Hecate capabilities via shared ExternalService");
-        
+
         // Use the shared ExternalService to call Hecate directly
         match self.external_service.call_hecate("marketplace").await {
             Ok(marketplace_info) => {
@@ -278,7 +292,7 @@ impl NullblockServiceIntegrator {
                     "hecate_marketplace": marketplace_info,
                     "available_endpoints": [
                         "/api/agents/hecate/chat",
-                        "/api/agents/hecate/status", 
+                        "/api/agents/hecate/status",
                         "/api/agents/hecate/personality",
                         "/api/agents/hecate/available-models"
                     ],
@@ -286,7 +300,10 @@ impl NullblockServiceIntegrator {
                 })
             }
             Err(e) => {
-                warn!("⚠️ Failed to fetch Hecate marketplace info via ExternalService: {}", e);
+                warn!(
+                    "⚠️ Failed to fetch Hecate marketplace info via ExternalService: {}",
+                    e
+                );
                 serde_json::json!({
                     "status": "error",
                     "message": "Failed to fetch Hecate marketplace info",
@@ -312,43 +329,52 @@ pub struct SchemaValidator {
 impl SchemaValidator {
     pub fn new() -> Self {
         let mut schemas = std::collections::HashMap::new();
-        
+
         // Add default schemas for common agent patterns
-        schemas.insert("agent_task".to_string(), serde_json::json!({
-            "type": "object",
-            "properties": {
-                "task_id": {"type": "string", "format": "uuid"},
-                "task_type": {"type": "string"},
-                "parameters": {"type": "object"},
-                "priority": {"type": "integer", "minimum": 1, "maximum": 10},
-                "deadline": {"type": "string", "format": "date-time"}
-            },
-            "required": ["task_id", "task_type", "parameters"]
-        }));
+        schemas.insert(
+            "agent_task".to_string(),
+            serde_json::json!({
+                "type": "object",
+                "properties": {
+                    "task_id": {"type": "string", "format": "uuid"},
+                    "task_type": {"type": "string"},
+                    "parameters": {"type": "object"},
+                    "priority": {"type": "integer", "minimum": 1, "maximum": 10},
+                    "deadline": {"type": "string", "format": "date-time"}
+                },
+                "required": ["task_id", "task_type", "parameters"]
+            }),
+        );
 
-        schemas.insert("agent_response".to_string(), serde_json::json!({
-            "type": "object", 
-            "properties": {
-                "task_id": {"type": "string", "format": "uuid"},
-                "status": {"type": "string", "enum": ["success", "error", "pending"]},
-                "result": {"type": "object"},
-                "error_message": {"type": "string"},
-                "execution_time_ms": {"type": "integer"}
-            },
-            "required": ["task_id", "status"]
-        }));
+        schemas.insert(
+            "agent_response".to_string(),
+            serde_json::json!({
+                "type": "object",
+                "properties": {
+                    "task_id": {"type": "string", "format": "uuid"},
+                    "status": {"type": "string", "enum": ["success", "error", "pending"]},
+                    "result": {"type": "object"},
+                    "error_message": {"type": "string"},
+                    "execution_time_ms": {"type": "integer"}
+                },
+                "required": ["task_id", "status"]
+            }),
+        );
 
-        schemas.insert("mcp_server_metadata".to_string(), serde_json::json!({
-            "type": "object",
-            "properties": {
-                "protocol_version": {"type": "string"},
-                "capabilities": {"type": "array", "items": {"type": "string"}},
-                "resources": {"type": "array"},
-                "tools": {"type": "array"},
-                "prompts": {"type": "array"}
-            },
-            "required": ["protocol_version", "capabilities"]
-        }));
+        schemas.insert(
+            "mcp_server_metadata".to_string(),
+            serde_json::json!({
+                "type": "object",
+                "properties": {
+                    "protocol_version": {"type": "string"},
+                    "capabilities": {"type": "array", "items": {"type": "string"}},
+                    "resources": {"type": "array"},
+                    "tools": {"type": "array"},
+                    "prompts": {"type": "array"}
+                },
+                "required": ["protocol_version", "capabilities"]
+            }),
+        );
 
         Self { schemas }
     }

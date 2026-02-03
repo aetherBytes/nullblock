@@ -17,9 +17,8 @@ pub struct AuthConfig {
 
 impl Default for AuthConfig {
     fn default() -> Self {
-        let api_keys_str = std::env::var("API_KEYS")
-            .unwrap_or_else(|_| String::new());
-        
+        let api_keys_str = std::env::var("API_KEYS").unwrap_or_else(|_| String::new());
+
         let api_keys: HashSet<String> = api_keys_str
             .split(',')
             .map(|s| s.trim().to_string())
@@ -97,7 +96,7 @@ pub fn validate_bearer_token(token: &str) -> Result<AuthContext, String> {
     if token.is_empty() {
         return Err("Empty token".to_string());
     }
-    
+
     Ok(AuthContext {
         authenticated: true,
         auth_type: Some(AuthType::BearerToken),
@@ -108,7 +107,7 @@ pub fn validate_bearer_token(token: &str) -> Result<AuthContext, String> {
 pub fn validate_service_token(token: &str) -> bool {
     let expected_token = std::env::var("SERVICE_SECRET")
         .unwrap_or_else(|_| "nullblock-service-secret-dev".to_string());
-    
+
     token == expected_token
 }
 
@@ -118,7 +117,7 @@ pub async fn auth_middleware(
     next: Next,
 ) -> Result<Response, StatusCode> {
     let config = AuthConfig::default();
-    
+
     if !config.require_auth {
         tracing::debug!("Auth not required, allowing request: {}", request.uri());
         return Ok(next.run(request).await);
@@ -205,4 +204,3 @@ pub async fn optional_auth_middleware(
     request.extensions_mut().insert(auth_ctx);
     Ok(next.run(request).await)
 }
-

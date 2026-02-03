@@ -78,8 +78,7 @@ pub fn get_standard_models() -> Vec<ConsensusModelConfig> {
     vec![
         ConsensusModelConfig::new("anthropic/claude-3.5-sonnet", 1.5)
             .with_display_name("Claude 3.5 Sonnet"),
-        ConsensusModelConfig::new("openai/gpt-4-turbo", 1.0)
-            .with_display_name("GPT-4 Turbo"),
+        ConsensusModelConfig::new("openai/gpt-4-turbo", 1.0).with_display_name("GPT-4 Turbo"),
         ConsensusModelConfig::new("meta-llama/llama-3.1-70b-instruct", 0.8)
             .with_display_name("Llama 3.1 70B"),
     ]
@@ -89,8 +88,7 @@ pub fn get_dev_wallet_models() -> Vec<ConsensusModelConfig> {
     vec![
         ConsensusModelConfig::new("anthropic/claude-3-opus", 2.0)
             .with_display_name("Claude 3 Opus"),
-        ConsensusModelConfig::new("openai/gpt-4-turbo", 1.5)
-            .with_display_name("GPT-4 Turbo"),
+        ConsensusModelConfig::new("openai/gpt-4-turbo", 1.5).with_display_name("GPT-4 Turbo"),
         ConsensusModelConfig::new("anthropic/claude-3.5-sonnet", 1.5)
             .with_display_name("Claude 3.5 Sonnet"),
         ConsensusModelConfig::new("meta-llama/llama-3.1-405b-instruct", 1.0)
@@ -231,8 +229,6 @@ pub const AVAILABLE_MODELS: &[(&str, &str, f64)] = &[
 pub fn get_all_available_models() -> Vec<ConsensusModelConfig> {
     AVAILABLE_MODELS
         .iter()
-        .map(|(id, name, weight)| {
-            ConsensusModelConfig::new(*id, *weight).with_display_name(*name)
-        })
+        .map(|(id, name, weight)| ConsensusModelConfig::new(*id, *weight).with_display_name(*name))
         .collect()
 }

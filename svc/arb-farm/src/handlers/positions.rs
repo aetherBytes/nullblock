@@ -11,10 +11,16 @@ use tokio::sync::Semaphore;
 use tracing::info;
 use uuid::Uuid;
 
-use crate::engrams::schemas::{TransactionSummary, TransactionAction, TransactionMetadata, ExecutionError, ExecutionErrorType, ErrorContext};
+use crate::engrams::schemas::{
+    ErrorContext, ExecutionError, ExecutionErrorType, TransactionAction, TransactionMetadata,
+    TransactionSummary,
+};
 use crate::error::AppError;
-use crate::events::{ArbEvent, EventSource, AgentType, topics};
-use crate::execution::{OpenPosition, PositionStatus, ExitReason, BaseCurrency, WalletTokenHolding, ReconciliationResult, ExitConfig};
+use crate::events::{topics, AgentType, ArbEvent, EventSource};
+use crate::execution::{
+    BaseCurrency, ExitConfig, ExitReason, OpenPosition, PositionStatus, ReconciliationResult,
+    WalletTokenHolding,
+};
 use crate::server::AppState;
 
 #[derive(Debug, Serialize)]
@@ -43,7 +49,9 @@ pub async fn get_positions(
 
     // Sort by P&L: most profitable first, biggest losses last
     positions.sort_by(|a, b| {
-        b.unrealized_pnl_percent.partial_cmp(&a.unrealized_pnl_percent).unwrap_or(std::cmp::Ordering::Equal)
+        b.unrealized_pnl_percent
+            .partial_cmp(&a.unrealized_pnl_percent)
+            .unwrap_or(std::cmp::Ordering::Equal)
     });
 
     Ok(Json(PositionsResponse {
@@ -97,13 +105,11 @@ pub async fn close_position(
         .trigger_manual_exit(position_id, exit_percent)
         .await
     {
-        Ok(_) => {
-            Ok(Json(ExitResponse {
-                success: true,
-                message: format!("Exit queued for {}% of position", exit_percent),
-                position_id,
-            }))
-        }
+        Ok(_) => Ok(Json(ExitResponse {
+            success: true,
+            message: format!("Exit queued for {}% of position", exit_percent),
+            position_id,
+        })),
         Err(e) => Ok(Json(ExitResponse {
             success: false,
             message: format!("Exit failed: {}", e),
@@ -163,10 +169,12 @@ pub async fn update_position_exit_config(
             "curve" => ExitConfig::for_curve_bonding(),
             "curve_conservative" => ExitConfig::for_curve_bonding_conservative(),
             "default" => ExitConfig::default(),
-            _ => return Err(AppError::BadRequest(format!(
-                "Unknown preset '{}'. Use: curve, curve_conservative, default",
-                preset
-            ))),
+            _ => {
+                return Err(AppError::BadRequest(format!(
+                    "Unknown preset '{}'. Use: curve, curve_conservative, default",
+                    preset
+                )))
+            }
         }
     } else {
         // Merge with existing config
@@ -218,10 +226,12 @@ pub async fn update_all_positions_exit_config(
         "curve" => ExitConfig::for_curve_bonding(),
         "curve_conservative" => ExitConfig::for_curve_bonding_conservative(),
         "default" => ExitConfig::default(),
-        _ => return Err(AppError::BadRequest(format!(
-            "Unknown preset '{}'. Use: curve, curve_conservative, default",
-            preset
-        ))),
+        _ => {
+            return Err(AppError::BadRequest(format!(
+                "Unknown preset '{}'. Use: curve, curve_conservative, default",
+                preset
+            )))
+        }
     };
 
     let positions = state.position_manager.get_open_positions().await;
@@ -293,7 +303,10 @@ pub async fn toggle_position_auto_exit(
     let mode = if request.enabled { "AUTO" } else { "MANUAL" };
     let message = format!(
         "Position {} set to {} mode",
-        &updated.token_symbol.as_deref().unwrap_or(&updated.token_mint[..8]),
+        &updated
+            .token_symbol
+            .as_deref()
+            .unwrap_or(&updated.token_mint[..8]),
         mode
     );
 
@@ -369,7 +382,10 @@ pub async fn emergency_close_all(
     for position in positions {
         info!(
             "🔴 Force exiting: {} ({}) - {} tokens",
-            position.token_symbol.as_deref().unwrap_or(&position.token_mint[..8]),
+            position
+                .token_symbol
+                .as_deref()
+                .unwrap_or(&position.token_mint[..8]),
             &position.token_mint[..12],
             position.entry_token_amount
         );
@@ -393,7 +409,10 @@ pub async fn emergency_close_all(
                 failed += 1;
                 tracing::error!(
                     "❌ Failed to exit {}: {}",
-                    position.token_symbol.as_deref().unwrap_or(&position.token_mint[..8]),
+                    position
+                        .token_symbol
+                        .as_deref()
+                        .unwrap_or(&position.token_mint[..8]),
                     e
                 );
                 results.push(EmergencyExitResult {
@@ -447,21 +466,30 @@ pub async fn force_clear_all_positions(
     let mut cleared = 0;
     for position in positions {
         // Close the position with zero PnL (just removing from tracking)
-        if let Err(e) = state.position_manager.close_position(
-            position.id,
-            position.current_price,
-            0.0, // Unknown PnL since sold externally
-            "ForceClear",
-            None,
-            Some(position.momentum.momentum_score),
-        ).await {
+        if let Err(e) = state
+            .position_manager
+            .close_position(
+                position.id,
+                position.current_price,
+                0.0, // Unknown PnL since sold externally
+                "ForceClear",
+                None,
+                Some(position.momentum.momentum_score),
+            )
+            .await
+        {
             tracing::warn!("Failed to clear position {}: {}", position.id, e);
         } else {
             cleared += 1;
             // Release any reserved capital
-            if let Some(released_lamports) = state.capital_manager.release_capital(position.id).await {
+            if let Some(released_lamports) =
+                state.capital_manager.release_capital(position.id).await
+            {
                 let released_sol = released_lamports as f64 / 1_000_000_000.0;
-                info!("   Released {:.4} SOL from position {}", released_sol, position.id);
+                info!(
+                    "   Released {:.4} SOL from position {}",
+                    released_sol, position.id
+                );
             }
 
             // Emit position closed event for real-time UI updates
@@ -544,7 +572,9 @@ pub async fn sell_all_wallet_tokens(
 ) -> Result<Json<SellAllResponse>, AppError> {
     use crate::execution::position_manager::BaseCurrency;
 
-    let wallet_address = state.dev_signer.get_address()
+    let wallet_address = state
+        .dev_signer
+        .get_address()
         .ok_or_else(|| AppError::Validation("No wallet configured".to_string()))?;
 
     // Check daily volume limits
@@ -555,7 +585,8 @@ pub async fn sell_all_wallet_tokens(
     let used_sol = daily_usage.total_volume_lamports as f64 / 1_000_000_000.0;
     let limit_sol = policy.daily_volume_limit_lamports as f64 / 1_000_000_000.0;
     let remaining_sol = if policy.daily_volume_limit_lamports > daily_usage.total_volume_lamports {
-        (policy.daily_volume_limit_lamports - daily_usage.total_volume_lamports) as f64 / 1_000_000_000.0
+        (policy.daily_volume_limit_lamports - daily_usage.total_volume_lamports) as f64
+            / 1_000_000_000.0
     } else {
         0.0
     };
@@ -602,11 +633,14 @@ pub async fn sell_all_wallet_tokens(
 
     info!("🔥 SELL ALL TOKENS - Liquidating entire wallet to SOL");
     info!("   Wallet: {}", &wallet_address[..12]);
-    info!("   Daily volume: {:.4}/{:.4} SOL ({:.1}% used, {:.4} SOL remaining)",
-        used_sol, limit_sol, percent_used, remaining_sol);
+    info!(
+        "   Daily volume: {:.4}/{:.4} SOL ({:.1}% used, {:.4} SOL remaining)",
+        used_sol, limit_sol, percent_used, remaining_sol
+    );
 
     // Step 1: Get all tokens in wallet via DAS
-    let token_accounts = state.helius_das
+    let token_accounts = state
+        .helius_das
         .get_token_accounts_by_owner(&wallet_address)
         .await
         .map_err(|e| AppError::ExternalApi(format!("Failed to fetch wallet tokens: {}", e)))?;
@@ -655,27 +689,54 @@ pub async fn sell_all_wallet_tokens(
     const MAX_CONCURRENT_SELLS: usize = 3;
     let semaphore = Arc::new(Semaphore::new(MAX_CONCURRENT_SELLS));
 
-    info!("📊 Selling {} tokens concurrently (max {} at a time)", total_found, MAX_CONCURRENT_SELLS);
+    info!(
+        "📊 Selling {} tokens concurrently (max {} at a time)",
+        total_found, MAX_CONCURRENT_SELLS
+    );
 
     // Create sell futures for parallel execution
-    let sell_futures: Vec<_> = sellable_tokens.into_iter().map(|token| {
-        let state = state.clone();
-        let wallet = wallet_address.clone();
-        let sem = semaphore.clone();
+    let sell_futures: Vec<_> = sellable_tokens
+        .into_iter()
+        .map(|token| {
+            let state = state.clone();
+            let wallet = wallet_address.clone();
+            let sem = semaphore.clone();
 
-        async move {
-            let _permit = match sem.acquire().await {
-                Ok(permit) => permit,
-                Err(e) => {
-                    tracing::error!("Semaphore acquire failed for {}: {}", &token.mint[..12], e);
-                    return (token, Err(crate::error::AppError::Internal(format!("Semaphore closed: {}", e))));
-                }
-            };
-            info!("💰 Selling {} ({:.2} tokens)", &token.mint[..12], token.ui_amount);
-            let result = sell_token_to_sol(&state, &token.mint, token.ui_amount, token.decimals, &wallet).await;
-            (token, result)
-        }
-    }).collect();
+            async move {
+                let _permit = match sem.acquire().await {
+                    Ok(permit) => permit,
+                    Err(e) => {
+                        tracing::error!(
+                            "Semaphore acquire failed for {}: {}",
+                            &token.mint[..12],
+                            e
+                        );
+                        return (
+                            token,
+                            Err(crate::error::AppError::Internal(format!(
+                                "Semaphore closed: {}",
+                                e
+                            ))),
+                        );
+                    }
+                };
+                info!(
+                    "💰 Selling {} ({:.2} tokens)",
+                    &token.mint[..12],
+                    token.ui_amount
+                );
+                let result = sell_token_to_sol(
+                    &state,
+                    &token.mint,
+                    token.ui_amount,
+                    token.decimals,
+                    &wallet,
+                )
+                .await;
+                (token, result)
+            }
+        })
+        .collect();
 
     // Execute all sells in parallel
     let sell_results = futures::future::join_all(sell_futures).await;
@@ -686,23 +747,43 @@ pub async fn sell_all_wallet_tokens(
             Ok((sol_received, signature)) => {
                 sold += 1;
                 total_sol += sol_received;
-                info!("   ✅ Sold {} for {:.6} SOL (tx: {}...)", &token.mint[..12], sol_received, &signature[..12]);
+                info!(
+                    "   ✅ Sold {} for {:.6} SOL (tx: {}...)",
+                    &token.mint[..12],
+                    sol_received,
+                    &signature[..12]
+                );
 
                 // Close any matching position in the position manager
-                if let Some(position) = state.position_manager.get_open_position_for_mint(&token.mint).await {
+                if let Some(position) = state
+                    .position_manager
+                    .get_open_position_for_mint(&token.mint)
+                    .await
+                {
                     let pnl = sol_received - position.entry_amount_base;
                     let exit_price = sol_received / position.entry_token_amount;
-                    if let Err(e) = state.position_manager.close_position(
-                        position.id,
-                        exit_price,
-                        pnl,
-                        "ManualSellAll",
-                        Some(signature.clone()),
-                        Some(position.momentum.momentum_score),
-                    ).await {
-                        tracing::warn!("Failed to close position {} after sell: {}", position.id, e);
+                    if let Err(e) = state
+                        .position_manager
+                        .close_position(
+                            position.id,
+                            exit_price,
+                            pnl,
+                            "ManualSellAll",
+                            Some(signature.clone()),
+                            Some(position.momentum.momentum_score),
+                        )
+                        .await
+                    {
+                        tracing::warn!(
+                            "Failed to close position {} after sell: {}",
+                            position.id,
+                            e
+                        );
                     } else {
-                        info!("   📦 Closed position {} (PnL: {:.6} SOL)", position.id, pnl);
+                        info!(
+                            "   📦 Closed position {} (PnL: {:.6} SOL)",
+                            position.id, pnl
+                        );
 
                         // Save transaction summary to engrams
                         let pnl_percent = if position.entry_amount_base > 0.0 {
@@ -728,10 +809,17 @@ pub async fn sell_all_wallet_tokens(
                             metadata: TransactionMetadata::default(),
                         };
 
-                        if let Err(e) = state.engrams_client.save_transaction_summary(&wallet_address, &tx_summary).await {
+                        if let Err(e) = state
+                            .engrams_client
+                            .save_transaction_summary(&wallet_address, &tx_summary)
+                            .await
+                        {
                             tracing::warn!("Failed to save transaction summary engram: {}", e);
                         } else {
-                            tracing::debug!("📝 Saved transaction summary engram for {}", &signature[..12]);
+                            tracing::debug!(
+                                "📝 Saved transaction summary engram for {}",
+                                &signature[..12]
+                            );
                         }
 
                         // Emit position closed event for real-time UI updates
@@ -772,13 +860,16 @@ pub async fn sell_all_wallet_tokens(
                     ExecutionErrorType::SlippageExceeded
                 } else if e.to_string().contains("timeout") || e.to_string().contains("timed out") {
                     ExecutionErrorType::RpcTimeout
-                } else if e.to_string().contains("insufficient") || e.to_string().contains("balance") {
+                } else if e.to_string().contains("insufficient")
+                    || e.to_string().contains("balance")
+                {
                     ExecutionErrorType::InsufficientFunds
                 } else if e.to_string().contains("simulation") {
                     ExecutionErrorType::SimulationFailed
                 } else if e.to_string().contains("rate limit") {
                     ExecutionErrorType::RateLimited
-                } else if e.to_string().contains("network") || e.to_string().contains("connection") {
+                } else if e.to_string().contains("network") || e.to_string().contains("connection")
+                {
                     ExecutionErrorType::NetworkError
                 } else {
                     ExecutionErrorType::TxFailed
@@ -808,13 +899,23 @@ pub async fn sell_all_wallet_tokens(
                         timestamp: Utc::now(),
                     };
 
-                    if let Err(save_err) = state.engrams_client.save_execution_error(&wallet_address, &exec_error).await {
+                    if let Err(save_err) = state
+                        .engrams_client
+                        .save_execution_error(&wallet_address, &exec_error)
+                        .await
+                    {
                         tracing::warn!("Failed to save execution error engram: {}", save_err);
                     } else {
-                        tracing::debug!("📝 Saved execution error engram for failed sell of {}", &token.mint[..12]);
+                        tracing::debug!(
+                            "📝 Saved execution error engram for failed sell of {}",
+                            &token.mint[..12]
+                        );
                     }
                 } else {
-                    tracing::debug!("⏭️ Skipping error engram for already-sold token {}", &token.mint[..12]);
+                    tracing::debug!(
+                        "⏭️ Skipping error engram for already-sold token {}",
+                        &token.mint[..12]
+                    );
                 }
 
                 results.push(SellTokenResult {
@@ -838,7 +939,8 @@ pub async fn sell_all_wallet_tokens(
     let used_sol = daily_usage.total_volume_lamports as f64 / 1_000_000_000.0;
     let limit_sol = policy.daily_volume_limit_lamports as f64 / 1_000_000_000.0;
     let remaining_sol = if policy.daily_volume_limit_lamports > daily_usage.total_volume_lamports {
-        (policy.daily_volume_limit_lamports - daily_usage.total_volume_lamports) as f64 / 1_000_000_000.0
+        (policy.daily_volume_limit_lamports - daily_usage.total_volume_lamports) as f64
+            / 1_000_000_000.0
     } else {
         0.0
     };
@@ -858,18 +960,27 @@ pub async fn sell_all_wallet_tokens(
         format!("❌ Sold {}/{} tokens for {:.6} SOL - DAILY LIMIT REACHED ({} failed). Used {:.4}/{:.4} SOL.",
             sold, total_found, total_sol, failed, used_sol, limit_sol)
     } else {
-        format!("⚠️ Sold {}/{} tokens for {:.6} SOL ({} failed). Daily usage: {:.4}/{:.4} SOL ({:.1}%)",
-            sold, total_found, total_sol, failed, used_sol, limit_sol, percent_used)
+        format!(
+            "⚠️ Sold {}/{} tokens for {:.6} SOL ({} failed). Daily usage: {:.4}/{:.4} SOL ({:.1}%)",
+            sold, total_found, total_sol, failed, used_sol, limit_sol, percent_used
+        )
     };
 
     info!("{}", message);
 
     // If any sells failed, run reconciliation to ensure orphaned tokens have positions
     if failed > 0 {
-        info!("🔄 Running post-sell reconciliation for {} failed tokens...", failed);
+        info!(
+            "🔄 Running post-sell reconciliation for {} failed tokens...",
+            failed
+        );
 
         // Re-fetch wallet tokens
-        if let Ok(remaining_tokens) = state.helius_das.get_token_accounts_by_owner(&wallet_address).await {
+        if let Ok(remaining_tokens) = state
+            .helius_das
+            .get_token_accounts_by_owner(&wallet_address)
+            .await
+        {
             let wallet_tokens: Vec<WalletTokenHolding> = remaining_tokens
                 .into_iter()
                 .filter(|t| !BaseCurrency::is_base_currency(&t.mint) && t.ui_amount >= 0.001)
@@ -881,7 +992,10 @@ pub async fn sell_all_wallet_tokens(
                 })
                 .collect();
 
-            let reconcile_result = state.position_manager.reconcile_wallet_tokens(&wallet_tokens).await;
+            let reconcile_result = state
+                .position_manager
+                .reconcile_wallet_tokens(&wallet_tokens)
+                .await;
 
             // Create positions for discovered tokens (ones that failed to sell but have no position)
             for token in &reconcile_result.discovered_tokens {
@@ -889,28 +1003,52 @@ pub async fn sell_all_wallet_tokens(
                     continue;
                 }
 
-                let estimated_price = match state.on_chain_fetcher.get_bonding_curve_state(&token.mint).await {
+                let estimated_price = match state
+                    .on_chain_fetcher
+                    .get_bonding_curve_state(&token.mint)
+                    .await
+                {
                     Ok(curve_state) if curve_state.virtual_token_reserves > 0 => {
-                        curve_state.virtual_sol_reserves as f64 / curve_state.virtual_token_reserves as f64
+                        curve_state.virtual_sol_reserves as f64
+                            / curve_state.virtual_token_reserves as f64
                     }
                     _ => 0.0000001,
                 };
 
-                let exit_config = match state.metrics_collector.calculate_metrics(&token.mint, "pump_fun").await {
-                    Ok(metrics) => ExitConfig::for_discovered_with_metrics(metrics.volume_24h, metrics.holder_count),
+                let exit_config = match state
+                    .metrics_collector
+                    .calculate_metrics(&token.mint, "pump_fun")
+                    .await
+                {
+                    Ok(metrics) => ExitConfig::for_discovered_with_metrics(
+                        metrics.volume_24h,
+                        metrics.holder_count,
+                    ),
                     Err(_) => ExitConfig::for_discovered_token(),
                 };
 
                 let max_position_sol = state.risk_config.read().await.max_position_sol;
                 let raw_entry = token.balance * estimated_price;
-                let entry_sol = if raw_entry > max_position_sol || raw_entry < 0.001 { max_position_sol } else { raw_entry };
+                let entry_sol = if raw_entry > max_position_sol || raw_entry < 0.001 {
+                    max_position_sol
+                } else {
+                    raw_entry
+                };
 
-                if let Ok(position) = state.position_manager.create_discovered_position_with_config(
-                    token, estimated_price, entry_sol, exit_config,
-                ).await {
+                if let Ok(position) = state
+                    .position_manager
+                    .create_discovered_position_with_config(
+                        token,
+                        estimated_price,
+                        entry_sol,
+                        exit_config,
+                    )
+                    .await
+                {
                     info!(
                         "   ✅ Created recovery position {} for failed sell {} (SL:{:?}%/TP:{:?}%)",
-                        position.id, &token.mint[..12],
+                        position.id,
+                        &token.mint[..12],
                         position.exit_config.stop_loss_percent,
                         position.exit_config.take_profit_percent
                     );
@@ -918,7 +1056,10 @@ pub async fn sell_all_wallet_tokens(
             }
 
             if !reconcile_result.discovered_tokens.is_empty() {
-                info!("📊 Post-sell reconciliation: created {} recovery positions", reconcile_result.discovered_tokens.len());
+                info!(
+                    "📊 Post-sell reconciliation: created {} recovery positions",
+                    reconcile_result.discovered_tokens.len()
+                );
             }
         }
     }
@@ -938,7 +1079,7 @@ pub async fn sell_all_wallet_tokens(
 async fn sell_token_to_sol(
     state: &AppState,
     mint: &str,
-    _amount: f64,  // Ignored - we fetch actual on-chain balance
+    _amount: f64, // Ignored - we fetch actual on-chain balance
     decimals: u8,
     wallet_address: &str,
 ) -> Result<(f64, String), AppError> {
@@ -946,7 +1087,8 @@ async fn sell_token_to_sol(
     use crate::wallet::SignRequest;
 
     // CRITICAL: Fetch ACTUAL on-chain balance instead of using DAS (which can be stale)
-    let actual_balance = state.on_chain_fetcher
+    let actual_balance = state
+        .on_chain_fetcher
         .get_token_balance(wallet_address, mint)
         .await
         .map_err(|e| AppError::ExternalApi(format!("Failed to get actual token balance: {}", e)))?;
@@ -1011,7 +1153,7 @@ async fn sell_via_bonding_curve(
     use crate::wallet::SignRequest;
 
     const MAX_RETRIES: u32 = 3;
-    const INITIAL_SLIPPAGE: u16 = 1500;   // 15% initial for manual sells
+    const INITIAL_SLIPPAGE: u16 = 1500; // 15% initial for manual sells
     const EMERGENCY_SLIPPAGE: u16 = 2500; // 25% emergency - prioritize exit
     let mut slippage: u16 = INITIAL_SLIPPAGE;
     let mut last_error = String::new();
@@ -1033,7 +1175,11 @@ async fn sell_via_bonding_curve(
             tokio::time::sleep(std::time::Duration::from_millis(500)).await;
 
             // Re-fetch actual balance on retry (handles race conditions / stale data)
-            match state.on_chain_fetcher.get_token_balance(wallet_address, mint).await {
+            match state
+                .on_chain_fetcher
+                .get_token_balance(wallet_address, mint)
+                .await
+            {
                 Ok(0) => {
                     return Err(AppError::Validation(format!(
                         "Token {} balance is now 0 - already sold",
@@ -1075,13 +1221,17 @@ async fn sell_via_bonding_curve(
         let expected_sol = build_result.expected_sol_out.unwrap_or(0);
 
         // Sign the transaction
-        let signed = match state.dev_signer.sign_transaction(SignRequest {
-            transaction_base64: build_result.transaction_base64,
-            estimated_amount_lamports: expected_sol,
-            estimated_profit_lamports: None,
-            description: format!("Curve sell {} ({}bps)", &mint[..12], slippage),
-            edge_id: None,
-        }).await {
+        let signed = match state
+            .dev_signer
+            .sign_transaction(SignRequest {
+                transaction_base64: build_result.transaction_base64,
+                estimated_amount_lamports: expected_sol,
+                estimated_profit_lamports: None,
+                description: format!("Curve sell {} ({}bps)", &mint[..12], slippage),
+                edge_id: None,
+            })
+            .await
+        {
             Ok(s) => s,
             Err(e) => {
                 last_error = format!("Failed to sign tx: {}", e);
@@ -1107,7 +1257,11 @@ async fn sell_via_bonding_curve(
 
         // Send via Helius and wait for confirmation
         let confirmation_timeout = std::time::Duration::from_secs(10);
-        match state.helius_sender.send_and_confirm(&signed_tx, confirmation_timeout).await {
+        match state
+            .helius_sender
+            .send_and_confirm(&signed_tx, confirmation_timeout)
+            .await
+        {
             Ok(signature) => {
                 let sol_received = expected_sol as f64 / 1_000_000_000.0;
                 tracing::info!(
@@ -1120,8 +1274,8 @@ async fn sell_via_bonding_curve(
             }
             Err(e) => {
                 last_error = format!("Transaction failed or not confirmed: {}", e);
-                let is_slippage_error = last_error.contains("6003")
-                    || last_error.to_lowercase().contains("slippage");
+                let is_slippage_error =
+                    last_error.contains("6003") || last_error.to_lowercase().contains("slippage");
                 let is_insufficient_tokens = last_error.contains("6023")
                     || last_error.to_lowercase().contains("not enough tokens");
 
@@ -1177,21 +1331,29 @@ async fn sell_via_jupiter(
         user_public_key: wallet_address.to_string(),
     };
 
-    let build_result = state.tx_builder.build_jupiter_swap(
-        &swap_params,
-        uuid::Uuid::new_v4(), // Generate a temporary edge ID
-    ).await.map_err(|e| AppError::ExternalApi(format!("Jupiter swap build failed: {}", e)))?;
+    let build_result = state
+        .tx_builder
+        .build_jupiter_swap(
+            &swap_params,
+            uuid::Uuid::new_v4(), // Generate a temporary edge ID
+        )
+        .await
+        .map_err(|e| AppError::ExternalApi(format!("Jupiter swap build failed: {}", e)))?;
 
     let expected_sol = build_result.route_info.out_amount;
 
     // Sign the transaction
-    let signed = state.dev_signer.sign_transaction(SignRequest {
-        transaction_base64: build_result.transaction_base64,
-        estimated_amount_lamports: expected_sol,
-        estimated_profit_lamports: None,
-        description: format!("Jupiter sell {}", &mint[..12]),
-        edge_id: Some(build_result.edge_id),
-    }).await.map_err(|e| AppError::ExternalApi(format!("Failed to sign tx: {}", e)))?;
+    let signed = state
+        .dev_signer
+        .sign_transaction(SignRequest {
+            transaction_base64: build_result.transaction_base64,
+            estimated_amount_lamports: expected_sol,
+            estimated_profit_lamports: None,
+            description: format!("Jupiter sell {}", &mint[..12]),
+            edge_id: Some(build_result.edge_id),
+        })
+        .await
+        .map_err(|e| AppError::ExternalApi(format!("Failed to sign tx: {}", e)))?;
 
     if !signed.success {
         return Err(AppError::ExternalApi(format!(
@@ -1200,15 +1362,17 @@ async fn sell_via_jupiter(
         )));
     }
 
-    let signed_tx = signed.signed_transaction_base64
+    let signed_tx = signed
+        .signed_transaction_base64
         .ok_or_else(|| AppError::ExternalApi("Signed transaction missing".to_string()))?;
 
     // Send via Helius and wait for confirmation
     let confirmation_timeout = std::time::Duration::from_secs(10);
-    let signature = state.helius_sender.send_and_confirm(
-        &signed_tx,
-        confirmation_timeout,
-    ).await.map_err(|e| AppError::ExternalApi(format!("Transaction failed to confirm: {}", e)))?;
+    let signature = state
+        .helius_sender
+        .send_and_confirm(&signed_tx, confirmation_timeout)
+        .await
+        .map_err(|e| AppError::ExternalApi(format!("Transaction failed to confirm: {}", e)))?;
 
     tracing::info!(
         mint = &mint[..12],
@@ -1277,7 +1441,8 @@ pub async fn stop_monitor(
 ) -> Result<Json<StopMonitorResponse>, AppError> {
     Ok(Json(StopMonitorResponse {
         success: true,
-        message: "Position monitor stop requested (note: monitor will stop on next cycle)".to_string(),
+        message: "Position monitor stop requested (note: monitor will stop on next cycle)"
+            .to_string(),
     }))
 }
 
@@ -1349,14 +1514,15 @@ pub struct ActiveStrategy {
     pub hold_time_mins: i64,
 }
 
-pub async fn get_pnl_summary(
-    State(state): State<AppState>,
-) -> Result<Json<PnLSummary>, AppError> {
+pub async fn get_pnl_summary(State(state): State<AppState>) -> Result<Json<PnLSummary>, AppError> {
     use crate::database::PositionRepository;
 
     let repo = PositionRepository::new(state.db_pool.clone());
 
-    let reset_at = state.settings_repo.get("pnl_reset_at").await
+    let reset_at = state
+        .settings_repo
+        .get("pnl_reset_at")
+        .await
         .ok()
         .flatten()
         .and_then(|r| chrono::DateTime::parse_from_rfc3339(&r.value).ok())
@@ -1381,63 +1547,76 @@ pub async fn get_pnl_summary(
         0.0
     };
 
-    let recent_trades: Vec<RecentTradeInfo> = recent.into_iter().map(|t| {
-        let pnl_percent = if t.entry_sol > 0.0 {
-            (t.pnl / t.entry_sol) * 100.0
-        } else {
-            0.0
-        };
-        let time_ago = t.time.map(|dt| {
-            let mins = (chrono::Utc::now() - dt).num_minutes();
-            if mins < 60 {
-                format!("{}m ago", mins)
-            } else if mins < 1440 {
-                format!("{}h ago", mins / 60)
+    let recent_trades: Vec<RecentTradeInfo> = recent
+        .into_iter()
+        .map(|t| {
+            let pnl_percent = if t.entry_sol > 0.0 {
+                (t.pnl / t.entry_sol) * 100.0
             } else {
-                format!("{}d ago", mins / 1440)
+                0.0
+            };
+            let time_ago = t
+                .time
+                .map(|dt| {
+                    let mins = (chrono::Utc::now() - dt).num_minutes();
+                    if mins < 60 {
+                        format!("{}m ago", mins)
+                    } else if mins < 1440 {
+                        format!("{}h ago", mins / 60)
+                    } else {
+                        format!("{}d ago", mins / 1440)
+                    }
+                })
+                .unwrap_or_else(|| "?".to_string());
+            RecentTradeInfo {
+                id: t.id,
+                symbol: t.symbol,
+                mint: t.mint,
+                venue: t.venue,
+                pnl: t.pnl,
+                pnl_percent,
+                exit_type: t.reason,
+                time_ago,
+                entry_price: t.entry_price,
+                exit_price: t.exit_price,
+                entry_amount_sol: t.entry_sol,
+                momentum_at_exit: t.momentum_at_exit,
+                hold_duration_mins: t.hold_duration_mins,
+                entry_time: t.entry_time.map(|dt| dt.to_rfc3339()),
+                exit_time: t.time.map(|dt| dt.to_rfc3339()),
+                entry_tx_signature: t.entry_tx_signature,
+                exit_tx_signature: t.exit_tx_signature,
             }
-        }).unwrap_or_else(|| "?".to_string());
-        RecentTradeInfo {
-            id: t.id,
-            symbol: t.symbol,
-            mint: t.mint,
-            venue: t.venue,
-            pnl: t.pnl,
-            pnl_percent,
-            exit_type: t.reason,
-            time_ago,
-            entry_price: t.entry_price,
-            exit_price: t.exit_price,
-            entry_amount_sol: t.entry_sol,
-            momentum_at_exit: t.momentum_at_exit,
-            hold_duration_mins: t.hold_duration_mins,
-            entry_time: t.entry_time.map(|dt| dt.to_rfc3339()),
-            exit_time: t.time.map(|dt| dt.to_rfc3339()),
-            entry_tx_signature: t.entry_tx_signature,
-            exit_tx_signature: t.exit_tx_signature,
-        }
-    }).collect();
+        })
+        .collect();
 
     // Get active positions with their strategies
     let open_positions = state.position_manager.get_open_positions().await;
-    let mut active_strategies: Vec<ActiveStrategy> = open_positions.into_iter().map(|p| {
-        let hold_time_mins = (chrono::Utc::now() - p.entry_time).num_minutes();
-        ActiveStrategy {
-            symbol: p.token_symbol.unwrap_or_else(|| p.token_mint[..8].to_string()),
-            mint: p.token_mint[..12].to_string(),
-            entry_sol: p.entry_amount_base,
-            current_pnl_percent: p.unrealized_pnl_percent,
-            stop_loss: p.exit_config.stop_loss_percent,
-            take_profit: p.exit_config.take_profit_percent,
-            trailing_stop: p.exit_config.trailing_stop_percent,
-            time_limit_mins: p.exit_config.time_limit_minutes,
-            hold_time_mins,
-        }
-    }).collect();
+    let mut active_strategies: Vec<ActiveStrategy> = open_positions
+        .into_iter()
+        .map(|p| {
+            let hold_time_mins = (chrono::Utc::now() - p.entry_time).num_minutes();
+            ActiveStrategy {
+                symbol: p
+                    .token_symbol
+                    .unwrap_or_else(|| p.token_mint[..8].to_string()),
+                mint: p.token_mint[..12].to_string(),
+                entry_sol: p.entry_amount_base,
+                current_pnl_percent: p.unrealized_pnl_percent,
+                stop_loss: p.exit_config.stop_loss_percent,
+                take_profit: p.exit_config.take_profit_percent,
+                trailing_stop: p.exit_config.trailing_stop_percent,
+                time_limit_mins: p.exit_config.time_limit_minutes,
+                hold_time_mins,
+            }
+        })
+        .collect();
 
     // Sort by P&L: most profitable first, biggest losses last
     active_strategies.sort_by(|a, b| {
-        b.current_pnl_percent.partial_cmp(&a.current_pnl_percent).unwrap_or(std::cmp::Ordering::Equal)
+        b.current_pnl_percent
+            .partial_cmp(&a.current_pnl_percent)
+            .unwrap_or(std::cmp::Ordering::Equal)
     });
 
     Ok(Json(PnLSummary {
@@ -1473,9 +1652,7 @@ pub async fn get_pnl_summary(
     }))
 }
 
-pub async fn reset_pnl(
-    State(state): State<AppState>,
-) -> Result<Json<serde_json::Value>, AppError> {
+pub async fn reset_pnl(State(state): State<AppState>) -> Result<Json<serde_json::Value>, AppError> {
     let now = Utc::now().to_rfc3339();
     state.settings_repo.set("pnl_reset_at", &now).await?;
 
@@ -1490,7 +1667,10 @@ pub async fn reset_pnl(
 pub async fn get_pnl_reset(
     State(state): State<AppState>,
 ) -> Result<Json<serde_json::Value>, AppError> {
-    let reset_at = state.settings_repo.get("pnl_reset_at").await
+    let reset_at = state
+        .settings_repo
+        .get("pnl_reset_at")
+        .await
         .ok()
         .flatten()
         .map(|r| r.value);
@@ -1511,9 +1691,18 @@ pub struct ExposureResponse {
 pub async fn get_exposure(
     State(state): State<AppState>,
 ) -> Result<Json<ExposureResponse>, AppError> {
-    let sol = state.position_manager.get_total_exposure_by_base(BaseCurrency::Sol).await;
-    let usdc = state.position_manager.get_total_exposure_by_base(BaseCurrency::Usdc).await;
-    let usdt = state.position_manager.get_total_exposure_by_base(BaseCurrency::Usdt).await;
+    let sol = state
+        .position_manager
+        .get_total_exposure_by_base(BaseCurrency::Sol)
+        .await;
+    let usdc = state
+        .position_manager
+        .get_total_exposure_by_base(BaseCurrency::Usdc)
+        .await;
+    let usdt = state
+        .position_manager
+        .get_total_exposure_by_base(BaseCurrency::Usdt)
+        .await;
 
     Ok(Json(ExposureResponse {
         sol_exposure: sol,
@@ -1535,29 +1724,38 @@ pub struct ReconciliationResponse {
 pub async fn reconcile_wallet(
     State(state): State<AppState>,
 ) -> Result<Json<ReconciliationResponse>, AppError> {
-    let wallet_address = state.dev_signer.get_address()
+    let wallet_address = state
+        .dev_signer
+        .get_address()
         .ok_or_else(|| AppError::Validation("No wallet configured".to_string()))?;
 
-    info!("🔄 Starting wallet reconciliation for {}", &wallet_address[..8]);
+    info!(
+        "🔄 Starting wallet reconciliation for {}",
+        &wallet_address[..8]
+    );
 
-    let token_accounts = state.helius_das
+    let token_accounts = state
+        .helius_das
         .get_token_accounts_by_owner(&wallet_address)
         .await
-        .map_err(|e| AppError::ExternalApi(format!("Failed to fetch wallet token accounts: {}", e)))?;
+        .map_err(|e| {
+            AppError::ExternalApi(format!("Failed to fetch wallet token accounts: {}", e))
+        })?;
 
     let wallet_tokens: Vec<WalletTokenHolding> = token_accounts
         .into_iter()
-        .map(|account| {
-            WalletTokenHolding {
-                mint: account.mint,
-                symbol: None,
-                balance: account.ui_amount,
-                decimals: account.decimals,
-            }
+        .map(|account| WalletTokenHolding {
+            mint: account.mint,
+            symbol: None,
+            balance: account.ui_amount,
+            decimals: account.decimals,
         })
         .collect();
 
-    info!("📊 Found {} tokens with non-zero balance in wallet", wallet_tokens.len());
+    info!(
+        "📊 Found {} tokens with non-zero balance in wallet",
+        wallet_tokens.len()
+    );
 
     // Log each token found for debugging
     for token in &wallet_tokens {
@@ -1569,10 +1767,17 @@ pub async fn reconcile_wallet(
         );
     }
 
-    let result = state.position_manager.reconcile_wallet_tokens(&wallet_tokens).await;
+    let result = state
+        .position_manager
+        .reconcile_wallet_tokens(&wallet_tokens)
+        .await;
 
     for position_id in &result.orphaned_positions {
-        if let Err(e) = state.position_manager.mark_position_orphaned(*position_id).await {
+        if let Err(e) = state
+            .position_manager
+            .mark_position_orphaned(*position_id)
+            .await
+        {
             tracing::warn!("Failed to mark position {} as orphaned: {}", position_id, e);
         }
     }
@@ -1590,10 +1795,15 @@ pub async fn reconcile_wallet(
             token.balance
         );
 
-        let (estimated_price, is_dead_token) = match state.on_chain_fetcher.get_bonding_curve_state(&token.mint).await {
+        let (estimated_price, is_dead_token) = match state
+            .on_chain_fetcher
+            .get_bonding_curve_state(&token.mint)
+            .await
+        {
             Ok(curve_state) => {
                 if curve_state.virtual_token_reserves > 0 {
-                    let price = curve_state.virtual_sol_reserves as f64 / curve_state.virtual_token_reserves as f64;
+                    let price = curve_state.virtual_sol_reserves as f64
+                        / curve_state.virtual_token_reserves as f64;
                     info!("   💰 On-chain price: {:.12} SOL/token", price);
                     (price, false)
                 } else {
@@ -1615,18 +1825,26 @@ pub async fn reconcile_wallet(
             crate::execution::ExitConfig::for_curve_bonding()
         };
 
-        if let Some(orphaned_position) = state.position_manager.get_orphaned_position_by_mint(&token.mint).await {
+        if let Some(orphaned_position) = state
+            .position_manager
+            .get_orphaned_position_by_mint(&token.mint)
+            .await
+        {
             info!(
                 "   ♻️ Found orphaned position {} - reactivating with new exit strategy",
                 orphaned_position.id
             );
 
-            match state.position_manager.reactivate_orphaned_position(
-                orphaned_position,
-                token.balance,
-                estimated_price,
-                exit_config,
-            ).await {
+            match state
+                .position_manager
+                .reactivate_orphaned_position(
+                    orphaned_position,
+                    token.balance,
+                    estimated_price,
+                    exit_config,
+                )
+                .await
+            {
                 Ok(position) => {
                     reactivated_positions += 1;
                     info!(
@@ -1638,7 +1856,11 @@ pub async fn reconcile_wallet(
                     );
                 }
                 Err(e) => {
-                    tracing::warn!("   ❌ Failed to reactivate position for {}: {}", &token.mint[..12], e);
+                    tracing::warn!(
+                        "   ❌ Failed to reactivate position for {}: {}",
+                        &token.mint[..12],
+                        e
+                    );
                 }
             }
         } else {
@@ -1648,8 +1870,10 @@ pub async fn reconcile_wallet(
             let raw_estimated_entry = token.balance * estimated_price;
             let estimated_entry_sol = if raw_estimated_entry > max_position_sol {
                 // Estimated value exceeds max position - cap at max (likely price moved)
-                info!("   📉 Raw estimate {:.4} SOL exceeds max, capping to {:.4} SOL",
-                    raw_estimated_entry, max_position_sol);
+                info!(
+                    "   📉 Raw estimate {:.4} SOL exceeds max, capping to {:.4} SOL",
+                    raw_estimated_entry, max_position_sol
+                );
                 max_position_sol
             } else if raw_estimated_entry < 0.001 {
                 // Too small to estimate, use max as conservative default
@@ -1658,12 +1882,16 @@ pub async fn reconcile_wallet(
                 raw_estimated_entry
             };
 
-            match state.position_manager.create_discovered_position_with_config(
-                token,
-                estimated_price,
-                estimated_entry_sol,
-                exit_config,
-            ).await {
+            match state
+                .position_manager
+                .create_discovered_position_with_config(
+                    token,
+                    estimated_price,
+                    estimated_entry_sol,
+                    exit_config,
+                )
+                .await
+            {
                 Ok(position) => {
                     created_positions += 1;
                     info!(
@@ -1675,14 +1903,26 @@ pub async fn reconcile_wallet(
                     );
                 }
                 Err(e) => {
-                    tracing::warn!("   ❌ Failed to create position for {}: {}", &token.mint[..12], e);
+                    tracing::warn!(
+                        "   ❌ Failed to create position for {}: {}",
+                        &token.mint[..12],
+                        e
+                    );
                 }
             }
         }
     }
 
-    let orphaned_ids: Vec<String> = result.orphaned_positions.iter().map(|id| id.to_string()).collect();
-    let fixed_exit_ids: Vec<String> = result.exit_strategies_fixed.iter().map(|id| id.to_string()).collect();
+    let orphaned_ids: Vec<String> = result
+        .orphaned_positions
+        .iter()
+        .map(|id| id.to_string())
+        .collect();
+    let fixed_exit_ids: Vec<String> = result
+        .exit_strategies_fixed
+        .iter()
+        .map(|id| id.to_string())
+        .collect();
 
     let message = format!(
         "Reconciliation complete: {} tracked, {} discovered ({} new, {} reactivated), {} orphaned, {} exit strategies fixed",
@@ -1739,31 +1979,38 @@ pub async fn get_position_history(
     use crate::database::PositionRepository;
 
     let repo = PositionRepository::new(state.db_pool.clone());
-    let rows = repo.get_all_positions(50).await
+    let rows = repo
+        .get_all_positions(50)
+        .await
         .map_err(|e| AppError::Database(format!("Failed to fetch positions: {}", e)))?;
 
-    let positions: Vec<PositionHistoryItem> = rows.into_iter().map(|row| {
-        let exit_config: crate::execution::ExitConfig = serde_json::from_value(row.exit_config.clone())
-            .unwrap_or_default();
+    let positions: Vec<PositionHistoryItem> = rows
+        .into_iter()
+        .map(|row| {
+            let exit_config: crate::execution::ExitConfig =
+                serde_json::from_value(row.exit_config.clone()).unwrap_or_default();
 
-        PositionHistoryItem {
-            id: row.id.to_string(),
-            token_mint: row.token_mint.clone(),
-            token_symbol: row.token_symbol.clone(),
-            status: row.status.clone(),
-            entry_sol: row.entry_amount_base.to_string().parse().unwrap_or(0.0),
-            realized_pnl: row.realized_pnl.map(|d| d.to_string().parse().unwrap_or(0.0)),
-            exit_reason: row.exit_reason.clone(),
-            exit_config: ExitConfigSummary {
-                stop_loss_percent: exit_config.stop_loss_percent,
-                take_profit_percent: exit_config.take_profit_percent,
-                trailing_stop_percent: exit_config.trailing_stop_percent,
-                time_limit_minutes: exit_config.time_limit_minutes,
-            },
-            entry_time: row.entry_time,
-            exit_time: row.exit_time,
-        }
-    }).collect();
+            PositionHistoryItem {
+                id: row.id.to_string(),
+                token_mint: row.token_mint.clone(),
+                token_symbol: row.token_symbol.clone(),
+                status: row.status.clone(),
+                entry_sol: row.entry_amount_base.to_string().parse().unwrap_or(0.0),
+                realized_pnl: row
+                    .realized_pnl
+                    .map(|d| d.to_string().parse().unwrap_or(0.0)),
+                exit_reason: row.exit_reason.clone(),
+                exit_config: ExitConfigSummary {
+                    stop_loss_percent: exit_config.stop_loss_percent,
+                    take_profit_percent: exit_config.take_profit_percent,
+                    trailing_stop_percent: exit_config.trailing_stop_percent,
+                    time_limit_minutes: exit_config.time_limit_minutes,
+                },
+                entry_time: row.entry_time,
+                exit_time: row.exit_time,
+            }
+        })
+        .collect();
 
     let total_count = positions.len();
 

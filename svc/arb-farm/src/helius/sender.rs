@@ -7,10 +7,10 @@ use serde_json::json;
 use tokio::sync::RwLock;
 use tracing::{debug, error, info, warn};
 
-use crate::error::{AppError, AppResult};
-use crate::events::{topics, ArbEvent, EventBus, EventSource};
 use super::client::HeliusClient;
 use super::types::{SenderStats, SenderTxEvent, TxStatus};
+use crate::error::{AppError, AppResult};
+use crate::events::{topics, ArbEvent, EventBus, EventSource};
 
 const RPC_REQUEST_TIMEOUT_SECS: u64 = 5;
 
@@ -54,13 +54,15 @@ impl HeliusSender {
 
         let signature: String = tokio::time::timeout(
             Duration::from_secs(RPC_REQUEST_TIMEOUT_SECS),
-            self.client.rpc_call("sendTransaction", params)
+            self.client.rpc_call("sendTransaction", params),
         )
         .await
-        .map_err(|_| AppError::Timeout(format!(
-            "sendTransaction RPC timeout after {}s",
-            RPC_REQUEST_TIMEOUT_SECS
-        )))??;
+        .map_err(|_| {
+            AppError::Timeout(format!(
+                "sendTransaction RPC timeout after {}s",
+                RPC_REQUEST_TIMEOUT_SECS
+            ))
+        })??;
 
         let latency_ms = start.elapsed().as_millis() as u64;
 
@@ -96,9 +98,7 @@ impl HeliusSender {
         let start = Instant::now();
         let signature = self.send_transaction(transaction_base64, true).await?;
 
-        let confirmation_result = self
-            .wait_for_confirmation(&signature, timeout)
-            .await;
+        let confirmation_result = self.wait_for_confirmation(&signature, timeout).await;
 
         let latency_ms = start.elapsed().as_millis() as u64;
 
@@ -114,7 +114,8 @@ impl HeliusSender {
                     };
                     let total = stats.total_confirmed;
                     stats.avg_landing_ms = if total > 0 {
-                        (stats.avg_landing_ms * (total - 1) as f64 + latency_ms as f64) / total as f64
+                        (stats.avg_landing_ms * (total - 1) as f64 + latency_ms as f64)
+                            / total as f64
                     } else {
                         latency_ms as f64
                     };
@@ -192,17 +193,14 @@ impl HeliusSender {
                 self.client.rpc_call(
                     "getSignatureStatuses",
                     json!([[signature], {"searchTransactionHistory": false}]),
-                )
+                ),
             )
             .await
             .map_err(|_| AppError::Timeout("getSignatureStatuses timeout".into()))??;
 
             if let Some(Some(status)) = response.value.first() {
                 if let Some(ref err) = status.err {
-                    return Err(AppError::Execution(format!(
-                        "Transaction error: {:?}",
-                        err
-                    )));
+                    return Err(AppError::Execution(format!("Transaction error: {:?}", err)));
                 }
 
                 if let Some(ref conf_status) = status.confirmation_status {
@@ -223,7 +221,7 @@ impl HeliusSender {
         let start = Instant::now();
         let _slot: u64 = tokio::time::timeout(
             Duration::from_secs(RPC_REQUEST_TIMEOUT_SECS),
-            self.client.rpc_call("getSlot", json!([]))
+            self.client.rpc_call("getSlot", json!([])),
         )
         .await
         .map_err(|_| AppError::Timeout("ping timeout".into()))??;

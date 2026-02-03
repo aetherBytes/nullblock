@@ -131,7 +131,8 @@ impl OnChainFetcher {
         let mint_pubkey = Pubkey::from_str(mint)
             .map_err(|e| AppError::Validation(format!("Invalid mint address: {}", e)))?;
 
-        let account = self.rpc_client
+        let account = self
+            .rpc_client
             .get_account(&mint_pubkey)
             .await
             .map_err(|e| AppError::ExternalApi(format!("Failed to fetch mint account: {}", e)))?;
@@ -146,20 +147,15 @@ impl OnChainFetcher {
         self.get_pump_fun_bonding_curve(mint).await
     }
 
-    pub async fn get_pump_fun_bonding_curve(
-        &self,
-        mint: &str,
-    ) -> AppResult<OnChainCurveState> {
+    pub async fn get_pump_fun_bonding_curve(&self, mint: &str) -> AppResult<OnChainCurveState> {
         let mint_pubkey = Pubkey::from_str(mint)
             .map_err(|e| AppError::Validation(format!("Invalid mint address: {}", e)))?;
 
         let program_id = Pubkey::from_str(PUMP_FUN_PROGRAM_ID)
             .map_err(|e| AppError::Internal(format!("Invalid program ID: {}", e)))?;
 
-        let (bonding_curve_pda, _bump) = Pubkey::find_program_address(
-            &[b"bonding-curve", mint_pubkey.as_ref()],
-            &program_id,
-        );
+        let (bonding_curve_pda, _bump) =
+            Pubkey::find_program_address(&[b"bonding-curve", mint_pubkey.as_ref()], &program_id);
 
         let token_2022_program = Pubkey::from_str(TOKEN_2022_PROGRAM_ID)
             .map_err(|e| AppError::Internal(format!("Invalid token-2022 program: {}", e)))?;
@@ -185,20 +181,27 @@ impl OnChainFetcher {
             )));
         }
 
-        let virtual_token_reserves = u64::from_le_bytes(
-            account_data[8..16].try_into().expect("validated len >= 89")
-        );
+        let virtual_token_reserves =
+            u64::from_le_bytes(account_data[8..16].try_into().expect("validated len >= 89"));
         let virtual_sol_reserves = u64::from_le_bytes(
-            account_data[16..24].try_into().expect("validated len >= 89")
+            account_data[16..24]
+                .try_into()
+                .expect("validated len >= 89"),
         );
         let real_token_reserves = u64::from_le_bytes(
-            account_data[24..32].try_into().expect("validated len >= 89")
+            account_data[24..32]
+                .try_into()
+                .expect("validated len >= 89"),
         );
         let real_sol_reserves = u64::from_le_bytes(
-            account_data[32..40].try_into().expect("validated len >= 89")
+            account_data[32..40]
+                .try_into()
+                .expect("validated len >= 89"),
         );
         let token_total_supply = u64::from_le_bytes(
-            account_data[40..48].try_into().expect("validated len >= 89")
+            account_data[40..48]
+                .try_into()
+                .expect("validated len >= 89"),
         );
         let is_complete = account_data[48] != 0;
 
@@ -260,9 +263,8 @@ impl OnChainFetcher {
 
         let sol_mint = spl_token::native_mint::ID;
 
-        let raydium_amm_program =
-            Pubkey::from_str("675kPX9MHTjS2zt1qfr1NYHuzeLXfQM9H24wFSUt1Mp8")
-                .map_err(|e| AppError::Internal(format!("Invalid Raydium program ID: {}", e)))?;
+        let raydium_amm_program = Pubkey::from_str("675kPX9MHTjS2zt1qfr1NYHuzeLXfQM9H24wFSUt1Mp8")
+            .map_err(|e| AppError::Internal(format!("Invalid Raydium program ID: {}", e)))?;
 
         let (pool_pda, _) = Pubkey::find_program_address(
             &[
@@ -321,10 +323,8 @@ impl OnChainFetcher {
             .map_err(|e| AppError::Validation(format!("Invalid mint address: {}", e)))?;
 
         // Try standard SPL Token ATA first
-        let spl_ata = spl_associated_token_account::get_associated_token_address(
-            &owner_pubkey,
-            &mint_pubkey,
-        );
+        let spl_ata =
+            spl_associated_token_account::get_associated_token_address(&owner_pubkey, &mint_pubkey);
 
         if let Ok(balance) = self.rpc_client.get_token_account_balance(&spl_ata).await {
             if let Ok(amount) = balance.amount.parse::<u64>() {
@@ -337,13 +337,18 @@ impl OnChainFetcher {
         // Try Token-2022 ATA (used by pump.fun)
         let token_2022_program = Pubkey::from_str(TOKEN_2022_PROGRAM_ID)
             .map_err(|e| AppError::Internal(format!("Invalid token-2022 program: {}", e)))?;
-        let token_2022_ata = spl_associated_token_account::get_associated_token_address_with_program_id(
-            &owner_pubkey,
-            &mint_pubkey,
-            &token_2022_program,
-        );
+        let token_2022_ata =
+            spl_associated_token_account::get_associated_token_address_with_program_id(
+                &owner_pubkey,
+                &mint_pubkey,
+                &token_2022_program,
+            );
 
-        match self.rpc_client.get_token_account_balance(&token_2022_ata).await {
+        match self
+            .rpc_client
+            .get_token_account_balance(&token_2022_ata)
+            .await
+        {
             Ok(balance) => {
                 let amount = balance
                     .amount
@@ -379,19 +384,27 @@ impl OnChainFetcher {
             .map_err(|e| AppError::ExternalApi(format!("Failed to fetch global state: {}", e)))?;
 
         if account_data.len() < 40 {
-            return Err(AppError::Internal("Global state data too short".to_string()));
+            return Err(AppError::Internal(
+                "Global state data too short".to_string(),
+            ));
         }
 
         Ok(PumpFunGlobalState {
             initialized: account_data[8] != 0,
             fee_basis_points: u64::from_le_bytes(
-                account_data[16..24].try_into().expect("validated len >= 40")
+                account_data[16..24]
+                    .try_into()
+                    .expect("validated len >= 40"),
             ),
             initial_virtual_token_reserves: u64::from_le_bytes(
-                account_data[24..32].try_into().expect("validated len >= 40"),
+                account_data[24..32]
+                    .try_into()
+                    .expect("validated len >= 40"),
             ),
             initial_virtual_sol_reserves: u64::from_le_bytes(
-                account_data[32..40].try_into().expect("validated len >= 40"),
+                account_data[32..40]
+                    .try_into()
+                    .expect("validated len >= 40"),
             ),
         })
     }
@@ -399,14 +412,20 @@ impl OnChainFetcher {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum GraduationStatus {
-    PreGraduation { progress: f64 },
-    NearGraduation { progress: f64 },
+    PreGraduation {
+        progress: f64,
+    },
+    NearGraduation {
+        progress: f64,
+    },
     Graduating,
     Graduated {
         graduation_slot: u64,
         raydium_pool: Option<String>,
     },
-    Failed { reason: String },
+    Failed {
+        reason: String,
+    },
 }
 
 impl GraduationStatus {
@@ -440,10 +459,8 @@ pub fn derive_pump_fun_bonding_curve(mint: &str) -> AppResult<(String, String)> 
     let program_id = Pubkey::from_str(PUMP_FUN_PROGRAM_ID)
         .map_err(|e| AppError::Internal(format!("Invalid program ID: {}", e)))?;
 
-    let (bonding_curve_pda, _bump) = Pubkey::find_program_address(
-        &[b"bonding-curve", mint_pubkey.as_ref()],
-        &program_id,
-    );
+    let (bonding_curve_pda, _bump) =
+        Pubkey::find_program_address(&[b"bonding-curve", mint_pubkey.as_ref()], &program_id);
 
     let token_2022_program = Pubkey::from_str(TOKEN_2022_PROGRAM_ID)
         .map_err(|e| AppError::Internal(format!("Invalid token-2022 program: {}", e)))?;

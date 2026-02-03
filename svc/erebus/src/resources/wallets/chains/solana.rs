@@ -53,10 +53,8 @@ impl ChainSignatureVerifier for SolanaSignatureVerifier {
         }
 
         // Check if it's a byte array format (comma-separated numbers)
-        let is_byte_array = signature.contains(',')
-            && signature
-                .split(',')
-                .all(|s| s.trim().parse::<u8>().is_ok());
+        let is_byte_array =
+            signature.contains(',') && signature.split(',').all(|s| s.trim().parse::<u8>().is_ok());
 
         // Or base58/base64 encoded
         let is_encoded = !signature.contains(',') && signature.len() >= 64;
@@ -84,8 +82,7 @@ impl ChainSignatureVerifier for SolanaSignatureVerifier {
     fn validate_address(&self, address: &str) -> bool {
         // Solana addresses are Base58 encoded, typically 32-44 characters
         // Valid Base58 alphabet (no 0, O, I, l)
-        const BASE58_ALPHABET: &str =
-            "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
+        const BASE58_ALPHABET: &str = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
 
         address.len() >= 32
             && address.len() <= 44
@@ -110,7 +107,8 @@ mod tests {
         assert!(!verifier.validate_address("0x742d35Cc6634C0532925a3b844Bc454e4438f44e")); // EVM format
         assert!(!verifier.validate_address("short")); // Too short
         assert!(!verifier.validate_address("5FHneW46xGXgs5mUiveU4sbTyGBzmstUspZC92UhjJM60")); // Contains 0
-        assert!(!verifier.validate_address("5FHneW46xGXgs5mUiveU4sbTyGBzmstUspZC92UhjJMO")); // Contains O
+        assert!(!verifier.validate_address("5FHneW46xGXgs5mUiveU4sbTyGBzmstUspZC92UhjJMO"));
+        // Contains O
     }
 
     #[test]

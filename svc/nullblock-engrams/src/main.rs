@@ -2,7 +2,7 @@ use std::env;
 use std::net::SocketAddr;
 
 use axum::{
-    routing::{get, post, put, delete},
+    routing::{delete, get, post, put},
     Router,
 };
 use tower_http::{cors::CorsLayer, trace::TraceLayer};
@@ -16,7 +16,7 @@ mod models;
 mod server;
 
 use crate::config::Config;
-use crate::handlers::{health, engrams};
+use crate::handlers::{engrams, health};
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
@@ -53,8 +53,8 @@ async fn main() -> anyhow::Result<()> {
         .unwrap_or(9004);
 
     let addr = SocketAddr::from(([0, 0, 0, 0], port));
-    let engrams_base_url = env::var("ENGRAMS_SERVICE_URL")
-        .unwrap_or_else(|_| format!("http://localhost:{}", port));
+    let engrams_base_url =
+        env::var("ENGRAMS_SERVICE_URL").unwrap_or_else(|_| format!("http://localhost:{}", port));
 
     info!("🚀 NullBlock Engrams Service starting...");
     info!("📡 Server will bind to: {}", addr);
@@ -81,8 +81,14 @@ fn create_router(state: server::AppState) -> Router {
         .route("/engrams/:id", put(engrams::update_engram))
         .route("/engrams/:id", delete(engrams::delete_engram))
         // Wallet-scoped endpoints
-        .route("/engrams/wallet/:wallet", get(engrams::get_engrams_by_wallet))
-        .route("/engrams/wallet/:wallet/:key", get(engrams::get_engram_by_wallet_key))
+        .route(
+            "/engrams/wallet/:wallet",
+            get(engrams::get_engrams_by_wallet),
+        )
+        .route(
+            "/engrams/wallet/:wallet/:key",
+            get(engrams::get_engram_by_wallet_key),
+        )
         // Search and operations
         .route("/engrams/search", post(engrams::search_engrams))
         .route("/engrams/:id/fork", post(engrams::fork_engram))

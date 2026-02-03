@@ -23,7 +23,10 @@ where
         // User API key management
         .route("/api/users/:user_id/api-keys", post(create_api_key))
         .route("/api/users/:user_id/api-keys", get(list_api_keys))
-        .route("/api/users/:user_id/api-keys/:key_id", delete(revoke_api_key))
+        .route(
+            "/api/users/:user_id/api-keys/:key_id",
+            delete(revoke_api_key),
+        )
         .route(
             "/internal/users/:user_id/api-keys/decrypted",
             get(get_decrypted_keys),
@@ -290,7 +293,10 @@ async fn get_decrypted_agent_key(
     State(service): State<Arc<ApiKeyService>>,
     Path((agent_name, provider)): Path<(String, String)>,
 ) -> impl IntoResponse {
-    match service.get_decrypted_agent_key(&agent_name, &provider).await {
+    match service
+        .get_decrypted_agent_key(&agent_name, &provider)
+        .await
+    {
         Ok(Some(api_key)) => (
             StatusCode::OK,
             Json(DecryptedAgentApiKeyResponse {

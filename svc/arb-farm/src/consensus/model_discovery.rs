@@ -2,7 +2,7 @@ use reqwest::Client;
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use tokio::sync::RwLock;
-use tracing::{info, warn, error};
+use tracing::{error, info, warn};
 
 use super::config::ConsensusModelConfig;
 
@@ -132,7 +132,8 @@ pub async fn discover_best_reasoning_models(api_key: &str) -> Vec<ConsensusModel
                         provider: model.id.split('/').next().unwrap_or("unknown").to_string(),
                         weight,
                         enabled: true,
-                        max_tokens: model.top_provider
+                        max_tokens: model
+                            .top_provider
                             .as_ref()
                             .and_then(|p| p.max_completion_tokens)
                             .unwrap_or(4096) as u32,
@@ -146,10 +147,10 @@ pub async fn discover_best_reasoning_models(api_key: &str) -> Vec<ConsensusModel
                 best_models = all_models
                     .iter()
                     .filter(|m| {
-                        m.id.contains("claude") ||
-                        m.id.contains("gpt-4") ||
-                        m.id.contains("gemini") ||
-                        m.id.contains("llama")
+                        m.id.contains("claude")
+                            || m.id.contains("gpt-4")
+                            || m.id.contains("gemini")
+                            || m.id.contains("llama")
                     })
                     .take(5)
                     .map(|m| ConsensusModelConfig {
@@ -163,7 +164,11 @@ pub async fn discover_best_reasoning_models(api_key: &str) -> Vec<ConsensusModel
                     .collect();
             }
 
-            best_models.sort_by(|a, b| b.weight.partial_cmp(&a.weight).unwrap_or(std::cmp::Ordering::Equal));
+            best_models.sort_by(|a, b| {
+                b.weight
+                    .partial_cmp(&a.weight)
+                    .unwrap_or(std::cmp::Ordering::Equal)
+            });
 
             let top_models: Vec<ConsensusModelConfig> = best_models.into_iter().take(5).collect();
 
@@ -240,7 +245,11 @@ pub async fn get_discovery_status() -> ModelDiscoveryStatus {
     ModelDiscoveryStatus {
         models_discovered: models.len(),
         last_refresh: Some(chrono::Utc::now()),
-        source: if models.is_empty() { "fallback".to_string() } else { "openrouter".to_string() },
+        source: if models.is_empty() {
+            "fallback".to_string()
+        } else {
+            "openrouter".to_string()
+        },
         top_models: models.iter().map(|m| m.display_name.clone()).collect(),
     }
 }

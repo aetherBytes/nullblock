@@ -3,12 +3,12 @@ use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 use uuid::Uuid;
 
+use super::registry::WALLET_REGISTRY;
+use super::traits::{ChainType, ChallengeContext};
 use crate::resources::types::{
     WalletChallengeRequest, WalletChallengeResponse, WalletInfo as ApiWalletInfo,
     WalletListResponse, WalletSession, WalletVerifyRequest, WalletVerifyResponse,
 };
-use super::registry::WALLET_REGISTRY;
-use super::traits::{ChallengeContext, ChainType};
 
 // Challenge data structure with chain info
 #[derive(Debug, Clone)]
@@ -122,10 +122,7 @@ impl WalletManager {
 
         println!(
             "Created {} wallet challenge ({}) for {}: {}",
-            request.wallet_type,
-            context.chain,
-            request.wallet_address,
-            challenge_id
+            request.wallet_type, context.chain, request.wallet_address, challenge_id
         );
 
         Ok(WalletChallengeResponse {
@@ -386,9 +383,8 @@ mod tests {
     #[test]
     fn test_detect_chain_from_address() {
         // EVM address
-        let evm = WalletManager::detect_chain_from_address(
-            "0x742d35Cc6634C0532925a3b844Bc454e4438f44e",
-        );
+        let evm =
+            WalletManager::detect_chain_from_address("0x742d35Cc6634C0532925a3b844Bc454e4438f44e");
         assert_eq!(evm, Some(ChainType::Evm));
 
         // Solana address

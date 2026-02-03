@@ -1,16 +1,21 @@
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 use std::time::Instant;
-use tokio::sync::{broadcast, RwLock, Mutex};
+use tokio::sync::{broadcast, Mutex, RwLock};
 use tokio::time::{interval, Duration};
 use uuid::Uuid;
 
+use super::strategies::{
+    BehavioralStrategy, GraduationEvent, RaydiumSnipeStrategy, StrategyRegistry, TokenData,
+    VenueSnapshot,
+};
+use super::StrategyEngine;
 use crate::error::AppResult;
-use crate::events::{ArbEvent, AgentType, EventSource, scanner as scanner_topics, swarm as swarm_topics};
+use crate::events::{
+    scanner as scanner_topics, swarm as swarm_topics, AgentType, ArbEvent, EventSource,
+};
 use crate::models::{Signal, VenueType};
 use crate::venues::MevVenue;
-use super::StrategyEngine;
-use super::strategies::{BehavioralStrategy, GraduationEvent, RaydiumSnipeStrategy, StrategyRegistry, VenueSnapshot, TokenData};
 
 pub struct VenueRateLimiter {
     last_request: Mutex<HashMap<Uuid, Instant>>,
@@ -143,7 +148,10 @@ impl ScannerAgent {
         *s = Some(strategy);
     }
 
-    pub async fn set_pump_fun_venue(&self, venue: Arc<crate::venues::curves::pump_fun::PumpFunVenue>) {
+    pub async fn set_pump_fun_venue(
+        &self,
+        venue: Arc<crate::venues::curves::pump_fun::PumpFunVenue>,
+    ) {
         let mut v = self.pump_fun_venue.write().await;
         *v = Some(venue);
     }
@@ -275,7 +283,9 @@ impl ScannerAgent {
                                         symbol: td.symbol,
                                         graduation_progress: td.graduation_progress,
                                         bonding_curve_address: td.bonding_curve_address,
-                                        market_cap_sol: td.market_cap_sol.unwrap_or(td.market_cap_usd),
+                                        market_cap_sol: td
+                                            .market_cap_sol
+                                            .unwrap_or(td.market_cap_usd),
                                         volume_24h_sol: td.volume_24h_usd / 200.0,
                                         volume_1h_sol: td.volume_1h_usd / 200.0,
                                         holder_count: td.holder_count,
@@ -302,7 +312,10 @@ impl ScannerAgent {
                                         "error": e.to_string(),
                                     }),
                                 )) {
-                                    tracing::warn!("Event broadcast failed (channel full/closed): {}", send_err);
+                                    tracing::warn!(
+                                        "Event broadcast failed (channel full/closed): {}",
+                                        send_err
+                                    );
                                 }
                             }
                         }
@@ -318,7 +331,11 @@ impl ScannerAgent {
                         .filter(|t| t.graduation_progress <= 100.0)
                         .cloned()
                         .collect();
-                    contenders.sort_by(|a, b| b.graduation_progress.partial_cmp(&a.graduation_progress).unwrap_or(std::cmp::Ordering::Equal));
+                    contenders.sort_by(|a, b| {
+                        b.graduation_progress
+                            .partial_cmp(&a.graduation_progress)
+                            .unwrap_or(std::cmp::Ordering::Equal)
+                    });
                     contenders.truncate(50);
                     contender_mints = contenders.iter().map(|t| t.mint.clone()).collect();
                     let mut cache = recent_token_data.write().await;
@@ -352,7 +369,8 @@ impl ScannerAgent {
                                     continue;
                                 }
 
-                                let last_progress = all_token_data.iter()
+                                let last_progress = all_token_data
+                                    .iter()
                                     .find(|t| t.mint == token.mint)
                                     .map(|t| t.graduation_progress)
                                     .unwrap_or(100.0);
@@ -368,13 +386,15 @@ impl ScannerAgent {
                                 );
 
                                 if let Some(strategy) = snipe_strategy.as_ref() {
-                                    strategy.push_graduation(GraduationEvent {
-                                        mint: token.mint.clone(),
-                                        symbol: token.symbol.clone(),
-                                        name: token.name.clone(),
-                                        raydium_pool: token.raydium_pool.clone(),
-                                        last_progress,
-                                    }).await;
+                                    strategy
+                                        .push_graduation(GraduationEvent {
+                                            mint: token.mint.clone(),
+                                            symbol: token.symbol.clone(),
+                                            name: token.name.clone(),
+                                            raydium_pool: token.raydium_pool.clone(),
+                                            last_progress,
+                                        })
+                                        .await;
                                 }
                             }
                         }
@@ -403,7 +423,9 @@ impl ScannerAgent {
                                     for signal in &mut strategy_signals {
                                         if let Some(obj) = signal.metadata.as_object_mut() {
                                             obj.entry("signal_source").or_insert(
-                                                serde_json::Value::String(strategy.strategy_type().to_string())
+                                                serde_json::Value::String(
+                                                    strategy.strategy_type().to_string(),
+                                                ),
                                             );
                                         }
                                     }
@@ -471,15 +493,19 @@ impl ScannerAgent {
                     cache.retain(|s| s.expires_at > now);
 
                     for signal in all_signals.iter() {
-                        let signal_source = signal.metadata.get("signal_source")
+                        let signal_source = signal
+                            .metadata
+                            .get("signal_source")
                             .and_then(|v| v.as_str())
                             .unwrap_or("");
                         let already_cached = cache.iter().any(|s| {
-                            s.token_mint == signal.token_mint &&
-                            s.signal_type == signal.signal_type &&
-                            s.metadata.get("signal_source")
-                                .and_then(|v| v.as_str())
-                                .unwrap_or("") == signal_source
+                            s.token_mint == signal.token_mint
+                                && s.signal_type == signal.signal_type
+                                && s.metadata
+                                    .get("signal_source")
+                                    .and_then(|v| v.as_str())
+                                    .unwrap_or("")
+                                    == signal_source
                         });
                         if !already_cached {
                             cache.push(signal.clone());
@@ -575,7 +601,11 @@ impl ScannerAgent {
         signals
     }
 
-    pub async fn get_cached_signals_by_venue(&self, venue_type: VenueType, limit: Option<usize>) -> Vec<Signal> {
+    pub async fn get_cached_signals_by_venue(
+        &self,
+        venue_type: VenueType,
+        limit: Option<usize>,
+    ) -> Vec<Signal> {
         let signals = self.get_recent_signals(None).await;
         let mut filtered: Vec<Signal> = signals
             .into_iter()
@@ -589,7 +619,11 @@ impl ScannerAgent {
         filtered
     }
 
-    pub async fn get_cached_high_confidence(&self, min_confidence: f64, limit: Option<usize>) -> Vec<Signal> {
+    pub async fn get_cached_high_confidence(
+        &self,
+        min_confidence: f64,
+        limit: Option<usize>,
+    ) -> Vec<Signal> {
         let signals = self.get_recent_signals(None).await;
         let mut filtered: Vec<Signal> = signals
             .into_iter()
@@ -607,7 +641,11 @@ impl ScannerAgent {
         let all_signals = self.scan_once().await?;
         Ok(all_signals
             .into_iter()
-            .filter(|s| format!("{:?}", s.signal_type).to_lowercase().contains(&signal_type.to_lowercase()))
+            .filter(|s| {
+                format!("{:?}", s.signal_type)
+                    .to_lowercase()
+                    .contains(&signal_type.to_lowercase())
+            })
             .collect())
     }
 

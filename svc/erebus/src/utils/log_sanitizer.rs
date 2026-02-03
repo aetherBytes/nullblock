@@ -171,11 +171,18 @@ impl LogSanitizer {
             return LogCategory::LlmApiCall;
         }
 
-        if source_lower.contains("erebus") || message_lower.contains("proxy") || message_lower.contains("routing") {
+        if source_lower.contains("erebus")
+            || message_lower.contains("proxy")
+            || message_lower.contains("routing")
+        {
             return LogCategory::ErebusRouting;
         }
 
-        if message_lower.contains("task") && (message_lower.contains("created") || message_lower.contains("completed") || message_lower.contains("failed")) {
+        if message_lower.contains("task")
+            && (message_lower.contains("created")
+                || message_lower.contains("completed")
+                || message_lower.contains("failed"))
+        {
             return LogCategory::TaskLifecycle;
         }
 
@@ -187,7 +194,10 @@ impl LogSanitizer {
             return LogCategory::SystemError;
         }
 
-        if source_lower.contains("database") || source_lower.contains("sqlx") || source_lower.contains("postgres") {
+        if source_lower.contains("database")
+            || source_lower.contains("sqlx")
+            || source_lower.contains("postgres")
+        {
             return LogCategory::DatabaseQuery;
         }
 

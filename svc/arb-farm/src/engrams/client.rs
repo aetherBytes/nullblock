@@ -161,7 +161,9 @@ impl EngramsClient {
     }
 
     fn get_wallet(&self, wallet: Option<&str>) -> Option<String> {
-        wallet.map(|w| w.to_string()).or(self.default_wallet.clone())
+        wallet
+            .map(|w| w.to_string())
+            .or(self.default_wallet.clone())
     }
 
     pub async fn create_engram(&self, request: CreateEngramRequest) -> Result<Engram, String> {
@@ -172,7 +174,8 @@ impl EngramsClient {
         let url = format!("{}/engrams", self.base_url);
         debug!("Creating engram: {} at {}", request.key, url);
 
-        match self.http_client
+        match self
+            .http_client
             .post(&url)
             .json(&request)
             .timeout(std::time::Duration::from_secs(30))
@@ -191,7 +194,8 @@ impl EngramsClient {
                                     Err("Engrams service returned success but no data".to_string())
                                 }
                             } else {
-                                let err_msg = resp.error.unwrap_or_else(|| "Unknown error".to_string());
+                                let err_msg =
+                                    resp.error.unwrap_or_else(|| "Unknown error".to_string());
                                 error!("Engrams service error: {}", err_msg);
                                 Err(err_msg)
                             }
@@ -223,7 +227,8 @@ impl EngramsClient {
         let url = format!("{}/engrams/wallet/{}", self.base_url, wallet);
         debug!("Fetching engrams for wallet: {}", wallet);
 
-        match self.http_client
+        match self
+            .http_client
             .get(&url)
             .timeout(std::time::Duration::from_secs(30))
             .send()
@@ -238,7 +243,8 @@ impl EngramsClient {
                                 debug!("Fetched {} engrams for wallet {}", engrams.len(), wallet);
                                 Ok(engrams)
                             } else {
-                                let err_msg = resp.error.unwrap_or_else(|| "Unknown error".to_string());
+                                let err_msg =
+                                    resp.error.unwrap_or_else(|| "Unknown error".to_string());
                                 error!("Engrams wallet fetch error: {}", err_msg);
                                 Err(err_msg)
                             }
@@ -269,7 +275,8 @@ impl EngramsClient {
         let url = format!("{}/engrams/search", self.base_url);
         debug!("Searching engrams with query: {:?}", request.query);
 
-        match self.http_client
+        match self
+            .http_client
             .post(&url)
             .json(&request)
             .timeout(std::time::Duration::from_secs(30))
@@ -285,7 +292,8 @@ impl EngramsClient {
                                 debug!("Found {} engrams matching query", engrams.len());
                                 Ok(engrams)
                             } else {
-                                let err_msg = resp.error.unwrap_or_else(|| "Unknown error".to_string());
+                                let err_msg =
+                                    resp.error.unwrap_or_else(|| "Unknown error".to_string());
                                 error!("Engrams search error: {}", err_msg);
                                 Err(err_msg)
                             }
@@ -334,7 +342,11 @@ impl EngramsClient {
                 "arb".to_string(),
                 "trade".to_string(),
                 trade.venue.clone(),
-                if trade.profit_lamports > 0 { "profit".to_string() } else { "loss".to_string() },
+                if trade.profit_lamports > 0 {
+                    "profit".to_string()
+                } else {
+                    "loss".to_string()
+                },
             ]),
             is_public: Some(false),
         };
@@ -493,10 +505,24 @@ impl EngramsClient {
         execution_mode: &str,
         risk_params: &Value,
     ) -> Result<Engram, String> {
-        self.save_strategy_full(wallet, strategy_id, strategy_name, strategy_type, venue_types, execution_mode, risk_params, true).await
+        self.save_strategy_full(
+            wallet,
+            strategy_id,
+            strategy_name,
+            strategy_type,
+            venue_types,
+            execution_mode,
+            risk_params,
+            true,
+        )
+        .await
     }
 
-    pub async fn get_engram_by_wallet_key(&self, wallet: &str, key: &str) -> Result<Option<Engram>, String> {
+    pub async fn get_engram_by_wallet_key(
+        &self,
+        wallet: &str,
+        key: &str,
+    ) -> Result<Option<Engram>, String> {
         if !self.is_configured() {
             return Err("Engrams service not configured".to_string());
         }
@@ -504,7 +530,8 @@ impl EngramsClient {
         let url = format!("{}/engrams/wallet/{}/{}", self.base_url, wallet, key);
         debug!("Fetching engram by wallet/key: {}/{}", wallet, key);
 
-        match self.http_client
+        match self
+            .http_client
             .get(&url)
             .timeout(std::time::Duration::from_secs(30))
             .send()
@@ -518,7 +545,10 @@ impl EngramsClient {
                                 return Ok(resp.data);
                             }
                             // Direct lookup failed - try search as fallback
-                            debug!("Direct lookup failed for {}/{}, trying search fallback", wallet, key);
+                            debug!(
+                                "Direct lookup failed for {}/{}, trying search fallback",
+                                wallet, key
+                            );
                         }
                         Err(_) => {}
                     }
@@ -552,7 +582,12 @@ impl EngramsClient {
         }
     }
 
-    pub async fn update_engram(&self, id: &str, content: &str, tags: Option<Vec<String>>) -> Result<Engram, String> {
+    pub async fn update_engram(
+        &self,
+        id: &str,
+        content: &str,
+        tags: Option<Vec<String>>,
+    ) -> Result<Engram, String> {
         if !self.is_configured() {
             return Err("Engrams service not configured".to_string());
         }
@@ -565,7 +600,8 @@ impl EngramsClient {
             "tags": tags,
         });
 
-        match self.http_client
+        match self
+            .http_client
             .put(&url)
             .json(&body)
             .timeout(std::time::Duration::from_secs(30))
@@ -584,7 +620,8 @@ impl EngramsClient {
                                     Err("Engrams service returned success but no data".to_string())
                                 }
                             } else {
-                                let err_msg = resp.error.unwrap_or_else(|| "Unknown error".to_string());
+                                let err_msg =
+                                    resp.error.unwrap_or_else(|| "Unknown error".to_string());
                                 error!("Engrams update error: {}", err_msg);
                                 Err(err_msg)
                             }
@@ -610,15 +647,22 @@ impl EngramsClient {
 
     pub async fn upsert_engram(&self, request: CreateEngramRequest) -> Result<Engram, String> {
         // Check if engram exists by wallet/key
-        if let Ok(Some(existing)) = self.get_engram_by_wallet_key(&request.wallet_address, &request.key).await {
+        if let Ok(Some(existing)) = self
+            .get_engram_by_wallet_key(&request.wallet_address, &request.key)
+            .await
+        {
             // Update existing
-            return self.update_engram(&existing.id, &request.content, request.tags).await;
+            return self
+                .update_engram(&existing.id, &request.content, request.tags)
+                .await;
         }
 
         // Also check with "default" wallet for legacy data
         if let Ok(Some(existing)) = self.get_engram_by_wallet_key("default", &request.key).await {
             // Update existing legacy engram
-            return self.update_engram(&existing.id, &request.content, request.tags).await;
+            return self
+                .update_engram(&existing.id, &request.content, request.tags)
+                .await;
         }
 
         // Try to create new, but handle duplicate key gracefully
@@ -626,17 +670,28 @@ impl EngramsClient {
             Ok(engram) => Ok(engram),
             Err(e) if e.contains("duplicate key") || e.contains("unique constraint") => {
                 // Engram exists but we couldn't find it - try one more time to fetch and update
-                warn!("Engram {} already exists but wasn't found initially - retrying fetch", request.key);
+                warn!(
+                    "Engram {} already exists but wasn't found initially - retrying fetch",
+                    request.key
+                );
 
                 // Retry fetching after a small delay (race condition mitigation)
                 tokio::time::sleep(std::time::Duration::from_millis(100)).await;
 
-                if let Ok(Some(existing)) = self.get_engram_by_wallet_key(&request.wallet_address, &request.key).await {
-                    return self.update_engram(&existing.id, &request.content, request.tags).await;
+                if let Ok(Some(existing)) = self
+                    .get_engram_by_wallet_key(&request.wallet_address, &request.key)
+                    .await
+                {
+                    return self
+                        .update_engram(&existing.id, &request.content, request.tags)
+                        .await;
                 }
 
                 // Still can't find it - return a synthetic success
-                warn!("Engram {} still not found after duplicate key error - treating as success", request.key);
+                warn!(
+                    "Engram {} still not found after duplicate key error - treating as success",
+                    request.key
+                );
                 Ok(Engram {
                     id: String::new(),
                     wallet_address: request.wallet_address,
@@ -743,11 +798,7 @@ impl EngramsClient {
             "risk_level": if risk_score < 30 { "low" } else if risk_score < 60 { "medium" } else { "high" },
         });
 
-        let mut tags = vec![
-            "arb".to_string(),
-            "edge".to_string(),
-            edge_type.to_string(),
-        ];
+        let mut tags = vec!["arb".to_string(), "edge".to_string(), edge_type.to_string()];
         if let Some(mint) = token_mint {
             tags.push(mint.chars().take(8).collect::<String>());
         }
@@ -802,7 +853,11 @@ impl EngramsClient {
                 "arb".to_string(),
                 "kol".to_string(),
                 discovery_source.to_string(),
-                if trust_score >= 70.0 { "high_trust".to_string() } else { "tracking".to_string() },
+                if trust_score >= 70.0 {
+                    "high_trust".to_string()
+                } else {
+                    "tracking".to_string()
+                },
             ]),
             is_public: Some(true), // KOL profiles can be shared
         };
@@ -810,7 +865,10 @@ impl EngramsClient {
         self.create_engram(request).await
     }
 
-    pub async fn get_discovered_kols(&self, wallet: &str) -> Result<Vec<KolDiscoveryEngram>, String> {
+    pub async fn get_discovered_kols(
+        &self,
+        wallet: &str,
+    ) -> Result<Vec<KolDiscoveryEngram>, String> {
         let search = SearchRequest {
             wallet_address: Some(wallet.to_string()),
             engram_type: Some("knowledge".to_string()),
@@ -986,7 +1044,11 @@ impl EngramsClient {
                 "arb".to_string(),
                 "error".to_string(),
                 error_type_str,
-                if error.recoverable { "recoverable".to_string() } else { "fatal".to_string() },
+                if error.recoverable {
+                    "recoverable".to_string()
+                } else {
+                    "fatal".to_string()
+                },
             ]),
             is_public: Some(false),
         };
@@ -1034,7 +1096,8 @@ impl EngramsClient {
         wallet: &str,
         recommendation: &crate::engrams::schemas::Recommendation,
     ) -> Result<Engram, String> {
-        let key = crate::engrams::schemas::generate_recommendation_key(&recommendation.recommendation_id);
+        let key =
+            crate::engrams::schemas::generate_recommendation_key(&recommendation.recommendation_id);
         let content = serde_json::to_string(recommendation)
             .map_err(|e| format!("Failed to serialize recommendation: {}", e))?;
 
@@ -1202,7 +1265,12 @@ impl EngramsClient {
                 crate::engrams::schemas::A2A_TAG_LEARNING.to_string(),
                 "decision".to_string(),
                 "consensus".to_string(),
-                if decision.approved { "approved" } else { "rejected" }.to_string(),
+                if decision.approved {
+                    "approved"
+                } else {
+                    "rejected"
+                }
+                .to_string(),
             ]),
             is_public: Some(false),
         };
@@ -1239,7 +1307,9 @@ impl EngramsClient {
         status: Option<&crate::engrams::schemas::RecommendationStatus>,
         limit: Option<i64>,
     ) -> Result<Vec<crate::engrams::schemas::Recommendation>, String> {
-        let engrams = self.get_learning_engrams(wallet, Some("recommendation"), limit).await?;
+        let engrams = self
+            .get_learning_engrams(wallet, Some("recommendation"), limit)
+            .await?;
 
         let recommendations: Vec<crate::engrams::schemas::Recommendation> = engrams
             .into_iter()
@@ -1261,7 +1331,9 @@ impl EngramsClient {
         wallet: &str,
         limit: Option<i64>,
     ) -> Result<Vec<crate::engrams::schemas::ConversationLog>, String> {
-        let engrams = self.get_learning_engrams(wallet, Some("conversation"), limit).await?;
+        let engrams = self
+            .get_learning_engrams(wallet, Some("conversation"), limit)
+            .await?;
 
         let conversations: Vec<crate::engrams::schemas::ConversationLog> = engrams
             .into_iter()
@@ -1298,10 +1370,13 @@ impl EngramsClient {
                 .to_string();
 
             let mut tags = existing.tags.clone();
-            tags.retain(|t| !["pending", "acknowledged", "applied", "rejected"].contains(&t.as_str()));
+            tags.retain(|t| {
+                !["pending", "acknowledged", "applied", "rejected"].contains(&t.as_str())
+            });
             tags.push(status_str);
 
-            self.update_engram(&existing.id, &new_content, Some(tags)).await
+            self.update_engram(&existing.id, &new_content, Some(tags))
+                .await
         } else {
             Err(format!("Recommendation {} not found", recommendation_id))
         }
@@ -1395,7 +1470,9 @@ impl EngramsClient {
         status: Option<&crate::engrams::schemas::RecommendationStatus>,
         limit: Option<i64>,
     ) -> Result<Vec<crate::engrams::schemas::RecommendationEngramWrapper>, String> {
-        let engrams = self.get_learning_engrams(wallet, Some("recommendation"), limit).await?;
+        let engrams = self
+            .get_learning_engrams(wallet, Some("recommendation"), limit)
+            .await?;
 
         let recommendations: Vec<crate::engrams::schemas::RecommendationEngramWrapper> = engrams
             .into_iter()
@@ -1464,7 +1541,8 @@ impl EngramsClient {
         for id in engram_ids {
             let url = format!("{}/engrams/{}", self.base_url, id);
 
-            match self.http_client
+            match self
+                .http_client
                 .get(&url)
                 .header("X-Wallet-Address", wallet)
                 .send()
@@ -1572,7 +1650,8 @@ impl EngramsClient {
         let url = format!("{}/engrams/{}", self.base_url, id);
         debug!("Deleting engram: {} at {}", id, url);
 
-        match self.http_client
+        match self
+            .http_client
             .delete(&url)
             .timeout(std::time::Duration::from_secs(30))
             .send()
@@ -1722,7 +1801,9 @@ impl EngramsClient {
             wallet_address: Some(wallet.to_string()),
             engram_type: Some("knowledge".to_string()),
             query: None,
-            tags: Some(vec![crate::engrams::schemas::PATTERN_SUMMARY_TAG.to_string()]),
+            tags: Some(vec![
+                crate::engrams::schemas::PATTERN_SUMMARY_TAG.to_string()
+            ]),
             limit: limit.or(Some(10)),
             offset: None,
         };

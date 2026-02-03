@@ -12,17 +12,20 @@ pub mod strategies;
 pub mod strategy_engine;
 
 pub use autonomous_executor::{
-    AutoExecutionRecord, AutoExecutionStatus, AutoExecutorStats, AutonomousExecutor,
-    spawn_autonomous_executor, start_autonomous_executor,
+    spawn_autonomous_executor, start_autonomous_executor, AutoExecutionRecord, AutoExecutionStatus,
+    AutoExecutorStats, AutonomousExecutor,
 };
 pub use curve_metrics::{CurveMetricsCollector, DetailedCurveMetrics, MetricsSample};
 pub use curve_scorer::{
     CurveOpportunityScorer, OpportunityScore, Recommendation, ScoringThresholds, ScoringWeights,
 };
 pub use engram_harvester::{EngramHarvester, HarvesterStats};
-pub use graduation_sniper::{GraduationSniper, SnipePosition, SnipeStatus, SniperConfig, SniperStats};
-pub use hecate_notifier::{HecateNotifier, spawn_hecate_notifier};
+pub use graduation_sniper::{
+    GraduationSniper, SnipePosition, SnipeStatus, SniperConfig, SniperStats,
+};
+pub use hecate_notifier::{spawn_hecate_notifier, HecateNotifier};
 pub use kol_discovery::{DiscoveredKol, KolDiscoveryAgent, KolDiscoveryStats};
+pub use metrics_aggregator::{start_daily_metrics_scheduler, MetricsAggregator};
 pub use overseer::{
     AgentHealth, AgentStatus, OverseerConfig, OverseerStats, ResilienceOverseer, SwarmHealth,
 };
@@ -32,4 +35,3 @@ pub use strategies::{
     StrategyRegistry, TokenData, VenueSnapshot,
 };
 pub use strategy_engine::{MatchResult, StrategyEngine};
-pub use metrics_aggregator::{MetricsAggregator, start_daily_metrics_scheduler};

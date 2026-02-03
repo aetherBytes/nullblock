@@ -1,5 +1,5 @@
-pub mod server;
+pub mod auth;
+pub mod errors;
 pub mod health;
 pub mod protocols;
-pub mod errors;
-pub mod auth;
+pub mod server;

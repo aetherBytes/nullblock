@@ -1,0 +1,46 @@
+{
+  "family": "nullblock-engrams",
+  "requiresCompatibilities": ["EC2"],
+  "networkMode": "bridge",
+  "memory": "256",
+  "cpu": "128",
+  "executionRoleArn": "arn:aws:iam::058264371750:role/ECSTaskDefinitionRole",
+  "taskRoleArn": "arn:aws:iam::058264371750:role/ECSTaskDefinitionRole",
+  "containerDefinitions": [
+    {
+      "name": "nullblock-engrams",
+      "image": "ghcr.io/aetherbytes/nullblock/nullblock-engrams:latest",
+      "essential": true,
+      "portMappings": [
+        {
+          "containerPort": 9004,
+          "hostPort": 9004,
+          "protocol": "tcp"
+        }
+      ],
+      "repositoryCredentials": {
+        "credentialsParameter": "arn:aws:secretsmanager:us-east-1:058264371750:secret:github-docker-token-g5Hrtm"
+      },
+      "healthCheck": {
+        "command": ["CMD-SHELL", "curl -f http://localhost:9004/health || exit 1"],
+        "interval": 30,
+        "timeout": 5,
+        "retries": 3,
+        "startPeriod": 60
+      },
+      "logConfiguration": {
+        "logDriver": "awslogs",
+        "options": {
+          "awslogs-group": "/ecs/nullblock/engrams",
+          "awslogs-region": "us-east-1",
+          "awslogs-stream-prefix": "ecs"
+        }
+      },
+      "environment": [],
+      "secrets": [],
+      "mountPoints": [],
+      "volumesFrom": []
+    }
+  ],
+  "volumes": []
+}

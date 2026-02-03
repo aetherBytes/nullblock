@@ -34,7 +34,9 @@ impl KaminoVenue {
             .timeout(std::time::Duration::from_secs(15))
             .send()
             .await
-            .map_err(|e| AppError::ExternalApi(format!("Kamino obligations request failed: {}", e)))?;
+            .map_err(|e| {
+                AppError::ExternalApi(format!("Kamino obligations request failed: {}", e))
+            })?;
 
         if !response.status().is_success() {
             return Err(AppError::ExternalApi(format!(
@@ -43,15 +45,17 @@ impl KaminoVenue {
             )));
         }
 
-        let obligations: KaminoObligationsResponse = response
-            .json()
-            .await
-            .map_err(|e| AppError::ExternalApi(format!("Failed to parse Kamino response: {}", e)))?;
+        let obligations: KaminoObligationsResponse = response.json().await.map_err(|e| {
+            AppError::ExternalApi(format!("Failed to parse Kamino response: {}", e))
+        })?;
 
         Ok(obligations.obligations)
     }
 
-    pub async fn get_obligation_details(&self, obligation_address: &str) -> AppResult<KaminoObligationDetail> {
+    pub async fn get_obligation_details(
+        &self,
+        obligation_address: &str,
+    ) -> AppResult<KaminoObligationDetail> {
         let url = format!("{}/obligations/{}", self.base_url, obligation_address);
 
         let response = self
@@ -60,7 +64,9 @@ impl KaminoVenue {
             .timeout(std::time::Duration::from_secs(10))
             .send()
             .await
-            .map_err(|e| AppError::ExternalApi(format!("Kamino obligation request failed: {}", e)))?;
+            .map_err(|e| {
+                AppError::ExternalApi(format!("Kamino obligation request failed: {}", e))
+            })?;
 
         if !response.status().is_success() {
             return Err(AppError::ExternalApi(format!(
@@ -69,13 +75,15 @@ impl KaminoVenue {
             )));
         }
 
-        response
-            .json()
-            .await
-            .map_err(|e| AppError::ExternalApi(format!("Failed to parse obligation response: {}", e)))
+        response.json().await.map_err(|e| {
+            AppError::ExternalApi(format!("Failed to parse obligation response: {}", e))
+        })
     }
 
-    pub async fn get_liquidatable_obligations(&self, min_shortfall: f64) -> AppResult<Vec<LiquidatableObligation>> {
+    pub async fn get_liquidatable_obligations(
+        &self,
+        min_shortfall: f64,
+    ) -> AppResult<Vec<LiquidatableObligation>> {
         let obligations = self.get_obligations_at_risk().await?;
         let mut liquidatable = Vec::new();
 
@@ -87,11 +95,13 @@ impl KaminoVenue {
             };
 
             if ltv > obligation.liquidation_ltv {
-                let shortfall = obligation.borrowed_value_usd - (obligation.deposited_value_usd * obligation.liquidation_ltv);
+                let shortfall = obligation.borrowed_value_usd
+                    - (obligation.deposited_value_usd * obligation.liquidation_ltv);
 
                 if shortfall >= min_shortfall {
                     let max_liquidation = obligation.borrowed_value_usd * 0.5;
-                    let liquidation_bonus = max_liquidation * obligation.liquidation_bonus_bps as f64 / 10000.0;
+                    let liquidation_bonus =
+                        max_liquidation * obligation.liquidation_bonus_bps as f64 / 10000.0;
                     let estimated_profit = (liquidation_bonus - 0.001) * 1e9;
 
                     liquidatable.push(LiquidatableObligation {
@@ -113,7 +123,8 @@ impl KaminoVenue {
         }
 
         liquidatable.sort_by(|a, b| {
-            b.estimated_profit_lamports.cmp(&a.estimated_profit_lamports)
+            b.estimated_profit_lamports
+                .cmp(&a.estimated_profit_lamports)
         });
 
         Ok(liquidatable)
@@ -137,10 +148,9 @@ impl KaminoVenue {
             )));
         }
 
-        let reserves: KaminoReservesResponse = response
-            .json()
-            .await
-            .map_err(|e| AppError::ExternalApi(format!("Failed to parse reserves response: {}", e)))?;
+        let reserves: KaminoReservesResponse = response.json().await.map_err(|e| {
+            AppError::ExternalApi(format!("Failed to parse reserves response: {}", e))
+        })?;
 
         Ok(reserves.reserves)
     }

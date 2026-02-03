@@ -1,9 +1,4 @@
-use axum::{
-    extract::State,
-    http::StatusCode,
-    response::IntoResponse,
-    Json,
-};
+use axum::{extract::State, http::StatusCode, response::IntoResponse, Json};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
@@ -34,10 +29,14 @@ pub struct ContentItem {
 impl From<McpToolResult> for ToolCallResponse {
     fn from(result: McpToolResult) -> Self {
         Self {
-            content: result.content.into_iter().map(|c| ContentItem {
-                content_type: c.content_type,
-                text: c.text,
-            }).collect(),
+            content: result
+                .content
+                .into_iter()
+                .map(|c| ContentItem {
+                    content_type: c.content_type,
+                    text: c.text,
+                })
+                .collect(),
             is_error: result.is_error,
         }
     }
@@ -181,10 +180,19 @@ async fn scanner_status(state: &AppState) -> McpToolResult {
 }
 
 async fn scanner_signals(state: &AppState, args: Value) -> McpToolResult {
-    let min_confidence = args.get("min_confidence").and_then(|v| v.as_f64()).unwrap_or(0.5);
+    let min_confidence = args
+        .get("min_confidence")
+        .and_then(|v| v.as_f64())
+        .unwrap_or(0.5);
 
-    match state.scanner.get_high_confidence_signals(min_confidence).await {
-        Ok(signals) => McpToolResult::success(serde_json::to_string_pretty(&signals).unwrap_or_default()),
+    match state
+        .scanner
+        .get_high_confidence_signals(min_confidence)
+        .await
+    {
+        Ok(signals) => {
+            McpToolResult::success(serde_json::to_string_pretty(&signals).unwrap_or_default())
+        }
         Err(e) => McpToolResult::error(format!("Failed to get signals: {}", e)),
     }
 }
@@ -196,7 +204,9 @@ async fn edge_list(state: &AppState, args: Value) -> McpToolResult {
     let status = args.get("status").and_then(|v| v.as_str());
 
     match state.edge_repo.list(None, status, limit, offset).await {
-        Ok(edges) => McpToolResult::success(serde_json::to_string_pretty(&edges).unwrap_or_default()),
+        Ok(edges) => {
+            McpToolResult::success(serde_json::to_string_pretty(&edges).unwrap_or_default())
+        }
         Err(e) => McpToolResult::error(format!("Failed to list edges: {}", e)),
     }
 }
@@ -213,7 +223,9 @@ async fn edge_details(state: &AppState, args: Value) -> McpToolResult {
     };
 
     match state.edge_repo.get_by_id(uuid).await {
-        Ok(Some(edge)) => McpToolResult::success(serde_json::to_string_pretty(&edge).unwrap_or_default()),
+        Ok(Some(edge)) => {
+            McpToolResult::success(serde_json::to_string_pretty(&edge).unwrap_or_default())
+        }
         Ok(None) => McpToolResult::error("Edge not found"),
         Err(e) => McpToolResult::error(format!("Failed to get edge: {}", e)),
     }
@@ -242,11 +254,14 @@ async fn strategy_toggle(state: &AppState, args: Value) -> McpToolResult {
     };
 
     match state.strategy_engine.toggle_strategy(uuid, enabled).await {
-        Ok(_) => McpToolResult::success(serde_json::json!({
-            "success": true,
-            "strategy_id": strategy_id,
-            "enabled": enabled
-        }).to_string()),
+        Ok(_) => McpToolResult::success(
+            serde_json::json!({
+                "success": true,
+                "strategy_id": strategy_id,
+                "enabled": enabled
+            })
+            .to_string(),
+        ),
         Err(e) => McpToolResult::error(format!("Failed to toggle strategy: {}", e)),
     }
 }
@@ -267,14 +282,17 @@ async fn strategy_kill(state: &AppState, args: Value) -> McpToolResult {
             // Also cancel pending approvals
             let _ = state.approval_manager.cancel_by_strategy(uuid).await;
 
-            McpToolResult::success(serde_json::json!({
-                "success": true,
-                "strategy_id": strategy_id,
-                "strategy_name": strategy_name,
-                "action": "emergency_stop",
-                "message": "Strategy killed - all operations halted"
-            }).to_string())
-        },
+            McpToolResult::success(
+                serde_json::json!({
+                    "success": true,
+                    "strategy_id": strategy_id,
+                    "strategy_name": strategy_name,
+                    "action": "emergency_stop",
+                    "message": "Strategy killed - all operations halted"
+                })
+                .to_string(),
+            )
+        }
         Err(e) => McpToolResult::error(format!("Failed to kill strategy: {}", e)),
     }
 }
@@ -323,15 +341,22 @@ async fn curve_list_tokens(state: &AppState, args: Value) -> McpToolResult {
 }
 
 async fn curve_graduation_candidates(state: &AppState, args: Value) -> McpToolResult {
-    let min_progress = args.get("min_progress").and_then(|v| v.as_f64()).unwrap_or(50.0);
-    let max_progress = args.get("max_progress").and_then(|v| v.as_f64()).unwrap_or(95.0);
+    let min_progress = args
+        .get("min_progress")
+        .and_then(|v| v.as_f64())
+        .unwrap_or(50.0);
+    let max_progress = args
+        .get("max_progress")
+        .and_then(|v| v.as_f64())
+        .unwrap_or(95.0);
     let limit = args.get("limit").and_then(|v| v.as_u64()).unwrap_or(20) as usize;
 
     let mut candidates = Vec::new();
 
     if let Ok(tokens) = state.pump_fun_venue.get_new_tokens(100).await {
         for token in tokens {
-            let progress = (token.market_cap / token.graduation_threshold.unwrap_or(69000.0)) * 100.0;
+            let progress =
+                (token.market_cap / token.graduation_threshold.unwrap_or(69000.0)) * 100.0;
             if progress >= min_progress && progress <= max_progress {
                 candidates.push(serde_json::json!({
                     "mint": token.mint,
@@ -356,21 +381,24 @@ async fn curve_check_progress(state: &AppState, args: Value) -> McpToolResult {
         Some(mint) => mint,
         None => return McpToolResult::error("token_mint is required"),
     };
-    let venue = args.get("venue").and_then(|v| v.as_str()).unwrap_or("pump_fun");
+    let venue = args
+        .get("venue")
+        .and_then(|v| v.as_str())
+        .unwrap_or("pump_fun");
 
     match venue {
-        "pump_fun" => {
-            match state.pump_fun_venue.get_token_info(token_mint).await {
-                Ok(info) => McpToolResult::success(serde_json::to_string_pretty(&info).unwrap_or_default()),
-                Err(e) => McpToolResult::error(format!("Failed to get token info: {}", e)),
+        "pump_fun" => match state.pump_fun_venue.get_token_info(token_mint).await {
+            Ok(info) => {
+                McpToolResult::success(serde_json::to_string_pretty(&info).unwrap_or_default())
             }
-        }
-        "moonshot" => {
-            match state.moonshot_venue.get_token_info(token_mint).await {
-                Ok(info) => McpToolResult::success(serde_json::to_string_pretty(&info).unwrap_or_default()),
-                Err(e) => McpToolResult::error(format!("Failed to get token info: {}", e)),
+            Err(e) => McpToolResult::error(format!("Failed to get token info: {}", e)),
+        },
+        "moonshot" => match state.moonshot_venue.get_token_info(token_mint).await {
+            Ok(info) => {
+                McpToolResult::success(serde_json::to_string_pretty(&info).unwrap_or_default())
             }
-        }
+            Err(e) => McpToolResult::error(format!("Failed to get token info: {}", e)),
+        },
         _ => McpToolResult::error("Invalid venue. Use 'pump_fun' or 'moonshot'"),
     }
 }
@@ -400,7 +428,11 @@ async fn kol_list(state: &AppState, args: Value) -> McpToolResult {
     let copy_enabled = args.get("copy_enabled").and_then(|v| v.as_bool());
     let min_trust = args.get("min_trust_score").and_then(|v| v.as_f64());
 
-    match state.kol_repo.list_entities(is_active, copy_enabled, min_trust, limit, 0).await {
+    match state
+        .kol_repo
+        .list_entities(is_active, copy_enabled, min_trust, limit, 0)
+        .await
+    {
         Ok(kols) => McpToolResult::success(serde_json::to_string_pretty(&kols).unwrap_or_default()),
         Err(e) => McpToolResult::error(format!("Failed to list KOLs: {}", e)),
     }
@@ -416,7 +448,9 @@ async fn kol_stats(state: &AppState, args: Value) -> McpToolResult {
     };
 
     match state.kol_repo.get_entity_stats(kol_id).await {
-        Ok(Some(stats)) => McpToolResult::success(serde_json::to_string_pretty(&stats).unwrap_or_default()),
+        Ok(Some(stats)) => {
+            McpToolResult::success(serde_json::to_string_pretty(&stats).unwrap_or_default())
+        }
         Ok(None) => McpToolResult::error("KOL not found"),
         Err(e) => McpToolResult::error(format!("Failed to get KOL stats: {}", e)),
     }
@@ -426,17 +460,32 @@ async fn kol_add(state: &AppState, args: Value) -> McpToolResult {
     use crate::database::repositories::kol::CreateKolEntityRecord;
     use crate::models::KolEntityType;
 
-    let wallet = args.get("wallet_address").and_then(|v| v.as_str()).map(String::from);
-    let twitter = args.get("twitter_handle").and_then(|v| v.as_str()).map(String::from);
-    let display_name = args.get("display_name").and_then(|v| v.as_str()).map(String::from);
+    let wallet = args
+        .get("wallet_address")
+        .and_then(|v| v.as_str())
+        .map(String::from);
+    let twitter = args
+        .get("twitter_handle")
+        .and_then(|v| v.as_str())
+        .map(String::from);
+    let display_name = args
+        .get("display_name")
+        .and_then(|v| v.as_str())
+        .map(String::from);
 
     let (entity_type, identifier, linked_wallet) = match (&wallet, &twitter) {
         (Some(w), _) => (KolEntityType::Wallet, w.clone(), Some(w.clone())),
         (None, Some(t)) => {
-            let handle = if t.starts_with('@') { t.clone() } else { format!("@{}", t) };
+            let handle = if t.starts_with('@') {
+                t.clone()
+            } else {
+                format!("@{}", t)
+            };
             (KolEntityType::TwitterHandle, handle, None)
         }
-        (None, None) => return McpToolResult::error("Either wallet_address or twitter_handle is required"),
+        (None, None) => {
+            return McpToolResult::error("Either wallet_address or twitter_handle is required")
+        }
     };
 
     let record = CreateKolEntityRecord {
@@ -463,7 +512,9 @@ async fn kol_get(state: &AppState, args: Value) -> McpToolResult {
     };
 
     match state.kol_repo.get_entity(kol_id).await {
-        Ok(Some(kol)) => McpToolResult::success(serde_json::to_string_pretty(&kol).unwrap_or_default()),
+        Ok(Some(kol)) => {
+            McpToolResult::success(serde_json::to_string_pretty(&kol).unwrap_or_default())
+        }
         Ok(None) => McpToolResult::error("KOL not found"),
         Err(e) => McpToolResult::error(format!("Failed to get KOL: {}", e)),
     }
@@ -481,8 +532,14 @@ async fn kol_update(state: &AppState, args: Value) -> McpToolResult {
     };
 
     let update = UpdateKolEntityRecord {
-        display_name: args.get("display_name").and_then(|v| v.as_str()).map(String::from),
-        linked_wallet: args.get("linked_wallet").and_then(|v| v.as_str()).map(String::from),
+        display_name: args
+            .get("display_name")
+            .and_then(|v| v.as_str())
+            .map(String::from),
+        linked_wallet: args
+            .get("linked_wallet")
+            .and_then(|v| v.as_str())
+            .map(String::from),
         is_active: args.get("is_active").and_then(|v| v.as_bool()),
         ..Default::default()
     };
@@ -517,17 +574,24 @@ async fn kol_trades(state: &AppState, args: Value) -> McpToolResult {
         None => return McpToolResult::error("kol_id is required"),
     };
 
-    let trade_type = args.get("trade_type").and_then(|v| v.as_str()).map(|t| {
-        match t.to_lowercase().as_str() {
-            "buy" => crate::models::KolTradeType::Buy,
-            "sell" => crate::models::KolTradeType::Sell,
-            _ => crate::models::KolTradeType::Buy,
-        }
-    });
+    let trade_type =
+        args.get("trade_type")
+            .and_then(|v| v.as_str())
+            .map(|t| match t.to_lowercase().as_str() {
+                "buy" => crate::models::KolTradeType::Buy,
+                "sell" => crate::models::KolTradeType::Sell,
+                _ => crate::models::KolTradeType::Buy,
+            });
     let limit = args.get("limit").and_then(|v| v.as_i64()).unwrap_or(50);
 
-    match state.kol_repo.get_trades(kol_id, trade_type, limit, 0).await {
-        Ok(trades) => McpToolResult::success(serde_json::to_string_pretty(&trades).unwrap_or_default()),
+    match state
+        .kol_repo
+        .get_trades(kol_id, trade_type, limit, 0)
+        .await
+    {
+        Ok(trades) => {
+            McpToolResult::success(serde_json::to_string_pretty(&trades).unwrap_or_default())
+        }
         Err(e) => McpToolResult::error(format!("Failed to get KOL trades: {}", e)),
     }
 }
@@ -553,13 +617,15 @@ async fn kol_enable_copy(state: &AppState, args: Value) -> McpToolResult {
 
     let mut config = current.copy_config_parsed();
     if let Some(max_pos) = args.get("max_position_sol").and_then(|v| v.as_f64()) {
-        config.max_position_sol = Decimal::from_f64_retain(max_pos).unwrap_or(config.max_position_sol);
+        config.max_position_sol =
+            Decimal::from_f64_retain(max_pos).unwrap_or(config.max_position_sol);
     }
     if let Some(delay) = args.get("delay_ms").and_then(|v| v.as_u64()) {
         config.delay_ms = delay;
     }
     if let Some(min_trust) = args.get("min_trust_score").and_then(|v| v.as_f64()) {
-        config.min_trust_score = Decimal::from_f64_retain(min_trust).unwrap_or(config.min_trust_score);
+        config.min_trust_score =
+            Decimal::from_f64_retain(min_trust).unwrap_or(config.min_trust_score);
     }
     if let Some(pct) = args.get("copy_percentage").and_then(|v| v.as_f64()) {
         config.copy_percentage = Decimal::from_f64_retain(pct).unwrap_or(config.copy_percentage);
@@ -608,27 +674,36 @@ async fn kol_copy_history(state: &AppState, args: Value) -> McpToolResult {
         None => return McpToolResult::error("kol_id is required"),
     };
 
-    let status = args.get("status").and_then(|v| v.as_str()).map(|s| {
-        match s.to_lowercase().as_str() {
-            "pending" => crate::models::CopyTradeStatus::Pending,
-            "executing" => crate::models::CopyTradeStatus::Executing,
-            "executed" => crate::models::CopyTradeStatus::Executed,
-            "failed" => crate::models::CopyTradeStatus::Failed,
-            "skipped" => crate::models::CopyTradeStatus::Skipped,
-            _ => crate::models::CopyTradeStatus::Pending,
-        }
-    });
+    let status =
+        args.get("status")
+            .and_then(|v| v.as_str())
+            .map(|s| match s.to_lowercase().as_str() {
+                "pending" => crate::models::CopyTradeStatus::Pending,
+                "executing" => crate::models::CopyTradeStatus::Executing,
+                "executed" => crate::models::CopyTradeStatus::Executed,
+                "failed" => crate::models::CopyTradeStatus::Failed,
+                "skipped" => crate::models::CopyTradeStatus::Skipped,
+                _ => crate::models::CopyTradeStatus::Pending,
+            });
     let limit = args.get("limit").and_then(|v| v.as_i64()).unwrap_or(50);
 
-    match state.kol_repo.get_copy_history(kol_id, status, limit, 0).await {
-        Ok(copies) => McpToolResult::success(serde_json::to_string_pretty(&copies).unwrap_or_default()),
+    match state
+        .kol_repo
+        .get_copy_history(kol_id, status, limit, 0)
+        .await
+    {
+        Ok(copies) => {
+            McpToolResult::success(serde_json::to_string_pretty(&copies).unwrap_or_default())
+        }
         Err(e) => McpToolResult::error(format!("Failed to get copy history: {}", e)),
     }
 }
 
 async fn kol_copy_stats(state: &AppState) -> McpToolResult {
     match state.kol_repo.get_copy_stats().await {
-        Ok(stats) => McpToolResult::success(serde_json::to_string_pretty(&stats).unwrap_or_default()),
+        Ok(stats) => {
+            McpToolResult::success(serde_json::to_string_pretty(&stats).unwrap_or_default())
+        }
         Err(e) => McpToolResult::error(format!("Failed to get copy stats: {}", e)),
     }
 }
@@ -640,12 +715,16 @@ async fn kol_discovery_status(state: &AppState) -> McpToolResult {
 
 async fn kol_discovery_start(state: &AppState) -> McpToolResult {
     state.kol_discovery.start().await;
-    McpToolResult::success(r#"{"status": "started", "message": "KOL discovery agent started"}"#.to_string())
+    McpToolResult::success(
+        r#"{"status": "started", "message": "KOL discovery agent started"}"#.to_string(),
+    )
 }
 
 async fn kol_discovery_stop(state: &AppState) -> McpToolResult {
     state.kol_discovery.stop().await;
-    McpToolResult::success(r#"{"status": "stopped", "message": "KOL discovery agent stopped"}"#.to_string())
+    McpToolResult::success(
+        r#"{"status": "stopped", "message": "KOL discovery agent stopped"}"#.to_string(),
+    )
 }
 
 async fn kol_scan_now(state: &AppState) -> McpToolResult {
@@ -718,36 +797,36 @@ async fn engram_search(state: &AppState, args: Value) -> McpToolResult {
     let engram_type = args.get("engram_type").and_then(|v| v.as_str());
 
     match engram_type {
-        Some("pattern") => {
-            match state.engrams_client.get_patterns(&wallet).await {
-                Ok(patterns) => McpToolResult::success(serde_json::to_string_pretty(&patterns).unwrap_or_default()),
-                Err(e) => McpToolResult::error(format!("Failed to search patterns: {}", e)),
+        Some("pattern") => match state.engrams_client.get_patterns(&wallet).await {
+            Ok(patterns) => {
+                McpToolResult::success(serde_json::to_string_pretty(&patterns).unwrap_or_default())
             }
-        }
-        Some("avoidance") => {
-            match state.engrams_client.get_avoidances(&wallet).await {
-                Ok(avoidances) => McpToolResult::success(serde_json::to_string_pretty(&avoidances).unwrap_or_default()),
-                Err(e) => McpToolResult::error(format!("Failed to search avoidances: {}", e)),
+            Err(e) => McpToolResult::error(format!("Failed to search patterns: {}", e)),
+        },
+        Some("avoidance") => match state.engrams_client.get_avoidances(&wallet).await {
+            Ok(avoidances) => McpToolResult::success(
+                serde_json::to_string_pretty(&avoidances).unwrap_or_default(),
+            ),
+            Err(e) => McpToolResult::error(format!("Failed to search avoidances: {}", e)),
+        },
+        Some("strategy") => match state.engrams_client.get_saved_strategies(&wallet).await {
+            Ok(strategies) => McpToolResult::success(
+                serde_json::to_string_pretty(&strategies).unwrap_or_default(),
+            ),
+            Err(e) => McpToolResult::error(format!("Failed to search strategies: {}", e)),
+        },
+        Some("kol") => match state.engrams_client.get_discovered_kols(&wallet).await {
+            Ok(kols) => {
+                McpToolResult::success(serde_json::to_string_pretty(&kols).unwrap_or_default())
             }
-        }
-        Some("strategy") => {
-            match state.engrams_client.get_saved_strategies(&wallet).await {
-                Ok(strategies) => McpToolResult::success(serde_json::to_string_pretty(&strategies).unwrap_or_default()),
-                Err(e) => McpToolResult::error(format!("Failed to search strategies: {}", e)),
+            Err(e) => McpToolResult::error(format!("Failed to search KOLs: {}", e)),
+        },
+        _ => match state.engrams_client.get_engrams_by_wallet(&wallet).await {
+            Ok(engrams) => {
+                McpToolResult::success(serde_json::to_string_pretty(&engrams).unwrap_or_default())
             }
-        }
-        Some("kol") => {
-            match state.engrams_client.get_discovered_kols(&wallet).await {
-                Ok(kols) => McpToolResult::success(serde_json::to_string_pretty(&kols).unwrap_or_default()),
-                Err(e) => McpToolResult::error(format!("Failed to search KOLs: {}", e)),
-            }
-        }
-        _ => {
-            match state.engrams_client.get_engrams_by_wallet(&wallet).await {
-                Ok(engrams) => McpToolResult::success(serde_json::to_string_pretty(&engrams).unwrap_or_default()),
-                Err(e) => McpToolResult::error(format!("Failed to search engrams: {}", e)),
-            }
-        }
+            Err(e) => McpToolResult::error(format!("Failed to search engrams: {}", e)),
+        },
     }
 }
 
@@ -758,10 +837,30 @@ async fn engram_stats(state: &AppState) -> McpToolResult {
 
     let wallet = state.dev_signer.get_address().unwrap_or_default();
 
-    let patterns = state.engrams_client.get_patterns(&wallet).await.map(|p| p.len()).unwrap_or(0);
-    let avoidances = state.engrams_client.get_avoidances(&wallet).await.map(|a| a.len()).unwrap_or(0);
-    let strategies = state.engrams_client.get_saved_strategies(&wallet).await.map(|s| s.len()).unwrap_or(0);
-    let kols = state.engrams_client.get_discovered_kols(&wallet).await.map(|k| k.len()).unwrap_or(0);
+    let patterns = state
+        .engrams_client
+        .get_patterns(&wallet)
+        .await
+        .map(|p| p.len())
+        .unwrap_or(0);
+    let avoidances = state
+        .engrams_client
+        .get_avoidances(&wallet)
+        .await
+        .map(|a| a.len())
+        .unwrap_or(0);
+    let strategies = state
+        .engrams_client
+        .get_saved_strategies(&wallet)
+        .await
+        .map(|s| s.len())
+        .unwrap_or(0);
+    let kols = state
+        .engrams_client
+        .get_discovered_kols(&wallet)
+        .await
+        .map(|k| k.len())
+        .unwrap_or(0);
 
     let stats = serde_json::json!({
         "wallet": wallet,
@@ -793,7 +892,9 @@ async fn position_details(state: &AppState, args: Value) -> McpToolResult {
     };
 
     match state.position_manager.get_position(uuid).await {
-        Some(position) => McpToolResult::success(serde_json::to_string_pretty(&position).unwrap_or_default()),
+        Some(position) => {
+            McpToolResult::success(serde_json::to_string_pretty(&position).unwrap_or_default())
+        }
         None => McpToolResult::error("Position not found"),
     }
 }
@@ -812,14 +913,19 @@ async fn wallet_balance(state: &AppState) -> McpToolResult {
 
     let params = serde_json::json!([wallet_address]);
 
-    match state.helius_rpc_client.rpc_call::<BalanceResult>("getBalance", params).await {
-        Ok(result) => {
-            McpToolResult::success(serde_json::json!({
+    match state
+        .helius_rpc_client
+        .rpc_call::<BalanceResult>("getBalance", params)
+        .await
+    {
+        Ok(result) => McpToolResult::success(
+            serde_json::json!({
                 "address": wallet_address,
                 "balance_lamports": result.value,
                 "balance_sol": result.value as f64 / 1_000_000_000.0
-            }).to_string())
-        }
+            })
+            .to_string(),
+        ),
         Err(e) => McpToolResult::error(format!("Failed to get balance: {}", e)),
     }
 }
@@ -923,12 +1029,15 @@ async fn approval_approve(state: &AppState, args: Value) -> McpToolResult {
     let notes = args.get("notes").and_then(|v| v.as_str()).map(String::from);
 
     match state.approval_manager.approve(approval_id, notes).await {
-        Ok(approval) => McpToolResult::success(serde_json::json!({
-            "success": true,
-            "approval_id": approval.id.to_string(),
-            "status": format!("{}", approval.status),
-            "message": "Approval approved successfully"
-        }).to_string()),
+        Ok(approval) => McpToolResult::success(
+            serde_json::json!({
+                "success": true,
+                "approval_id": approval.id.to_string(),
+                "status": format!("{}", approval.status),
+                "message": "Approval approved successfully"
+            })
+            .to_string(),
+        ),
         Err(e) => McpToolResult::error(format!("Failed to approve: {}", e)),
     }
 }
@@ -948,12 +1057,15 @@ async fn approval_reject(state: &AppState, args: Value) -> McpToolResult {
     };
 
     match state.approval_manager.reject(approval_id, reason).await {
-        Ok(approval) => McpToolResult::success(serde_json::json!({
-            "success": true,
-            "approval_id": approval.id.to_string(),
-            "status": format!("{}", approval.status),
-            "message": "Approval rejected successfully"
-        }).to_string()),
+        Ok(approval) => McpToolResult::success(
+            serde_json::json!({
+                "success": true,
+                "approval_id": approval.id.to_string(),
+                "status": format!("{}", approval.status),
+                "message": "Approval rejected successfully"
+            })
+            .to_string(),
+        ),
         Err(e) => McpToolResult::error(format!("Failed to reject: {}", e)),
     }
 }
@@ -997,59 +1109,82 @@ async fn execution_toggle(state: &AppState, args: Value) -> McpToolResult {
     // Update all autonomous-capable strategies (curve_arb AND graduation_snipe)
     let strategies = state.strategy_engine.list_strategies().await;
     let mut updated_count = 0;
-    for strategy in strategies.iter().filter(|s|
-        s.strategy_type == "curve_arb" || s.strategy_type == "graduation_snipe"
-    ) {
+    for strategy in strategies
+        .iter()
+        .filter(|s| s.strategy_type == "curve_arb" || s.strategy_type == "graduation_snipe")
+    {
         let mut updated_params = strategy.risk_params.clone();
         updated_params.auto_execute_enabled = enabled;
 
-        let new_execution_mode = if enabled { "autonomous" } else { "agent_directed" };
+        let new_execution_mode = if enabled {
+            "autonomous"
+        } else {
+            "agent_directed"
+        };
 
         // Update in-memory engine
-        let _ = state.strategy_engine.set_risk_params(strategy.id, updated_params.clone()).await;
-        let _ = state.strategy_engine.set_execution_mode(strategy.id, new_execution_mode.to_string()).await;
+        let _ = state
+            .strategy_engine
+            .set_risk_params(strategy.id, updated_params.clone())
+            .await;
+        let _ = state
+            .strategy_engine
+            .set_execution_mode(strategy.id, new_execution_mode.to_string())
+            .await;
 
         // Persist to database
         use crate::database::repositories::strategies::UpdateStrategyRecord;
-        let _ = state.strategy_repo.update(strategy.id, UpdateStrategyRecord {
-            name: None,
-            venue_types: None,
-            execution_mode: Some(new_execution_mode.to_string()),
-            risk_params: Some(updated_params.clone()),
-            is_active: None,
-        }).await;
+        let _ = state
+            .strategy_repo
+            .update(
+                strategy.id,
+                UpdateStrategyRecord {
+                    name: None,
+                    venue_types: None,
+                    execution_mode: Some(new_execution_mode.to_string()),
+                    risk_params: Some(updated_params.clone()),
+                    is_active: None,
+                },
+            )
+            .await;
 
         // Persist to engrams
         if state.engrams_client.is_configured() {
             if let Some(wallet) = state.dev_signer.get_address() {
                 let risk_params_value = serde_json::to_value(&updated_params).unwrap_or_default();
-                let _ = state.engrams_client.save_strategy_full(
-                    &wallet,
-                    &strategy.id.to_string(),
-                    &strategy.name,
-                    &strategy.strategy_type,
-                    &strategy.venue_types,
-                    new_execution_mode,
-                    &risk_params_value,
-                    strategy.is_active,
-                ).await;
+                let _ = state
+                    .engrams_client
+                    .save_strategy_full(
+                        &wallet,
+                        &strategy.id.to_string(),
+                        &strategy.name,
+                        &strategy.strategy_type,
+                        &strategy.venue_types,
+                        new_execution_mode,
+                        &risk_params_value,
+                        strategy.is_active,
+                    )
+                    .await;
             }
         }
 
         updated_count += 1;
     }
 
-    McpToolResult::success(serde_json::json!({
-        "success": true,
-        "auto_execution_enabled": config.auto_execution_enabled,
-        "executor_running": enabled,
-        "strategies_updated": updated_count,
-        "message": if config.auto_execution_enabled {
-            "Auto-execution enabled - executor started"
-        } else {
-            "Auto-execution disabled - executor stopped"
-        }
-    }).to_string())
+    McpToolResult::success(
+        serde_json::json!({
+            "success": true,
+            "auto_execution_enabled": config.auto_execution_enabled,
+            "executor_running": enabled,
+            "strategies_updated": updated_count,
+            "message": if config.auto_execution_enabled {
+                "Auto-execution enabled - executor started"
+            } else {
+                "Auto-execution disabled - executor stopped"
+            }
+        })
+        .to_string(),
+    )
 }
 
 async fn approval_recommend(state: &AppState, args: Value) -> McpToolResult {
@@ -1071,7 +1206,10 @@ async fn approval_recommend(state: &AppState, args: Value) -> McpToolResult {
         None => return McpToolResult::error("reasoning is required"),
     };
 
-    let confidence = args.get("confidence").and_then(|v| v.as_f64()).unwrap_or(0.5);
+    let confidence = args
+        .get("confidence")
+        .and_then(|v| v.as_f64())
+        .unwrap_or(0.5);
 
     let recommendation = crate::models::HecateRecommendation {
         approval_id,
@@ -1080,14 +1218,21 @@ async fn approval_recommend(state: &AppState, args: Value) -> McpToolResult {
         confidence,
     };
 
-    match state.approval_manager.add_hecate_recommendation(recommendation).await {
-        Ok(approval) => McpToolResult::success(serde_json::json!({
-            "success": true,
-            "approval_id": approval.id.to_string(),
-            "hecate_decision": approval.hecate_decision,
-            "hecate_confidence": approval.hecate_confidence,
-            "message": "Recommendation added successfully"
-        }).to_string()),
+    match state
+        .approval_manager
+        .add_hecate_recommendation(recommendation)
+        .await
+    {
+        Ok(approval) => McpToolResult::success(
+            serde_json::json!({
+                "success": true,
+                "approval_id": approval.id.to_string(),
+                "hecate_decision": approval.hecate_decision,
+                "hecate_confidence": approval.hecate_confidence,
+                "message": "Recommendation added successfully"
+            })
+            .to_string(),
+        ),
         Err(e) => McpToolResult::error(format!("Failed to add recommendation: {}", e)),
     }
 }
@@ -1099,7 +1244,10 @@ async fn engram_get_arbfarm_learning(state: &AppState, args: Value) -> McpToolRe
     }
 
     let wallet = state.dev_signer.get_address().unwrap_or_default();
-    let category = args.get("category").and_then(|v| v.as_str()).unwrap_or("all");
+    let category = args
+        .get("category")
+        .and_then(|v| v.as_str())
+        .unwrap_or("all");
     let limit = args.get("limit").and_then(|v| v.as_i64()).unwrap_or(20);
     let status_filter = args.get("status").and_then(|v| v.as_str()).unwrap_or("all");
 
@@ -1119,9 +1267,14 @@ async fn engram_get_arbfarm_learning(state: &AppState, args: Value) -> McpToolRe
                 _ => None,
             };
 
-            match state.engrams_client.get_recommendations_with_metadata(&wallet, status.as_ref(), Some(limit)).await {
+            match state
+                .engrams_client
+                .get_recommendations_with_metadata(&wallet, status.as_ref(), Some(limit))
+                .await
+            {
                 Ok(recs) => {
-                    result["engrams"]["recommendations"] = serde_json::to_value(&recs).unwrap_or_default();
+                    result["engrams"]["recommendations"] =
+                        serde_json::to_value(&recs).unwrap_or_default();
                     result["engrams"]["recommendations_count"] = serde_json::json!(recs.len());
                 }
                 Err(e) => {
@@ -1134,9 +1287,14 @@ async fn engram_get_arbfarm_learning(state: &AppState, args: Value) -> McpToolRe
 
     match category {
         "conversations" | "all" => {
-            match state.engrams_client.get_conversations(&wallet, Some(limit)).await {
+            match state
+                .engrams_client
+                .get_conversations(&wallet, Some(limit))
+                .await
+            {
                 Ok(convos) => {
-                    result["engrams"]["conversations"] = serde_json::to_value(&convos).unwrap_or_default();
+                    result["engrams"]["conversations"] =
+                        serde_json::to_value(&convos).unwrap_or_default();
                     result["engrams"]["conversations_count"] = serde_json::json!(convos.len());
                 }
                 Err(e) => {
@@ -1148,18 +1306,16 @@ async fn engram_get_arbfarm_learning(state: &AppState, args: Value) -> McpToolRe
     }
 
     match category {
-        "patterns" | "all" => {
-            match state.engrams_client.get_patterns(&wallet).await {
-                Ok(patterns) => {
-                    let limited: Vec<_> = patterns.into_iter().take(limit as usize).collect();
-                    result["engrams"]["patterns"] = serde_json::to_value(&limited).unwrap_or_default();
-                    result["engrams"]["patterns_count"] = serde_json::json!(limited.len());
-                }
-                Err(e) => {
-                    result["engrams"]["patterns_error"] = serde_json::json!(e);
-                }
+        "patterns" | "all" => match state.engrams_client.get_patterns(&wallet).await {
+            Ok(patterns) => {
+                let limited: Vec<_> = patterns.into_iter().take(limit as usize).collect();
+                result["engrams"]["patterns"] = serde_json::to_value(&limited).unwrap_or_default();
+                result["engrams"]["patterns_count"] = serde_json::json!(limited.len());
             }
-        }
+            Err(e) => {
+                result["engrams"]["patterns_error"] = serde_json::json!(e);
+            }
+        },
         _ => {}
     }
 
@@ -1188,18 +1344,29 @@ async fn engram_acknowledge_recommendation(state: &AppState, args: Value) -> Mcp
         "acknowledged" => crate::engrams::schemas::RecommendationStatus::Acknowledged,
         "applied" => crate::engrams::schemas::RecommendationStatus::Applied,
         "rejected" => crate::engrams::schemas::RecommendationStatus::Rejected,
-        _ => return McpToolResult::error("Invalid status. Must be 'acknowledged', 'applied', or 'rejected'"),
+        _ => {
+            return McpToolResult::error(
+                "Invalid status. Must be 'acknowledged', 'applied', or 'rejected'",
+            )
+        }
     };
 
     let wallet = state.dev_signer.get_address().unwrap_or_default();
 
-    match state.engrams_client.update_recommendation_status(&wallet, &recommendation_id, new_status.clone()).await {
-        Ok(_) => McpToolResult::success(serde_json::json!({
-            "success": true,
-            "recommendation_id": recommendation_id.to_string(),
-            "new_status": status_str,
-            "message": format!("Recommendation status updated to {}", status_str)
-        }).to_string()),
+    match state
+        .engrams_client
+        .update_recommendation_status(&wallet, &recommendation_id, new_status.clone())
+        .await
+    {
+        Ok(_) => McpToolResult::success(
+            serde_json::json!({
+                "success": true,
+                "recommendation_id": recommendation_id.to_string(),
+                "new_status": status_str,
+                "message": format!("Recommendation status updated to {}", status_str)
+            })
+            .to_string(),
+        ),
         Err(e) => McpToolResult::error(format!("Failed to update recommendation status: {}", e)),
     }
 }
@@ -1217,19 +1384,31 @@ async fn engram_apply_recommendation(state: &AppState, args: Value) -> McpToolRe
         None => return McpToolResult::error("recommendation_id is required"),
     };
 
-    let dry_run = args.get("dry_run").and_then(|v| v.as_bool()).unwrap_or(false);
+    let dry_run = args
+        .get("dry_run")
+        .and_then(|v| v.as_bool())
+        .unwrap_or(false);
     let wallet = state.dev_signer.get_address().unwrap_or_default();
 
     // Fetch the recommendation from engrams (pass None for status filter)
-    let recommendations = match state.engrams_client.get_recommendations(&wallet, None, Some(100)).await {
+    let recommendations = match state
+        .engrams_client
+        .get_recommendations(&wallet, None, Some(100))
+        .await
+    {
         Ok(recs) => recs,
         Err(e) => return McpToolResult::error(format!("Failed to fetch recommendations: {}", e)),
     };
 
     // Find the recommendation by ID (recommendations are returned directly, not wrapped)
-    let recommendation = match recommendations.iter().find(|r| r.recommendation_id == recommendation_id) {
+    let recommendation = match recommendations
+        .iter()
+        .find(|r| r.recommendation_id == recommendation_id)
+    {
         Some(r) => r.clone(),
-        None => return McpToolResult::error(format!("Recommendation {} not found", recommendation_id)),
+        None => {
+            return McpToolResult::error(format!("Recommendation {} not found", recommendation_id))
+        }
     };
 
     // Check status - must be pending or acknowledged
@@ -1260,13 +1439,17 @@ async fn engram_apply_recommendation(state: &AppState, args: Value) -> McpToolRe
                         "min_consensus_threshold" => {
                             if let Some(v) = new_value.as_f64() {
                                 config.min_consensus_threshold = v;
-                                changes_made.push(format!("Set consensus.min_consensus_threshold to {}", v));
+                                changes_made.push(format!(
+                                    "Set consensus.min_consensus_threshold to {}",
+                                    v
+                                ));
                             }
                         }
                         "review_interval_hours" => {
                             if let Some(v) = new_value.as_u64() {
                                 config.review_interval_hours = v as u32;
-                                changes_made.push(format!("Set consensus.review_interval_hours to {}", v));
+                                changes_made
+                                    .push(format!("Set consensus.review_interval_hours to {}", v));
                             }
                         }
                         _ => {
@@ -1296,26 +1479,30 @@ async fn engram_apply_recommendation(state: &AppState, args: Value) -> McpToolRe
                                 if capped < v {
                                     changes_made.push(format!("Set risk.max_position_sol to {} (capped from {} by wallet limit)", capped, v));
                                 } else {
-                                    changes_made.push(format!("Set risk.max_position_sol to {}", capped));
+                                    changes_made
+                                        .push(format!("Set risk.max_position_sol to {}", capped));
                                 }
                             }
                         }
                         "daily_loss_limit_sol" => {
                             if let Some(v) = new_value.as_f64() {
                                 config.daily_loss_limit_sol = v;
-                                changes_made.push(format!("Set risk.daily_loss_limit_sol to {}", v));
+                                changes_made
+                                    .push(format!("Set risk.daily_loss_limit_sol to {}", v));
                             }
                         }
                         "max_drawdown_percent" => {
                             if let Some(v) = new_value.as_f64() {
                                 config.max_drawdown_percent = v;
-                                changes_made.push(format!("Set risk.max_drawdown_percent to {}", v));
+                                changes_made
+                                    .push(format!("Set risk.max_drawdown_percent to {}", v));
                             }
                         }
                         "max_concurrent_positions" => {
                             if let Some(v) = new_value.as_u64() {
                                 config.max_concurrent_positions = v as u32;
-                                changes_made.push(format!("Set risk.max_concurrent_positions to {}", v));
+                                changes_made
+                                    .push(format!("Set risk.max_concurrent_positions to {}", v));
                             }
                         }
                         _ => {
@@ -1336,7 +1523,11 @@ async fn engram_apply_recommendation(state: &AppState, args: Value) -> McpToolRe
 
             if let Ok(strategy_id) = uuid::Uuid::parse_str(strategy_id_str) {
                 if !dry_run {
-                    match state.strategy_engine.toggle_strategy(strategy_id, enable).await {
+                    match state
+                        .strategy_engine
+                        .toggle_strategy(strategy_id, enable)
+                        .await
+                    {
                         Ok(_) => {
                             changes_made.push(format!(
                                 "Strategy {} {}",
@@ -1372,7 +1563,10 @@ async fn engram_apply_recommendation(state: &AppState, args: Value) -> McpToolRe
                             let capped = v.min(wallet_max);
                             config.max_position_sol = capped;
                             if capped < v {
-                                changes_made.push(format!("Set max_position_sol to {} (capped from {} by wallet limit)", capped, v));
+                                changes_made.push(format!(
+                                    "Set max_position_sol to {} (capped from {} by wallet limit)",
+                                    capped, v
+                                ));
                             } else {
                                 changes_made.push(format!("Set max_position_sol to {}", capped));
                             }
@@ -1421,16 +1615,26 @@ async fn engram_apply_recommendation(state: &AppState, args: Value) -> McpToolRe
                         "recommendation_id": recommendation_id.to_string(),
                     }),
                 };
-                match state.engrams_client.save_avoidance(&wallet, avoidance).await {
+                match state
+                    .engrams_client
+                    .save_avoidance(&wallet, avoidance)
+                    .await
+                {
                     Ok(_) => {
-                        changes_made.push(format!("Added {} to avoidance list: {}", token_mint, reason));
+                        changes_made.push(format!(
+                            "Added {} to avoidance list: {}",
+                            token_mint, reason
+                        ));
                     }
                     Err(e) => {
                         changes_made.push(format!("Failed to add avoidance: {}", e));
                     }
                 }
             } else {
-                changes_made.push(format!("[DRY RUN] Would add {} to avoidance list", token_mint));
+                changes_made.push(format!(
+                    "[DRY RUN] Would add {} to avoidance list",
+                    token_mint
+                ));
             }
         }
         crate::engrams::SuggestedActionType::VenueDisable => {
@@ -1444,22 +1648,28 @@ async fn engram_apply_recommendation(state: &AppState, args: Value) -> McpToolRe
 
     // Update recommendation status to Applied (unless dry run)
     if !dry_run && !changes_made.is_empty() {
-        let _ = state.engrams_client.update_recommendation_status(
-            &wallet,
-            &recommendation_id,
-            crate::engrams::RecommendationStatus::Applied,
-        ).await;
+        let _ = state
+            .engrams_client
+            .update_recommendation_status(
+                &wallet,
+                &recommendation_id,
+                crate::engrams::RecommendationStatus::Applied,
+            )
+            .await;
     }
 
-    McpToolResult::success(serde_json::json!({
-        "success": true,
-        "recommendation_id": recommendation_id.to_string(),
-        "dry_run": dry_run,
-        "action_type": format!("{:?}", action.action_type),
-        "target": action.target,
-        "changes_made": changes_made,
-        "status": if dry_run { "simulated" } else { "applied" }
-    }).to_string())
+    McpToolResult::success(
+        serde_json::json!({
+            "success": true,
+            "recommendation_id": recommendation_id.to_string(),
+            "dry_run": dry_run,
+            "action_type": format!("{:?}", action.action_type),
+            "target": action.target,
+            "changes_made": changes_made,
+            "status": if dry_run { "simulated" } else { "applied" }
+        })
+        .to_string(),
+    )
 }
 
 async fn engram_get_trade_history(state: &AppState, args: Value) -> McpToolResult {
@@ -1469,18 +1679,31 @@ async fn engram_get_trade_history(state: &AppState, args: Value) -> McpToolResul
 
     let wallet = state.dev_signer.get_address().unwrap_or_default();
     let limit = args.get("limit").and_then(|v| v.as_i64()).unwrap_or(50);
-    let profitable_only = args.get("profitable_only").and_then(|v| v.as_bool()).unwrap_or(false);
+    let profitable_only = args
+        .get("profitable_only")
+        .and_then(|v| v.as_bool())
+        .unwrap_or(false);
 
-    match state.engrams_client.get_trade_history_with_metadata(&wallet, Some(limit)).await {
+    match state
+        .engrams_client
+        .get_trade_history_with_metadata(&wallet, Some(limit))
+        .await
+    {
         Ok(trades) => {
             let filtered: Vec<_> = if profitable_only {
-                trades.into_iter().filter(|t| t.trade.pnl_sol.unwrap_or(0.0) > 0.0).collect()
+                trades
+                    .into_iter()
+                    .filter(|t| t.trade.pnl_sol.unwrap_or(0.0) > 0.0)
+                    .collect()
             } else {
                 trades
             };
 
             let total_pnl: f64 = filtered.iter().filter_map(|t| t.trade.pnl_sol).sum();
-            let winning_trades = filtered.iter().filter(|t| t.trade.pnl_sol.unwrap_or(0.0) > 0.0).count();
+            let winning_trades = filtered
+                .iter()
+                .filter(|t| t.trade.pnl_sol.unwrap_or(0.0) > 0.0)
+                .count();
             let win_rate = if !filtered.is_empty() {
                 (winning_trades as f64 / filtered.len() as f64) * 100.0
             } else {
@@ -1511,16 +1734,23 @@ async fn engram_get_errors(state: &AppState, args: Value) -> McpToolResult {
     let limit = args.get("limit").and_then(|v| v.as_i64()).unwrap_or(50);
     let error_type_filter = args.get("error_type").and_then(|v| v.as_str());
 
-    match state.engrams_client.get_error_history_with_metadata(&wallet, Some(limit)).await {
+    match state
+        .engrams_client
+        .get_error_history_with_metadata(&wallet, Some(limit))
+        .await
+    {
         Ok(errors) => {
             let filtered: Vec<_> = if let Some(et) = error_type_filter {
-                errors.into_iter().filter(|e| {
-                    let type_str = serde_json::to_string(&e.error.error_type)
-                        .unwrap_or_default()
-                        .trim_matches('"')
-                        .to_lowercase();
-                    type_str == et.to_lowercase()
-                }).collect()
+                errors
+                    .into_iter()
+                    .filter(|e| {
+                        let type_str = serde_json::to_string(&e.error.error_type)
+                            .unwrap_or_default()
+                            .trim_matches('"')
+                            .to_lowercase();
+                        type_str == et.to_lowercase()
+                    })
+                    .collect()
             } else {
                 errors
             };
@@ -1528,7 +1758,8 @@ async fn engram_get_errors(state: &AppState, args: Value) -> McpToolResult {
             let recoverable_count = filtered.iter().filter(|e| e.error.recoverable).count();
             let fatal_count = filtered.len() - recoverable_count;
 
-            let mut by_type: std::collections::HashMap<String, u32> = std::collections::HashMap::new();
+            let mut by_type: std::collections::HashMap<String, u32> =
+                std::collections::HashMap::new();
             for error in &filtered {
                 let type_str = serde_json::to_string(&error.error.error_type)
                     .unwrap_or_else(|_| "unknown".to_string())
@@ -1557,8 +1788,14 @@ async fn engram_request_analysis(state: &AppState, args: Value) -> McpToolResult
         return McpToolResult::error("Engrams service not configured");
     }
 
-    let analysis_type = args.get("analysis_type").and_then(|v| v.as_str()).unwrap_or("trade_review");
-    let time_period = args.get("time_period").and_then(|v| v.as_str()).unwrap_or("24h");
+    let analysis_type = args
+        .get("analysis_type")
+        .and_then(|v| v.as_str())
+        .unwrap_or("trade_review");
+    let time_period = args
+        .get("time_period")
+        .and_then(|v| v.as_str())
+        .unwrap_or("24h");
     let wallet = state.dev_signer.get_address().unwrap_or_default();
 
     // Gather data for analysis based on time period
@@ -1570,45 +1807,91 @@ async fn engram_request_analysis(state: &AppState, args: Value) -> McpToolResult
     };
 
     // Get trade history and errors for context
-    let trades = state.engrams_client.get_trade_history(&wallet, Some(limit)).await.unwrap_or_default();
-    let errors = state.engrams_client.get_error_history(&wallet, Some(limit / 2)).await.unwrap_or_default();
+    let trades = state
+        .engrams_client
+        .get_trade_history(&wallet, Some(limit))
+        .await
+        .unwrap_or_default();
+    let errors = state
+        .engrams_client
+        .get_error_history(&wallet, Some(limit / 2))
+        .await
+        .unwrap_or_default();
 
     // Calculate summary stats
     let total_trades = trades.len() as u32;
-    let winning_trades = trades.iter().filter(|t| t.pnl_sol.unwrap_or(0.0) > 0.0).count() as u32;
+    let winning_trades = trades
+        .iter()
+        .filter(|t| t.pnl_sol.unwrap_or(0.0) > 0.0)
+        .count() as u32;
     let total_pnl: f64 = trades.iter().filter_map(|t| t.pnl_sol).sum();
-    let win_rate = if total_trades > 0 { winning_trades as f64 / total_trades as f64 } else { 0.0 };
+    let win_rate = if total_trades > 0 {
+        winning_trades as f64 / total_trades as f64
+    } else {
+        0.0
+    };
 
     // Aggregate error counts by type
-    let mut error_counts: std::collections::HashMap<String, (u32, String)> = std::collections::HashMap::new();
+    let mut error_counts: std::collections::HashMap<String, (u32, String)> =
+        std::collections::HashMap::new();
     for error in &errors {
         let error_type_str = serde_json::to_string(&error.error_type)
             .unwrap_or_else(|_| "unknown".to_string())
             .trim_matches('"')
             .to_string();
-        let entry = error_counts.entry(error_type_str).or_insert((0, error.message.clone()));
+        let entry = error_counts
+            .entry(error_type_str)
+            .or_insert((0, error.message.clone()));
         entry.0 += 1;
     }
 
     let error_summaries: Vec<crate::consensus::ErrorSummary> = error_counts
         .into_iter()
-        .map(|(error_type, (count, last_message))| crate::consensus::ErrorSummary {
-            error_type,
-            count,
-            last_message,
-        })
+        .map(
+            |(error_type, (count, last_message))| crate::consensus::ErrorSummary {
+                error_type,
+                count,
+                last_message,
+            },
+        )
         .collect();
 
     // Find best and worst trades
-    let best_trade = trades.iter()
-        .filter_map(|t| t.pnl_sol.map(|pnl| (t.token_symbol.clone().unwrap_or_else(|| t.token_mint[..8].to_string()), pnl)))
+    let best_trade = trades
+        .iter()
+        .filter_map(|t| {
+            t.pnl_sol.map(|pnl| {
+                (
+                    t.token_symbol
+                        .clone()
+                        .unwrap_or_else(|| t.token_mint[..8].to_string()),
+                    pnl,
+                )
+            })
+        })
         .max_by(|a, b| a.1.partial_cmp(&b.1).unwrap_or(std::cmp::Ordering::Equal))
-        .map(|(symbol, pnl)| crate::consensus::TradeHighlightContext { symbol, pnl_sol: pnl });
+        .map(|(symbol, pnl)| crate::consensus::TradeHighlightContext {
+            symbol,
+            pnl_sol: pnl,
+        });
 
-    let worst_trade = trades.iter()
-        .filter_map(|t| t.pnl_sol.map(|pnl| (t.token_symbol.clone().unwrap_or_else(|| t.token_mint[..8].to_string()), pnl)))
+    let worst_trade = trades
+        .iter()
+        .filter_map(|t| {
+            t.pnl_sol.map(|pnl| {
+                (
+                    t.token_symbol
+                        .clone()
+                        .unwrap_or_else(|| t.token_mint[..8].to_string()),
+                    pnl,
+                )
+            })
+        })
         .min_by(|a, b| a.1.partial_cmp(&b.1).unwrap_or(std::cmp::Ordering::Equal))
-        .map(|(symbol, pnl)| crate::consensus::TradeHighlightContext { symbol, pnl_sol: pnl });
+        .map(|(symbol, pnl)| crate::consensus::TradeHighlightContext {
+            symbol,
+            pnl_sol: pnl,
+        });
 
     // Build analysis context
     let context = crate::consensus::AnalysisContext {
@@ -1616,9 +1899,9 @@ async fn engram_request_analysis(state: &AppState, args: Value) -> McpToolResult
         winning_trades,
         win_rate,
         total_pnl_sol: total_pnl,
-        today_pnl_sol: 0.0, // Would need DB query for accurate value
+        today_pnl_sol: 0.0,      // Would need DB query for accurate value
         week_pnl_sol: total_pnl, // Approximation based on time_period
-        avg_hold_minutes: 0.0, // Would need DB query for accurate value
+        avg_hold_minutes: 0.0,   // Would need DB query for accurate value
         best_trade,
         worst_trade,
         take_profit_count: winning_trades,
@@ -1655,11 +1938,21 @@ async fn engram_request_analysis(state: &AppState, args: Value) -> McpToolResult
                         description: rec.description.clone(),
                         suggested_action: crate::engrams::schemas::SuggestedAction {
                             action_type: match rec.action_type.as_str() {
-                                "config_change" => crate::engrams::schemas::SuggestedActionType::ConfigChange,
-                                "strategy_toggle" => crate::engrams::schemas::SuggestedActionType::StrategyToggle,
-                                "risk_adjustment" => crate::engrams::schemas::SuggestedActionType::RiskAdjustment,
-                                "venue_disable" => crate::engrams::schemas::SuggestedActionType::VenueDisable,
-                                "avoid_token" => crate::engrams::schemas::SuggestedActionType::AvoidToken,
+                                "config_change" => {
+                                    crate::engrams::schemas::SuggestedActionType::ConfigChange
+                                }
+                                "strategy_toggle" => {
+                                    crate::engrams::schemas::SuggestedActionType::StrategyToggle
+                                }
+                                "risk_adjustment" => {
+                                    crate::engrams::schemas::SuggestedActionType::RiskAdjustment
+                                }
+                                "venue_disable" => {
+                                    crate::engrams::schemas::SuggestedActionType::VenueDisable
+                                }
+                                "avoid_token" => {
+                                    crate::engrams::schemas::SuggestedActionType::AvoidToken
+                                }
                                 _ => crate::engrams::schemas::SuggestedActionType::ConfigChange,
                             },
                             target: rec.target.clone(),
@@ -1681,7 +1974,11 @@ async fn engram_request_analysis(state: &AppState, args: Value) -> McpToolResult
                         created_at: chrono::Utc::now(),
                         applied_at: None,
                     };
-                    if let Err(e) = state.engrams_client.save_recommendation(&wallet, &recommendation).await {
+                    if let Err(e) = state
+                        .engrams_client
+                        .save_recommendation(&wallet, &recommendation)
+                        .await
+                    {
                         tracing::error!(
                             "⚠️ FAILED to save recommendation engram for {}: {} - recommendation {} will be LOST",
                             wallet, e, rec.title
@@ -1696,10 +1993,18 @@ async fn engram_request_analysis(state: &AppState, args: Value) -> McpToolResult
                 let consensus_analysis = crate::engrams::schemas::ConsensusAnalysis {
                     analysis_id,
                     analysis_type: match analysis_type {
-                        "trade_review" => crate::engrams::schemas::ConsensusAnalysisType::TradeReview,
-                        "risk_assessment" => crate::engrams::schemas::ConsensusAnalysisType::RiskAssessment,
-                        "strategy_optimization" => crate::engrams::schemas::ConsensusAnalysisType::StrategyOptimization,
-                        "pattern_discovery" => crate::engrams::schemas::ConsensusAnalysisType::PatternDiscovery,
+                        "trade_review" => {
+                            crate::engrams::schemas::ConsensusAnalysisType::TradeReview
+                        }
+                        "risk_assessment" => {
+                            crate::engrams::schemas::ConsensusAnalysisType::RiskAssessment
+                        }
+                        "strategy_optimization" => {
+                            crate::engrams::schemas::ConsensusAnalysisType::StrategyOptimization
+                        }
+                        "pattern_discovery" => {
+                            crate::engrams::schemas::ConsensusAnalysisType::PatternDiscovery
+                        }
                         _ => crate::engrams::schemas::ConsensusAnalysisType::TradeReview,
                     },
                     time_period: time_period.to_string(),
@@ -1720,7 +2025,11 @@ async fn engram_request_analysis(state: &AppState, args: Value) -> McpToolResult
                     created_at: chrono::Utc::now(),
                 };
 
-                if let Err(e) = state.engrams_client.save_consensus_analysis(&wallet, &consensus_analysis).await {
+                if let Err(e) = state
+                    .engrams_client
+                    .save_consensus_analysis(&wallet, &consensus_analysis)
+                    .await
+                {
                     tracing::warn!("Failed to save consensus analysis engram: {}", e);
                 }
 
@@ -1807,12 +2116,10 @@ async fn engram_get_by_ids(state: &AppState, args: Value) -> McpToolResult {
     let wallet = state.dev_signer.get_address().unwrap_or_default();
 
     let engram_ids: Vec<String> = match args.get("engram_ids") {
-        Some(ids) => {
-            match serde_json::from_value(ids.clone()) {
-                Ok(v) => v,
-                Err(_) => return McpToolResult::error("engram_ids must be an array of strings"),
-            }
-        }
+        Some(ids) => match serde_json::from_value(ids.clone()) {
+            Ok(v) => v,
+            Err(_) => return McpToolResult::error("engram_ids must be an array of strings"),
+        },
         None => return McpToolResult::error("engram_ids is required"),
     };
 
@@ -1820,7 +2127,11 @@ async fn engram_get_by_ids(state: &AppState, args: Value) -> McpToolResult {
         return McpToolResult::error("engram_ids array cannot be empty");
     }
 
-    match state.engrams_client.get_engrams_by_ids(&wallet, &engram_ids).await {
+    match state
+        .engrams_client
+        .get_engrams_by_ids(&wallet, &engram_ids)
+        .await
+    {
         Ok(engrams) => {
             let result = serde_json::json!({
                 "wallet": wallet,
@@ -1846,20 +2157,41 @@ async fn engram_get_by_ids(state: &AppState, args: Value) -> McpToolResult {
 // Consensus MCP tool implementations
 async fn consensus_request_mcp(state: &AppState, args: Value) -> McpToolResult {
     if state.config.openrouter_api_key.is_none() {
-        return McpToolResult::error("Consensus engine not configured - OpenRouter API key missing");
+        return McpToolResult::error(
+            "Consensus engine not configured - OpenRouter API key missing",
+        );
     }
 
-    let edge_type = args.get("edge_type").and_then(|v| v.as_str()).unwrap_or("unknown");
-    let venue = args.get("venue").and_then(|v| v.as_str()).unwrap_or("unknown");
-    let token_pair: Vec<String> = args.get("token_pair")
+    let edge_type = args
+        .get("edge_type")
+        .and_then(|v| v.as_str())
+        .unwrap_or("unknown");
+    let venue = args
+        .get("venue")
+        .and_then(|v| v.as_str())
+        .unwrap_or("unknown");
+    let token_pair: Vec<String> = args
+        .get("token_pair")
         .and_then(|v| serde_json::from_value(v.clone()).ok())
         .unwrap_or_default();
-    let estimated_profit_lamports = args.get("estimated_profit_lamports").and_then(|v| v.as_i64()).unwrap_or(0);
-    let risk_score = args.get("risk_score").and_then(|v| v.as_i64()).unwrap_or(50) as i32;
-    let route_data = args.get("route_data").cloned().unwrap_or_else(|| serde_json::json!({}));
-    let models: Option<Vec<String>> = args.get("models").and_then(|v| serde_json::from_value(v.clone()).ok());
+    let estimated_profit_lamports = args
+        .get("estimated_profit_lamports")
+        .and_then(|v| v.as_i64())
+        .unwrap_or(0);
+    let risk_score = args
+        .get("risk_score")
+        .and_then(|v| v.as_i64())
+        .unwrap_or(50) as i32;
+    let route_data = args
+        .get("route_data")
+        .cloned()
+        .unwrap_or_else(|| serde_json::json!({}));
+    let models: Option<Vec<String>> = args
+        .get("models")
+        .and_then(|v| serde_json::from_value(v.clone()).ok());
 
-    let edge_id = args.get("edge_id")
+    let edge_id = args
+        .get("edge_id")
         .and_then(|v| v.as_str())
         .and_then(|s| uuid::Uuid::parse_str(s).ok())
         .unwrap_or_else(uuid::Uuid::new_v4);
@@ -1873,9 +2205,15 @@ async fn consensus_request_mcp(state: &AppState, args: Value) -> McpToolResult {
         &route_data,
     );
 
-    match state.consensus_engine.request_consensus(edge_id, &edge_context, models).await {
+    match state
+        .consensus_engine
+        .request_consensus(edge_id, &edge_context, models)
+        .await
+    {
         Ok(result) => {
-            let event = state.consensus_engine.create_consensus_event(edge_id, &result);
+            let event = state
+                .consensus_engine
+                .create_consensus_event(edge_id, &result);
             crate::events::broadcast_event(&state.event_tx, event);
 
             let response = serde_json::json!({
@@ -2026,15 +2364,29 @@ async fn consensus_models_discovered_mcp(state: &AppState) -> McpToolResult {
 }
 
 async fn consensus_learning_summary_mcp(state: &AppState) -> McpToolResult {
-    let wallet = state.config.wallet_address.clone().unwrap_or_else(|| "default".to_string());
+    let wallet = state
+        .config
+        .wallet_address
+        .clone()
+        .unwrap_or_else(|| "default".to_string());
 
-    let recommendations = state.engrams_client.get_recommendations(&wallet, None, Some(100)).await.unwrap_or_default();
-    let conversations = state.engrams_client.get_conversations(&wallet, Some(20)).await.unwrap_or_default();
+    let recommendations = state
+        .engrams_client
+        .get_recommendations(&wallet, None, Some(100))
+        .await
+        .unwrap_or_default();
+    let conversations = state
+        .engrams_client
+        .get_conversations(&wallet, Some(20))
+        .await
+        .unwrap_or_default();
 
-    let pending = recommendations.iter()
+    let pending = recommendations
+        .iter()
         .filter(|r| r.status == crate::engrams::schemas::RecommendationStatus::Pending)
         .count();
-    let applied = recommendations.iter()
+    let applied = recommendations
+        .iter()
         .filter(|r| r.status == crate::engrams::schemas::RecommendationStatus::Applied)
         .count();
 
@@ -2064,8 +2416,14 @@ async fn web_search(state: &AppState, args: Value) -> McpToolResult {
         None => return McpToolResult::error("Missing required parameter: query"),
     };
 
-    let num_results = args.get("num_results").and_then(|v| v.as_u64()).unwrap_or(5) as u32;
-    let search_type = args.get("search_type").and_then(|v| v.as_str()).unwrap_or("search");
+    let num_results = args
+        .get("num_results")
+        .and_then(|v| v.as_u64())
+        .unwrap_or(5) as u32;
+    let search_type = args
+        .get("search_type")
+        .and_then(|v| v.as_str())
+        .unwrap_or("search");
     let time_range = args.get("time_range").and_then(|v| v.as_str());
 
     let client = SerperClient::new(
@@ -2076,11 +2434,14 @@ async fn web_search(state: &AppState, args: Value) -> McpToolResult {
     if !client.is_configured() {
         return McpToolResult::error(
             "Serper API key not configured. Set SERPER_API_KEY environment variable.\n\
-            You can still use web_fetch to fetch content from URLs directly."
+            You can still use web_fetch to fetch content from URLs directly.",
         );
     }
 
-    match client.search(query, num_results, search_type, time_range).await {
+    match client
+        .search(query, num_results, search_type, time_range)
+        .await
+    {
         Ok(response) => {
             let result = serde_json::json!({
                 "query": response.query,
@@ -2101,20 +2462,27 @@ async fn web_search(state: &AppState, args: Value) -> McpToolResult {
 }
 
 async fn web_fetch(state: &AppState, args: Value) -> McpToolResult {
-    use crate::research::{WebClient, ExtractMode};
+    use crate::research::{ExtractMode, WebClient};
 
     let url = match args.get("url").and_then(|v| v.as_str()) {
         Some(u) => u,
         None => return McpToolResult::error("Missing required parameter: url"),
     };
 
-    let extract_mode = match args.get("extract_mode").and_then(|v| v.as_str()).unwrap_or("article") {
+    let extract_mode = match args
+        .get("extract_mode")
+        .and_then(|v| v.as_str())
+        .unwrap_or("article")
+    {
         "full" => ExtractMode::Full,
         "summary" => ExtractMode::Summary,
         _ => ExtractMode::Article,
     };
 
-    let max_length = args.get("max_length").and_then(|v| v.as_u64()).unwrap_or(10000) as usize;
+    let max_length = args
+        .get("max_length")
+        .and_then(|v| v.as_u64())
+        .unwrap_or(10000) as usize;
 
     let client = WebClient::new();
 
@@ -2140,7 +2508,7 @@ async fn web_fetch(state: &AppState, args: Value) -> McpToolResult {
 
 async fn web_summarize(state: &AppState, args: Value) -> McpToolResult {
     use crate::engrams::schemas::{
-        WebResearchEngram, WebSourceType, AnalysisFocus, ExtractedStrategyInsight
+        AnalysisFocus, ExtractedStrategyInsight, WebResearchEngram, WebSourceType,
     };
     use crate::research::WebContentType;
     use chrono::Utc;
@@ -2156,8 +2524,14 @@ async fn web_summarize(state: &AppState, args: Value) -> McpToolResult {
         None => return McpToolResult::error("Missing required parameter: url"),
     };
 
-    let focus = args.get("focus").and_then(|v| v.as_str()).unwrap_or("general");
-    let save_as_engram = args.get("save_as_engram").and_then(|v| v.as_bool()).unwrap_or(true);
+    let focus = args
+        .get("focus")
+        .and_then(|v| v.as_str())
+        .unwrap_or("general");
+    let save_as_engram = args
+        .get("save_as_engram")
+        .and_then(|v| v.as_bool())
+        .unwrap_or(true);
 
     let analysis_focus = match focus {
         "strategy" => AnalysisFocus::Strategy,
@@ -2217,19 +2591,39 @@ Format your response as JSON:
         match crate::consensus::quick_llm_call(&prompt).await {
             Ok(response) => {
                 if let Ok(parsed) = serde_json::from_str::<serde_json::Value>(&response) {
-                    summary = parsed.get("summary").and_then(|v| v.as_str()).unwrap_or("").to_string();
-                    key_insights = parsed.get("key_insights")
+                    summary = parsed
+                        .get("summary")
+                        .and_then(|v| v.as_str())
+                        .unwrap_or("")
+                        .to_string();
+                    key_insights = parsed
+                        .get("key_insights")
                         .and_then(|v| v.as_array())
-                        .map(|arr| arr.iter().filter_map(|v| v.as_str().map(String::from)).collect())
+                        .map(|arr| {
+                            arr.iter()
+                                .filter_map(|v| v.as_str().map(String::from))
+                                .collect()
+                        })
                         .unwrap_or_default();
-                    extracted_strategies = parsed.get("extracted_strategies")
-                        .and_then(|v| serde_json::from_value::<Vec<ExtractedStrategyInsight>>(v.clone()).ok())
+                    extracted_strategies = parsed
+                        .get("extracted_strategies")
+                        .and_then(|v| {
+                            serde_json::from_value::<Vec<ExtractedStrategyInsight>>(v.clone()).ok()
+                        })
                         .unwrap_or_default();
-                    extracted_tokens = parsed.get("extracted_tokens")
+                    extracted_tokens = parsed
+                        .get("extracted_tokens")
                         .and_then(|v| v.as_array())
-                        .map(|arr| arr.iter().filter_map(|v| v.as_str().map(String::from)).collect())
+                        .map(|arr| {
+                            arr.iter()
+                                .filter_map(|v| v.as_str().map(String::from))
+                                .collect()
+                        })
                         .unwrap_or_default();
-                    confidence = parsed.get("confidence").and_then(|v| v.as_f64()).unwrap_or(0.5);
+                    confidence = parsed
+                        .get("confidence")
+                        .and_then(|v| v.as_f64())
+                        .unwrap_or(0.5);
                 } else {
                     summary = response[..response.len().min(500)].to_string();
                     key_insights = vec![];
@@ -2239,7 +2633,11 @@ Format your response as JSON:
                 }
             }
             Err(e) => {
-                summary = format!("LLM analysis failed: {}. Content excerpt: {}", e, &content[..content.len().min(300)]);
+                summary = format!(
+                    "LLM analysis failed: {}. Content excerpt: {}",
+                    e,
+                    &content[..content.len().min(300)]
+                );
                 key_insights = vec![];
                 extracted_strategies = vec![];
                 extracted_tokens = vec![];
@@ -2275,8 +2673,16 @@ Format your response as JSON:
 
     let mut engram_saved = false;
     if save_as_engram && state.engrams_client.is_configured() {
-        let wallet = state.config.wallet_address.clone().unwrap_or_else(|| "default".to_string());
-        if let Ok(_) = state.engrams_client.save_web_research(&wallet, &research).await {
+        let wallet = state
+            .config
+            .wallet_address
+            .clone()
+            .unwrap_or_else(|| "default".to_string());
+        if let Ok(_) = state
+            .engrams_client
+            .save_web_research(&wallet, &research)
+            .await
+        {
             engram_saved = true;
         }
     }
@@ -2303,20 +2709,31 @@ async fn web_research_list(state: &AppState, args: Value) -> McpToolResult {
         return McpToolResult::error("Engrams service not configured");
     }
 
-    let wallet = state.config.wallet_address.clone().unwrap_or_else(|| "default".to_string());
+    let wallet = state
+        .config
+        .wallet_address
+        .clone()
+        .unwrap_or_else(|| "default".to_string());
     let limit = args.get("limit").and_then(|v| v.as_i64()).unwrap_or(20);
     let focus_filter = args.get("focus").and_then(|v| v.as_str());
 
-    match state.engrams_client.get_web_research(&wallet, Some(limit)).await {
+    match state
+        .engrams_client
+        .get_web_research(&wallet, Some(limit))
+        .await
+    {
         Ok(research_list) => {
             let filtered: Vec<_> = if let Some(focus) = focus_filter {
-                research_list.into_iter().filter(|r| {
-                    let focus_str = serde_json::to_string(&r.analysis_focus)
-                        .unwrap_or_default()
-                        .trim_matches('"')
-                        .to_lowercase();
-                    focus_str == focus.to_lowercase()
-                }).collect()
+                research_list
+                    .into_iter()
+                    .filter(|r| {
+                        let focus_str = serde_json::to_string(&r.analysis_focus)
+                            .unwrap_or_default()
+                            .trim_matches('"')
+                            .to_lowercase();
+                        focus_str == focus.to_lowercase()
+                    })
+                    .collect()
             } else {
                 research_list
             };

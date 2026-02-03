@@ -135,9 +135,9 @@ impl SerperClient {
                                     .map(|(i, item)| SearchResult {
                                         title: item.title,
                                         url: item.link,
-                                        snippet: item.snippet.unwrap_or_else(|| {
-                                            item.date.unwrap_or_default()
-                                        }),
+                                        snippet: item
+                                            .snippet
+                                            .unwrap_or_else(|| item.date.unwrap_or_default()),
                                         position: (i + 1) as u32,
                                     })
                                     .collect()
@@ -210,8 +210,10 @@ mod tests {
 
     #[test]
     fn test_serper_client_configured() {
-        let client =
-            SerperClient::new("https://google.serper.dev".to_string(), Some("test-key".to_string()));
+        let client = SerperClient::new(
+            "https://google.serper.dev".to_string(),
+            Some("test-key".to_string()),
+        );
         assert!(client.is_configured());
     }
 }

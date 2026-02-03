@@ -104,9 +104,9 @@ impl BlockhashCache {
             )));
         }
 
-        let result = rpc_response.result.ok_or_else(|| {
-            AppError::ExternalApi("Missing result in RPC response".to_string())
-        })?;
+        let result = rpc_response
+            .result
+            .ok_or_else(|| AppError::ExternalApi("Missing result in RPC response".to_string()))?;
 
         Ok(RecentBlockhash {
             blockhash: result.value.blockhash,

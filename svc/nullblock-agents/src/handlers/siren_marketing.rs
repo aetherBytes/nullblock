@@ -1,14 +1,10 @@
-use axum::{
-    extract::State,
-    http::StatusCode,
-    response::Json,
-};
+use axum::{extract::State, http::StatusCode, response::Json};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use tracing::{error, info};
 
 use crate::{
-    models::{ErrorResponse, ChatRequest},
+    models::{ChatRequest, ErrorResponse},
     server::AppState,
 };
 
@@ -55,8 +51,11 @@ pub async fn generate_content(
     info!("📝 Generating marketing content: {}", request.content_type);
 
     let mut marketing_agent = state.marketing_agent.write().await;
-    
-    match marketing_agent.generate_content(request.content_type, request.context).await {
+
+    match marketing_agent
+        .generate_content(request.content_type, request.context)
+        .await
+    {
         Ok(content) => {
             info!("✅ Content generated successfully");
             Ok(Json(MarketingContentResponse {
@@ -86,8 +85,11 @@ pub async fn create_twitter_post(
     info!("📱 Creating Twitter post");
 
     let mut marketing_agent = state.marketing_agent.write().await;
-    
-    match marketing_agent.create_twitter_post(request.content, request.media_urls).await {
+
+    match marketing_agent
+        .create_twitter_post(request.content, request.media_urls)
+        .await
+    {
         Ok(result) => {
             info!("✅ Twitter post created successfully");
             Ok(Json(TwitterPostResponse {
@@ -116,7 +118,7 @@ pub async fn analyze_project_progress(
     info!("🔍 Analyzing project progress for marketing opportunities");
 
     let mut marketing_agent = state.marketing_agent.write().await;
-    
+
     match marketing_agent.analyze_project_progress().await {
         Ok(analysis) => {
             info!("✅ Project analysis completed");
@@ -211,8 +213,9 @@ pub async fn get_content_themes(
     info!("🎨 Getting available content themes");
 
     let marketing_agent = state.marketing_agent.read().await;
-    
-    let themes: Vec<serde_json::Value> = marketing_agent.content_themes
+
+    let themes: Vec<serde_json::Value> = marketing_agent
+        .content_themes
         .iter()
         .map(|(key, theme)| {
             serde_json::json!({
@@ -245,18 +248,26 @@ pub async fn chat(
 
     let mut marketing_agent = state.marketing_agent.write().await;
 
-    match marketing_agent.chat(request.message, request.user_context).await {
+    match marketing_agent
+        .chat(request.message, request.user_context)
+        .await
+    {
         Ok(response) => {
-            info!("✅ Marketing chat response generated: {} chars", response.content.len());
+            info!(
+                "✅ Marketing chat response generated: {} chars",
+                response.content.len()
+            );
 
             // Extract latency_ms and confidence_score from metadata
-            let latency_ms = response.metadata
+            let latency_ms = response
+                .metadata
                 .as_ref()
                 .and_then(|meta| meta.get("latency_ms"))
                 .and_then(|v| v.as_f64())
                 .unwrap_or(0.0);
 
-            let confidence_score = response.metadata
+            let confidence_score = response
+                .metadata
                 .as_ref()
                 .and_then(|meta| meta.get("confidence_score"))
                 .and_then(|v| v.as_f64())
@@ -292,7 +303,9 @@ pub async fn set_model(
     let mut marketing_agent = state.marketing_agent.write().await;
     let api_keys = state.api_keys.clone();
 
-    let success = marketing_agent.set_preferred_model(request.model_name.clone(), &api_keys).await;
+    let success = marketing_agent
+        .set_preferred_model(request.model_name.clone(), &api_keys)
+        .await;
 
     if success {
         info!("✅ Siren model successfully set to: {}", request.model_name);
@@ -312,7 +325,3 @@ pub async fn set_model(
         ))
     }
 }
-
-
-
-

@@ -40,7 +40,10 @@ pub async fn resolve_settlement(
     wallet_pubkey: &str,
 ) -> TxSettlement {
     if signature.starts_with("INFERRED_") {
-        debug!("Skipping settlement for inferred signature: {}", &signature[..30.min(signature.len())]);
+        debug!(
+            "Skipping settlement for inferred signature: {}",
+            &signature[..30.min(signature.len())]
+        );
         return TxSettlement::estimated_fallback();
     }
 
@@ -54,7 +57,10 @@ pub async fn resolve_settlement(
                 let meta = match tx_response.meta {
                     Some(m) => m,
                     None => {
-                        warn!("Transaction {} has no meta, using estimated PnL", &signature[..16]);
+                        warn!(
+                            "Transaction {} has no meta, using estimated PnL",
+                            &signature[..16]
+                        );
                         return TxSettlement::estimated_fallback();
                     }
                 };
@@ -62,17 +68,20 @@ pub async fn resolve_settlement(
                 let account_keys = match tx_response.transaction {
                     Some(ref inner) => &inner.message.account_keys,
                     None => {
-                        warn!("Transaction {} has no inner transaction, using estimated PnL", &signature[..16]);
+                        warn!(
+                            "Transaction {} has no inner transaction, using estimated PnL",
+                            &signature[..16]
+                        );
                         return TxSettlement::estimated_fallback();
                     }
                 };
 
-                let wallet_index = account_keys
-                    .iter()
-                    .position(|key| key == wallet_pubkey);
+                let wallet_index = account_keys.iter().position(|key| key == wallet_pubkey);
 
                 match wallet_index {
-                    Some(idx) if idx < meta.pre_balances.len() && idx < meta.post_balances.len() => {
+                    Some(idx)
+                        if idx < meta.pre_balances.len() && idx < meta.post_balances.len() =>
+                    {
                         let pre = meta.pre_balances[idx] as i64;
                         let post = meta.post_balances[idx] as i64;
                         let sol_delta = post - pre;
@@ -97,14 +106,18 @@ pub async fn resolve_settlement(
                     Some(idx) => {
                         warn!(
                             "Wallet index {} out of bounds (pre_balances={}, post_balances={})",
-                            idx, meta.pre_balances.len(), meta.post_balances.len()
+                            idx,
+                            meta.pre_balances.len(),
+                            meta.post_balances.len()
                         );
                         return TxSettlement::estimated_fallback();
                     }
                     None => {
                         warn!(
                             "Wallet {} not found in transaction {} account keys ({} keys)",
-                            &wallet_pubkey[..12], &signature[..16], account_keys.len()
+                            &wallet_pubkey[..12],
+                            &signature[..16],
+                            account_keys.len()
                         );
                         return TxSettlement::estimated_fallback();
                     }
@@ -113,13 +126,18 @@ pub async fn resolve_settlement(
             Ok(None) => {
                 debug!(
                     "Transaction {} not indexed yet (attempt {}/{})",
-                    &signature[..16], attempt + 1, MAX_RETRIES
+                    &signature[..16],
+                    attempt + 1,
+                    MAX_RETRIES
                 );
             }
             Err(e) => {
                 warn!(
                     "Failed to fetch transaction {} (attempt {}/{}): {}",
-                    &signature[..16], attempt + 1, MAX_RETRIES, e
+                    &signature[..16],
+                    attempt + 1,
+                    MAX_RETRIES,
+                    e
                 );
             }
         }
@@ -127,7 +145,8 @@ pub async fn resolve_settlement(
 
     warn!(
         "[estimated] Could not resolve on-chain settlement for {} after {} attempts",
-        &signature[..16], MAX_RETRIES
+        &signature[..16],
+        MAX_RETRIES
     );
     TxSettlement::estimated_fallback()
 }
@@ -140,10 +159,7 @@ pub async fn resolve_inferred_settlement(
 ) -> TxSettlement {
     match helius.get_signatures_for_address(wallet_pubkey, 30).await {
         Ok(signatures) => {
-            let recent_sigs: Vec<_> = signatures
-                .into_iter()
-                .filter(|s| s.err.is_none())
-                .collect();
+            let recent_sigs: Vec<_> = signatures.into_iter().filter(|s| s.err.is_none()).collect();
 
             if recent_sigs.is_empty() {
                 warn!("[inferred] No recent successful transactions found for wallet");
@@ -170,14 +186,19 @@ pub async fn resolve_inferred_settlement(
                             if !keys.iter().any(|k| k == mint) {
                                 debug!(
                                     "[inferred] TX {} does not involve token {} - skipping",
-                                    &sig_info.signature[..16], &mint[..8]
+                                    &sig_info.signature[..16],
+                                    &mint[..8]
                                 );
                                 continue;
                             }
                         }
 
                         let idx = match keys.iter().position(|k| k == wallet_pubkey) {
-                            Some(i) if i < meta.pre_balances.len() && i < meta.post_balances.len() => i,
+                            Some(i)
+                                if i < meta.pre_balances.len() && i < meta.post_balances.len() =>
+                            {
+                                i
+                            }
                             _ => continue,
                         };
 
@@ -198,7 +219,11 @@ pub async fn resolve_inferred_settlement(
                     }
                     Ok(None) => continue,
                     Err(e) => {
-                        debug!("[inferred] Failed to fetch TX {}: {}", &sig_info.signature[..16], e);
+                        debug!(
+                            "[inferred] Failed to fetch TX {}: {}",
+                            &sig_info.signature[..16],
+                            e
+                        );
                         continue;
                     }
                 }

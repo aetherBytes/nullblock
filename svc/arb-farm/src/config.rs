@@ -69,15 +69,16 @@ pub struct Config {
 impl Config {
     pub fn from_env() -> anyhow::Result<Self> {
         Ok(Self {
-            service_name: env::var("SERVICE_NAME")
-                .unwrap_or_else(|_| "arb-farm".to_string()),
+            service_name: env::var("SERVICE_NAME").unwrap_or_else(|_| "arb-farm".to_string()),
             port: env::var("ARB_FARM_PORT")
                 .unwrap_or_else(|_| "9007".to_string())
                 .parse()
                 .unwrap_or(9007),
             database_url: env::var("ARB_FARM_DATABASE_URL")
                 .or_else(|_| env::var("DATABASE_URL"))
-                .map_err(|_| anyhow::anyhow!("DATABASE_URL or ARB_FARM_DATABASE_URL must be set"))?,
+                .map_err(|_| {
+                    anyhow::anyhow!("DATABASE_URL or ARB_FARM_DATABASE_URL must be set")
+                })?,
             erebus_url: env::var("EREBUS_BASE_URL")
                 .unwrap_or_else(|_| "http://localhost:3000".to_string()),
             engrams_url: env::var("ENGRAMS_SERVICE_URL")
@@ -190,7 +191,10 @@ impl Config {
 
         // Validate RPC URL format
         if !self.rpc_url.starts_with("http://") && !self.rpc_url.starts_with("https://") {
-            errors.push(format!("Invalid RPC URL: {} (must start with http:// or https://)", self.rpc_url));
+            errors.push(format!(
+                "Invalid RPC URL: {} (must start with http:// or https://)",
+                self.rpc_url
+            ));
         }
 
         // Validate database URL format
@@ -205,8 +209,12 @@ impl Config {
 
         // Warn if webhook auth token not set - webhooks will be REJECTED
         if self.helius_webhook_auth_token.is_none() {
-            tracing::warn!("⚠️ HELIUS_WEBHOOK_AUTH_TOKEN not set - webhooks will be REJECTED (401)");
-            tracing::warn!("   Copy trading requires this token to be set for webhook authentication");
+            tracing::warn!(
+                "⚠️ HELIUS_WEBHOOK_AUTH_TOKEN not set - webhooks will be REJECTED (401)"
+            );
+            tracing::warn!(
+                "   Copy trading requires this token to be set for webhook authentication"
+            );
         }
 
         // Validate risk parameters are within sensible bounds
@@ -214,7 +222,10 @@ impl Config {
             errors.push("default_max_position_sol must be > 0".to_string());
         }
         if self.default_max_position_sol > 100.0 {
-            tracing::warn!("⚠️ default_max_position_sol is very high ({} SOL) - is this intentional?", self.default_max_position_sol);
+            tracing::warn!(
+                "⚠️ default_max_position_sol is very high ({} SOL) - is this intentional?",
+                self.default_max_position_sol
+            );
         }
 
         if self.default_daily_loss_limit_sol <= 0.0 {
@@ -222,8 +233,11 @@ impl Config {
         }
 
         if self.default_max_slippage_bps > 5000 {
-            tracing::warn!("⚠️ default_max_slippage_bps is very high ({} bps = {}%) - is this intentional?",
-                self.default_max_slippage_bps, self.default_max_slippage_bps as f64 / 100.0);
+            tracing::warn!(
+                "⚠️ default_max_slippage_bps is very high ({} bps = {}%) - is this intentional?",
+                self.default_max_slippage_bps,
+                self.default_max_slippage_bps as f64 / 100.0
+            );
         }
 
         // Validate Turnkey config is complete if any Turnkey env var is set
@@ -233,13 +247,18 @@ impl Config {
 
         if turnkey_partially_configured {
             if self.turnkey_organization_id.is_none() {
-                errors.push("TURNKEY_ORGANIZATION_ID required when Turnkey is configured".to_string());
+                errors.push(
+                    "TURNKEY_ORGANIZATION_ID required when Turnkey is configured".to_string(),
+                );
             }
             if self.turnkey_api_public_key.is_none() {
-                errors.push("TURNKEY_API_PUBLIC_KEY required when Turnkey is configured".to_string());
+                errors
+                    .push("TURNKEY_API_PUBLIC_KEY required when Turnkey is configured".to_string());
             }
             if self.turnkey_api_private_key.is_none() {
-                errors.push("TURNKEY_API_PRIVATE_KEY required when Turnkey is configured".to_string());
+                errors.push(
+                    "TURNKEY_API_PRIVATE_KEY required when Turnkey is configured".to_string(),
+                );
             }
         }
 

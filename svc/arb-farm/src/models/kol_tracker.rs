@@ -133,9 +133,14 @@ mod tests {
     async fn test_kol_tracker() {
         let tracker = KOLTracker::new();
 
-        tracker.add_kol("wallet1", Some("TestKOL".to_string()), 0.8).await;
+        tracker
+            .add_kol("wallet1", Some("TestKOL".to_string()), 0.8)
+            .await;
 
-        assert_eq!(tracker.get_kol_name("wallet1").await, Some("TestKOL".to_string()));
+        assert_eq!(
+            tracker.get_kol_name("wallet1").await,
+            Some("TestKOL".to_string())
+        );
         assert_eq!(tracker.get_trust_score("wallet1").await, Some(0.8));
         assert!(tracker.is_tracked("wallet1").await);
         assert!(!tracker.is_tracked("wallet2").await);

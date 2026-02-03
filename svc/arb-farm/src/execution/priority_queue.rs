@@ -38,7 +38,9 @@ pub struct PrioritizedEdge {
 impl PrioritizedEdge {
     pub fn new(edge: Edge) -> Self {
         let priority = Self::calculate_priority(&edge);
-        let deadline = edge.expires_at.unwrap_or(chrono::Utc::now() + chrono::Duration::minutes(5));
+        let deadline = edge
+            .expires_at
+            .unwrap_or(chrono::Utc::now() + chrono::Duration::minutes(5));
 
         Self {
             edge,
@@ -50,7 +52,9 @@ impl PrioritizedEdge {
     }
 
     pub fn with_priority(edge: Edge, priority: Priority) -> Self {
-        let deadline = edge.expires_at.unwrap_or(chrono::Utc::now() + chrono::Duration::minutes(5));
+        let deadline = edge
+            .expires_at
+            .unwrap_or(chrono::Utc::now() + chrono::Duration::minutes(5));
 
         Self {
             edge,
@@ -243,10 +247,8 @@ impl EdgePriorityQueue {
         let original_len = queue.len();
 
         let items: Vec<PrioritizedEdge> = queue.drain().collect();
-        let filtered: Vec<PrioritizedEdge> = items
-            .into_iter()
-            .filter(|e| e.edge.id != edge_id)
-            .collect();
+        let filtered: Vec<PrioritizedEdge> =
+            items.into_iter().filter(|e| e.edge.id != edge_id).collect();
 
         for item in filtered {
             queue.push(item);
@@ -282,10 +284,7 @@ impl EdgePriorityQueue {
         let original_len = queue.len();
 
         let items: Vec<PrioritizedEdge> = queue.drain().collect();
-        let valid: Vec<PrioritizedEdge> = items
-            .into_iter()
-            .filter(|e| !e.is_expired())
-            .collect();
+        let valid: Vec<PrioritizedEdge> = items.into_iter().filter(|e| !e.is_expired()).collect();
 
         let expired_count = original_len - valid.len();
 

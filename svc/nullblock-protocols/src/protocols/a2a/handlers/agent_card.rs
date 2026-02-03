@@ -1,5 +1,5 @@
-use axum::Json;
 use crate::protocols::a2a::types::AgentCard;
+use axum::Json;
 
 pub async fn get_agent_card() -> Json<AgentCard> {
     Json(AgentCard::default())

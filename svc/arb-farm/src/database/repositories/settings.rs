@@ -1,6 +1,6 @@
-use sqlx::PgPool;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
+use sqlx::PgPool;
 
 use crate::error::{AppError, AppResult};
 

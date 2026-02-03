@@ -6,18 +6,26 @@ use tokio::sync::{broadcast, RwLock};
 use uuid::Uuid;
 
 use crate::agents::StrategyEngine;
-use crate::consensus::{ConsensusConfig, ConsensusEngine, format_edge_context};
+use crate::consensus::{format_edge_context, ConsensusConfig, ConsensusEngine};
 use crate::database::TradeRepository;
 use crate::engrams::client::EngramsClient;
-use crate::engrams::schemas::{TransactionSummary, TransactionAction, TransactionMetadata, ExecutionError, ExecutionErrorType, ErrorContext};
+use crate::engrams::schemas::{
+    ErrorContext, ExecutionError, ExecutionErrorType, TransactionAction, TransactionMetadata,
+    TransactionSummary,
+};
 use crate::error::{AppError, AppResult};
-use crate::events::{edge as edge_topics, kol as kol_topics, topics::position as position_topics, ArbEvent, AgentType, EventSource};
-use crate::execution::{CurveBuyParams, CurveTransactionBuilder, ExitConfig, PositionManager, CopyTradeExecutor};
+use crate::events::{
+    edge as edge_topics, kol as kol_topics, topics::position as position_topics, AgentType,
+    ArbEvent, EventSource,
+};
 use crate::execution::risk::RiskConfig;
+use crate::execution::{
+    CopyTradeExecutor, CurveBuyParams, CurveTransactionBuilder, ExitConfig, PositionManager,
+};
 use crate::helius::{HeliusClient, HeliusSender};
 use crate::models::Signal;
-use crate::wallet::DevWalletSigner;
 use crate::wallet::turnkey::SignRequest;
+use crate::wallet::DevWalletSigner;
 
 const MAX_EXECUTION_RETRIES: u32 = 2;
 const EXECUTION_COOLDOWN_MS: u64 = 1000;
@@ -36,15 +44,24 @@ async fn send_critical_event(tx: &broadcast::Sender<ArbEvent>, event: ArbEvent) 
     send_event_with_retry(tx, event, true).await;
 }
 
-async fn send_event_with_retry(tx: &broadcast::Sender<ArbEvent>, event: ArbEvent, is_critical: bool) {
-    let max_attempts = if is_critical { EVENT_RETRY_ATTEMPTS } else { EVENT_RETRY_ATTEMPTS };
+async fn send_event_with_retry(
+    tx: &broadcast::Sender<ArbEvent>,
+    event: ArbEvent,
+    is_critical: bool,
+) {
+    let max_attempts = if is_critical {
+        EVENT_RETRY_ATTEMPTS
+    } else {
+        EVENT_RETRY_ATTEMPTS
+    };
 
     for attempt in 0..max_attempts {
         match tx.send(event.clone()) {
             Ok(_) => return,
             Err(_e) => {
                 if attempt < max_attempts - 1 {
-                    tokio::time::sleep(std::time::Duration::from_millis(EVENT_RETRY_DELAY_MS)).await;
+                    tokio::time::sleep(std::time::Duration::from_millis(EVENT_RETRY_DELAY_MS))
+                        .await;
                 } else {
                     if is_critical {
                         tracing::error!(
@@ -300,7 +317,10 @@ impl AutonomousExecutor {
                 }
             }
 
-            tracing::warn!("🤖 Autonomous executor event loop EXITED (events_received={})", events_received);
+            tracing::warn!(
+                "🤖 Autonomous executor event loop EXITED (events_received={})",
+                events_received
+            );
         });
     }
 
@@ -346,19 +366,25 @@ impl AutonomousExecutor {
         default_wallet: &str,
         default_slippage_bps: u16,
     ) -> AppResult<()> {
-        let edge_id = event.payload.get("edge_id")
+        let edge_id = event
+            .payload
+            .get("edge_id")
             .and_then(|v| v.as_str())
             .and_then(|s| Uuid::parse_str(s).ok())
             .ok_or_else(|| AppError::Validation("Missing edge_id in event".into()))?;
 
-        let strategy_id = event.payload.get("strategy_id")
+        let strategy_id = event
+            .payload
+            .get("strategy_id")
             .and_then(|v| v.as_str())
             .and_then(|s| Uuid::parse_str(s).ok())
             .ok_or_else(|| AppError::Validation("Missing strategy_id in event".into()))?;
 
         // IMPORTANT: Check the CURRENT strategy state, not the stale event payload
         // This allows toggling autonomous mode to take effect immediately for new edges
-        let strategy = strategy_engine.get_strategy(strategy_id).await
+        let strategy = strategy_engine
+            .get_strategy(strategy_id)
+            .await
             .ok_or_else(|| AppError::NotFound(format!("Strategy {} not found", strategy_id)))?;
 
         let is_autonomous_mode = strategy.execution_mode.to_lowercase() == "autonomous";
@@ -393,15 +419,39 @@ impl AutonomousExecutor {
         if global_consensus_enabled && strategy_requires_consensus {
             if let Some(engine) = consensus_engine {
                 let edge_context = format_edge_context(
-                    event.payload.get("edge_type").and_then(|v| v.as_str()).unwrap_or("curve_buy"),
-                    event.payload.get("venue").and_then(|v| v.as_str()).unwrap_or("pump_fun"),
+                    event
+                        .payload
+                        .get("edge_type")
+                        .and_then(|v| v.as_str())
+                        .unwrap_or("curve_buy"),
+                    event
+                        .payload
+                        .get("venue")
+                        .and_then(|v| v.as_str())
+                        .unwrap_or("pump_fun"),
                     &[
-                        event.payload.get("token_mint").and_then(|v| v.as_str()).unwrap_or("unknown").to_string(),
+                        event
+                            .payload
+                            .get("token_mint")
+                            .and_then(|v| v.as_str())
+                            .unwrap_or("unknown")
+                            .to_string(),
                         "SOL".to_string(),
                     ],
-                    event.payload.get("estimated_profit_lamports").and_then(|v| v.as_i64()).unwrap_or(0),
-                    event.payload.get("risk_score").and_then(|v| v.as_i64()).unwrap_or(50) as i32,
-                    event.payload.get("route_data").unwrap_or(&serde_json::json!({})),
+                    event
+                        .payload
+                        .get("estimated_profit_lamports")
+                        .and_then(|v| v.as_i64())
+                        .unwrap_or(0),
+                    event
+                        .payload
+                        .get("risk_score")
+                        .and_then(|v| v.as_i64())
+                        .unwrap_or(50) as i32,
+                    event
+                        .payload
+                        .get("route_data")
+                        .unwrap_or(&serde_json::json!({})),
                 );
 
                 match engine.request_consensus(edge_id, &edge_context, None).await {
@@ -414,13 +464,20 @@ impl AutonomousExecutor {
                             approved: result.approved,
                             agreement_score: result.agreement_score,
                             weighted_confidence: result.weighted_confidence,
-                            model_votes: result.model_votes.iter().map(|v| v.model.clone()).collect(),
+                            model_votes: result
+                                .model_votes
+                                .iter()
+                                .map(|v| v.model.clone())
+                                .collect(),
                             reasoning_summary: result.reasoning_summary.clone(),
                             edge_context: edge_context.clone(),
                             total_latency_ms: result.total_latency_ms,
                             created_at: chrono::Utc::now(),
                         };
-                        if let Err(e) = engrams_client.save_consensus_decision(default_wallet, &decision).await {
+                        if let Err(e) = engrams_client
+                            .save_consensus_decision(default_wallet, &decision)
+                            .await
+                        {
                             tracing::warn!("Failed to save consensus decision engram: {}", e);
                         }
 
@@ -432,17 +489,21 @@ impl AutonomousExecutor {
                                 reasoning = %result.reasoning_summary,
                                 "🚫 Edge rejected by consensus - skipping execution"
                             );
-                            send_event(&event_tx,ArbEvent::new(
-                                "consensus.rejected",
-                                EventSource::Agent(AgentType::Executor),
-                                "arb.edge.rejected",
-                                serde_json::json!({
-                                    "edge_id": edge_id,
-                                    "strategy_id": strategy_id,
-                                    "agreement_score": result.agreement_score,
-                                    "reasoning": result.reasoning_summary,
-                                }),
-                            )).await;
+                            send_event(
+                                &event_tx,
+                                ArbEvent::new(
+                                    "consensus.rejected",
+                                    EventSource::Agent(AgentType::Executor),
+                                    "arb.edge.rejected",
+                                    serde_json::json!({
+                                        "edge_id": edge_id,
+                                        "strategy_id": strategy_id,
+                                        "agreement_score": result.agreement_score,
+                                        "reasoning": result.reasoning_summary,
+                                    }),
+                                ),
+                            )
+                            .await;
                             return Ok(());
                         }
                         tracing::info!(
@@ -475,7 +536,9 @@ impl AutonomousExecutor {
                     if fail_open { "proceeding anyway" } else { "aborting" }
                 );
                 if !fail_open {
-                    return Err(AppError::ConsensusFailed("Consensus engine not configured".to_string()));
+                    return Err(AppError::ConsensusFailed(
+                        "Consensus engine not configured".to_string(),
+                    ));
                 }
             }
         }
@@ -485,11 +548,15 @@ impl AutonomousExecutor {
             return Err(AppError::Internal("Dev signer not configured".into()));
         }
 
-        let route_data = event.payload.get("route_data")
+        let route_data = event
+            .payload
+            .get("route_data")
             .cloned()
             .unwrap_or(serde_json::json!({}));
 
-        let mint = event.payload.get("token_mint")
+        let mint = event
+            .payload
+            .get("token_mint")
             .or_else(|| event.payload.get("mint"))
             .or_else(|| route_data.get("token_mint"))
             .and_then(|v| v.as_str())
@@ -504,11 +571,15 @@ impl AutonomousExecutor {
         };
 
         // Extract token_symbol from route_data (populated by signal metadata)
-        let token_symbol = route_data.get("token_symbol")
+        let token_symbol = route_data
+            .get("token_symbol")
             .and_then(|v| v.as_str())
             .map(|s| s.to_string());
 
-        if position_manager.has_open_position_for_mint_and_strategy(&mint, &strategy_id).await {
+        if position_manager
+            .has_open_position_for_mint_and_strategy(&mint, &strategy_id)
+            .await
+        {
             tracing::info!(
                 edge_id = %edge_id,
                 mint = %mint,
@@ -562,7 +633,8 @@ impl AutonomousExecutor {
         let strategy_max_sol = strategy.risk_params.max_position_sol;
 
         // Check if this is a graduation snipe - use aggressive sizing
-        let is_graduation_snipe = route_data.get("signal_source")
+        let is_graduation_snipe = route_data
+            .get("signal_source")
             .and_then(|v| v.as_str())
             .map(|s| s == "graduation_sniper")
             .unwrap_or(false)
@@ -577,22 +649,23 @@ impl AutonomousExecutor {
         };
 
         // Velocity-based position scaling for snipes
-        let velocity = route_data.get("progress_velocity")
+        let velocity = route_data
+            .get("progress_velocity")
             .and_then(|v| v.as_f64())
             .unwrap_or(0.0);
 
         let velocity_multiplier = if is_graduation_snipe && velocity > 0.0 {
             if velocity >= 2.0 {
-                1.0  // Full position for strong momentum (>2%/min)
+                1.0 // Full position for strong momentum (>2%/min)
             } else if velocity >= 1.0 {
-                0.7  // 70% for good momentum (1-2%/min)
+                0.7 // 70% for good momentum (1-2%/min)
             } else if velocity >= 0.5 {
-                0.5  // 50% for moderate momentum (0.5-1%/min)
+                0.5 // 50% for moderate momentum (0.5-1%/min)
             } else {
-                0.3  // 30% for weak momentum (<0.5%/min)
+                0.3 // 30% for weak momentum (<0.5%/min)
             }
         } else {
-            1.0  // No scaling for non-snipes
+            1.0 // No scaling for non-snipes
         };
 
         let capped_sol = base_sol * velocity_multiplier;
@@ -687,18 +760,25 @@ impl AutonomousExecutor {
 
         // Entry quality check: calculate price velocity from recent curve state changes
         // We check if the price momentum is favorable for entry
-        let current_price = curve_state.virtual_sol_reserves as f64 / curve_state.virtual_token_reserves as f64;
+        let current_price =
+            curve_state.virtual_sol_reserves as f64 / curve_state.virtual_token_reserves as f64;
 
         // Check recent price change from event payload (if available)
-        let price_change_1m = event.payload.get("price_change_1m")
+        let price_change_1m = event
+            .payload
+            .get("price_change_1m")
             .and_then(|v| v.as_f64())
             .unwrap_or(0.0);
 
-        let velocity = event.payload.get("velocity")
+        let velocity = event
+            .payload
+            .get("velocity")
             .and_then(|v| v.as_f64())
             .unwrap_or(0.0);
 
-        let progress_velocity = event.payload.get("progress_velocity")
+        let progress_velocity = event
+            .payload
+            .get("progress_velocity")
             .and_then(|v| v.as_f64())
             .unwrap_or(0.0);
 
@@ -720,9 +800,9 @@ impl AutonomousExecutor {
         // - Graduation snipes WANT momentum - tokens often pump 20%+ at graduation
         // - Regular curve_arb: tighter filter to avoid chasing pumps
         let max_recent_pump = if is_graduation_snipe {
-            50.0  // Allow up to 50% pump for graduation snipes (momentum is desired)
+            50.0 // Allow up to 50% pump for graduation snipes (momentum is desired)
         } else {
-            15.0  // Conservative 15% for regular curve_arb (avoid FOMO entries)
+            15.0 // Conservative 15% for regular curve_arb (avoid FOMO entries)
         };
         if price_change_1m > max_recent_pump {
             tracing::info!(
@@ -740,7 +820,7 @@ impl AutonomousExecutor {
         }
 
         // ENTRY FILTER 3: Require positive progress velocity (graduation accelerating)
-        let min_progress_velocity = 0.5;  // % per minute
+        let min_progress_velocity = 0.5; // % per minute
         if progress_velocity < min_progress_velocity && progress_velocity != 0.0 {
             tracing::info!(
                 edge_id = %edge_id,
@@ -788,20 +868,25 @@ impl AutonomousExecutor {
             s.executions_attempted += 1;
         }
 
-        send_event(&event_tx,ArbEvent::new(
-            "auto_execution_started",
-            EventSource::Agent(AgentType::Executor),
-            edge_topics::EXECUTING,
-            serde_json::json!({
-                "edge_id": edge_id,
-                "strategy_id": strategy_id,
-                "mint": mint,
-                "sol_amount": sol_amount_lamports as f64 / 1e9,
-                "mode": "autonomous",
-            }),
-        )).await;
+        send_event(
+            &event_tx,
+            ArbEvent::new(
+                "auto_execution_started",
+                EventSource::Agent(AgentType::Executor),
+                edge_topics::EXECUTING,
+                serde_json::json!({
+                    "edge_id": edge_id,
+                    "strategy_id": strategy_id,
+                    "mint": mint,
+                    "sol_amount": sol_amount_lamports as f64 / 1e9,
+                    "mode": "autonomous",
+                }),
+            ),
+        )
+        .await;
 
-        let is_raydium_snipe = route_data.get("signal_source")
+        let is_raydium_snipe = route_data
+            .get("signal_source")
             .and_then(|v| v.as_str())
             .map(|s| s == "raydium_snipe")
             .unwrap_or(false);
@@ -815,7 +900,8 @@ impl AutonomousExecutor {
                 curve_builder,
                 dev_signer,
                 helius_sender,
-            ).await
+            )
+            .await
         } else {
             Self::execute_curve_buy(
                 &mint,
@@ -825,7 +911,8 @@ impl AutonomousExecutor {
                 curve_builder,
                 dev_signer,
                 helius_sender,
-            ).await
+            )
+            .await
         };
 
         match result {
@@ -853,30 +940,36 @@ impl AutonomousExecutor {
                     s.total_sol_deployed += sol_amount_lamports as f64 / 1e9;
                 }
 
-                let signal_source = route_data.get("signal_source")
+                let signal_source = route_data
+                    .get("signal_source")
                     .and_then(|v| v.as_str())
                     .unwrap_or("");
-                let symbol = route_data.get("symbol")
+                let symbol = route_data
+                    .get("symbol")
                     .and_then(|v| v.as_str())
                     .unwrap_or("???");
 
-                send_critical_event(&event_tx, ArbEvent::new(
-                    "auto_execution_succeeded",
-                    EventSource::Agent(AgentType::Executor),
-                    edge_topics::EXECUTED,
-                    serde_json::json!({
-                        "edge_id": edge_id,
-                        "strategy_id": strategy_id,
-                        "mint": mint,
-                        "symbol": symbol,
-                        "signature": signature,
-                        "tokens_received": tokens_out,
-                        "sol_amount": sol_amount_lamports as f64 / 1e9,
-                        "sol_spent": sol_amount_lamports as f64 / 1e9,
-                        "signal_source": signal_source,
-                        "significance": "critical",
-                    }),
-                )).await;
+                send_critical_event(
+                    &event_tx,
+                    ArbEvent::new(
+                        "auto_execution_succeeded",
+                        EventSource::Agent(AgentType::Executor),
+                        edge_topics::EXECUTED,
+                        serde_json::json!({
+                            "edge_id": edge_id,
+                            "strategy_id": strategy_id,
+                            "mint": mint,
+                            "symbol": symbol,
+                            "signature": signature,
+                            "tokens_received": tokens_out,
+                            "sol_amount": sol_amount_lamports as f64 / 1e9,
+                            "sol_spent": sol_amount_lamports as f64 / 1e9,
+                            "signal_source": signal_source,
+                            "significance": "critical",
+                        }),
+                    ),
+                )
+                .await;
 
                 {
                     let mut mints = recent_mints.write().await;
@@ -904,31 +997,48 @@ impl AutonomousExecutor {
                         "🛡️ Using {} exit config", config_label
                     );
 
-                    let venue = route_data.get("venue")
+                    let venue = route_data
+                        .get("venue")
                         .and_then(|v| v.as_str())
                         .map(|s| s.to_string())
-                        .or_else(|| if is_raydium_snipe { Some("raydium".to_string()) } else { Some("pump_fun".to_string()) });
+                        .or_else(|| {
+                            if is_raydium_snipe {
+                                Some("raydium".to_string())
+                            } else {
+                                Some("pump_fun".to_string())
+                            }
+                        });
                     let signal_src = if signal_source.is_empty() {
                         None
                     } else {
                         Some(signal_source.to_string())
                     };
-                    let is_snipe = signal_source == "graduation_sniper" || signal_source == "raydium_snipe";
-                    let snipe_indicator = if signal_source == "raydium_snipe" { "🎓 " } else if is_snipe { "🔫 " } else { "" };
+                    let is_snipe =
+                        signal_source == "graduation_sniper" || signal_source == "raydium_snipe";
+                    let snipe_indicator = if signal_source == "raydium_snipe" {
+                        "🎓 "
+                    } else if is_snipe {
+                        "🔫 "
+                    } else {
+                        ""
+                    };
 
-                    if let Err(e) = position_manager.open_position(
-                        edge_id,
-                        strategy_id,
-                        mint.clone(),
-                        token_symbol.clone(),
-                        sol_amount_lamports as f64 / 1e9,
-                        tokens_received as f64,
-                        entry_price,
-                        exit_config,
-                        Some(signature.clone()),
-                        venue,
-                        signal_src,
-                    ).await {
+                    if let Err(e) = position_manager
+                        .open_position(
+                            edge_id,
+                            strategy_id,
+                            mint.clone(),
+                            token_symbol.clone(),
+                            sol_amount_lamports as f64 / 1e9,
+                            tokens_received as f64,
+                            entry_price,
+                            exit_config,
+                            Some(signature.clone()),
+                            venue,
+                            signal_src,
+                        )
+                        .await
+                    {
                         tracing::warn!(
                             edge_id = %edge_id,
                             error = %e,
@@ -944,20 +1054,24 @@ impl AutonomousExecutor {
                             "{}📊 Position opened for tracking", snipe_indicator
                         );
 
-                        send_critical_event(&event_tx, ArbEvent::new(
-                            "position_opened",
-                            EventSource::Agent(AgentType::Executor),
-                            position_topics::OPENED,
-                            serde_json::json!({
-                                "edge_id": edge_id.to_string(),
-                                "mint": mint,
-                                "symbol": token_symbol,
-                                "sol_amount": sol_amount_lamports as f64 / 1e9,
-                                "entry_price": entry_price,
-                                "signal_source": signal_source,
-                                "strategy_type": strategy.strategy_type,
-                            }),
-                        )).await;
+                        send_critical_event(
+                            &event_tx,
+                            ArbEvent::new(
+                                "position_opened",
+                                EventSource::Agent(AgentType::Executor),
+                                position_topics::OPENED,
+                                serde_json::json!({
+                                    "edge_id": edge_id.to_string(),
+                                    "mint": mint,
+                                    "symbol": token_symbol,
+                                    "sol_amount": sol_amount_lamports as f64 / 1e9,
+                                    "entry_price": entry_price,
+                                    "signal_source": signal_source,
+                                    "strategy_type": strategy.strategy_type,
+                                }),
+                            ),
+                        )
+                        .await;
                     }
 
                     // Save buy transaction summary to engrams
@@ -984,14 +1098,25 @@ impl AutonomousExecutor {
                         },
                     };
 
-                    if let Err(e) = engrams_client.save_transaction_summary(default_wallet, &tx_summary).await {
+                    if let Err(e) = engrams_client
+                        .save_transaction_summary(default_wallet, &tx_summary)
+                        .await
+                    {
                         tracing::warn!("Failed to save buy transaction summary engram: {}", e);
                     } else {
-                        tracing::debug!("📝 Saved buy transaction summary engram for {}", &signature[..12.min(signature.len())]);
+                        tracing::debug!(
+                            "📝 Saved buy transaction summary engram for {}",
+                            &signature[..12.min(signature.len())]
+                        );
                     }
 
                     let buy_settlement = if let Some(ref hc) = helius_client {
-                        let s = crate::execution::tx_settlement::resolve_settlement(hc, &signature, default_wallet).await;
+                        let s = crate::execution::tx_settlement::resolve_settlement(
+                            hc,
+                            &signature,
+                            default_wallet,
+                        )
+                        .await;
                         Some(s)
                     } else {
                         None
@@ -1007,11 +1132,20 @@ impl AutonomousExecutor {
                             entry_price: entry_price_decimal,
                             exit_price: None,
                             profit_lamports: None,
-                            gas_cost_lamports: buy_settlement.as_ref().map(|s| s.gas_lamports as i64),
+                            gas_cost_lamports: buy_settlement
+                                .as_ref()
+                                .map(|s| s.gas_lamports as i64),
                             slippage_bps: Some(default_slippage_bps as i32),
-                            entry_gas_lamports: buy_settlement.as_ref().map(|s| s.gas_lamports as i64),
+                            entry_gas_lamports: buy_settlement
+                                .as_ref()
+                                .map(|s| s.gas_lamports as i64),
                             exit_gas_lamports: None,
-                            pnl_source: Some(buy_settlement.as_ref().map(|s| s.source.to_string()).unwrap_or_else(|| "estimated".to_string())),
+                            pnl_source: Some(
+                                buy_settlement
+                                    .as_ref()
+                                    .map(|s| s.source.to_string())
+                                    .unwrap_or_else(|| "estimated".to_string()),
+                            ),
                         };
                         if let Err(e) = repo.create(trade_record).await {
                             tracing::warn!("Failed to save buy trade record to DB: {}", e);
@@ -1049,17 +1183,21 @@ impl AutonomousExecutor {
                     s.executions_failed += 1;
                 }
 
-                send_critical_event(&event_tx, ArbEvent::new(
-                    "auto_execution_failed",
-                    EventSource::Agent(AgentType::Executor),
-                    edge_topics::FAILED,
-                    serde_json::json!({
-                        "edge_id": edge_id,
-                        "strategy_id": strategy_id,
-                        "mint": mint,
-                        "error": e.to_string(),
-                    }),
-                )).await;
+                send_critical_event(
+                    &event_tx,
+                    ArbEvent::new(
+                        "auto_execution_failed",
+                        EventSource::Agent(AgentType::Executor),
+                        edge_topics::FAILED,
+                        serde_json::json!({
+                            "edge_id": edge_id,
+                            "strategy_id": strategy_id,
+                            "mint": mint,
+                            "error": e.to_string(),
+                        }),
+                    ),
+                )
+                .await;
 
                 // Save execution error to engrams
                 let error_str = e.to_string();
@@ -1097,10 +1235,16 @@ impl AutonomousExecutor {
                     timestamp: Utc::now(),
                 };
 
-                if let Err(save_err) = engrams_client.save_execution_error(default_wallet, &exec_error).await {
+                if let Err(save_err) = engrams_client
+                    .save_execution_error(default_wallet, &exec_error)
+                    .await
+                {
                     tracing::warn!("Failed to save execution error engram: {}", save_err);
                 } else {
-                    tracing::debug!("📝 Saved execution error engram for failed buy of {}", &mint[..12.min(mint.len())]);
+                    tracing::debug!(
+                        "📝 Saved execution error engram for failed buy of {}",
+                        &mint[..12.min(mint.len())]
+                    );
                 }
 
                 Err(e)
@@ -1140,7 +1284,11 @@ impl AutonomousExecutor {
             estimated_amount_lamports: sol_amount_lamports,
             estimated_profit_lamports: None,
             edge_id: None,
-            description: format!("Auto curve buy: {} for {} SOL", mint, sol_amount_lamports as f64 / 1e9),
+            description: format!(
+                "Auto curve buy: {} for {} SOL",
+                mint,
+                sol_amount_lamports as f64 / 1e9
+            ),
         };
 
         let sign_result = dev_signer.sign_transaction(sign_request).await?;
@@ -1148,11 +1296,14 @@ impl AutonomousExecutor {
         if !sign_result.success {
             return Err(AppError::Internal(format!(
                 "Signing failed: {}",
-                sign_result.error.unwrap_or_else(|| "Unknown error".to_string())
+                sign_result
+                    .error
+                    .unwrap_or_else(|| "Unknown error".to_string())
             )));
         }
 
-        let signed_tx = sign_result.signed_transaction_base64
+        let signed_tx = sign_result
+            .signed_transaction_base64
             .ok_or_else(|| AppError::Internal("No signed transaction returned".into()))?;
 
         tracing::debug!(mint = %mint, "Transaction signed, submitting...");
@@ -1180,13 +1331,15 @@ impl AutonomousExecutor {
         let jupiter_api_url = std::env::var("JUPITER_API_URL")
             .unwrap_or_else(|_| "https://lite-api.jup.ag/swap/v1".to_string());
 
-        let build_result = curve_builder.build_post_graduation_buy(
-            mint,
-            sol_amount_lamports,
-            slippage_bps,
-            user_wallet,
-            &jupiter_api_url,
-        ).await?;
+        let build_result = curve_builder
+            .build_post_graduation_buy(
+                mint,
+                sol_amount_lamports,
+                slippage_bps,
+                user_wallet,
+                &jupiter_api_url,
+            )
+            .await?;
 
         tracing::debug!(
             mint = %mint,
@@ -1201,7 +1354,11 @@ impl AutonomousExecutor {
             estimated_amount_lamports: sol_amount_lamports,
             estimated_profit_lamports: None,
             edge_id: None,
-            description: format!("Post-graduation buy: {} for {} SOL (Jupiter)", mint, sol_amount_lamports as f64 / 1e9),
+            description: format!(
+                "Post-graduation buy: {} for {} SOL (Jupiter)",
+                mint,
+                sol_amount_lamports as f64 / 1e9
+            ),
         };
 
         let sign_result = dev_signer.sign_transaction(sign_request).await?;
@@ -1209,11 +1366,14 @@ impl AutonomousExecutor {
         if !sign_result.success {
             return Err(AppError::Internal(format!(
                 "Signing failed: {}",
-                sign_result.error.unwrap_or_else(|| "Unknown error".to_string())
+                sign_result
+                    .error
+                    .unwrap_or_else(|| "Unknown error".to_string())
             )));
         }
 
-        let signed_tx = sign_result.signed_transaction_base64
+        let signed_tx = sign_result
+            .signed_transaction_base64
             .ok_or_else(|| AppError::Internal("No signed transaction returned".into()))?;
 
         tracing::debug!(mint = %mint, "Post-graduation TX signed, submitting...");
@@ -1242,15 +1402,21 @@ impl AutonomousExecutor {
         };
         drop(copy_exec_guard);
 
-        let kol_id = event.payload.get("kol_id")
+        let kol_id = event
+            .payload
+            .get("kol_id")
             .and_then(|v| v.as_str())
             .ok_or_else(|| AppError::Validation("Missing kol_id in event".into()))?;
 
-        let token_mint = event.payload.get("token_mint")
+        let token_mint = event
+            .payload
+            .get("token_mint")
             .and_then(|v| v.as_str())
             .ok_or_else(|| AppError::Validation("Missing token_mint in event".into()))?;
 
-        let trade_type = event.payload.get("trade_type")
+        let trade_type = event
+            .payload
+            .get("trade_type")
             .and_then(|v| v.as_str())
             .unwrap_or("buy");
 
@@ -1269,7 +1435,9 @@ impl AutonomousExecutor {
             token_mint: Some(token_mint.to_string()),
             pool_address: None,
             estimated_profit_bps: 100,
-            confidence: event.payload.get("kol_trust_score")
+            confidence: event
+                .payload
+                .get("kol_trust_score")
                 .and_then(|v| v.as_f64())
                 .map(|s| s / 100.0)
                 .unwrap_or(0.7),
@@ -1301,20 +1469,24 @@ impl AutonomousExecutor {
                     s.total_sol_deployed += result.sol_amount;
                 }
 
-                send_critical_event(&event_tx, ArbEvent::new(
-                    "kol_trade_copied",
-                    EventSource::Agent(AgentType::Executor),
-                    kol_topics::TRADE_COPIED,
-                    serde_json::json!({
-                        "kol_id": kol_id,
-                        "token_mint": token_mint,
-                        "trade_type": trade_type,
-                        "copy_trade_id": result.copy_trade_id,
-                        "sol_amount": result.sol_amount,
-                        "tx_signature": result.tx_signature,
-                        "latency_ms": result.latency_ms,
-                    }),
-                )).await;
+                send_critical_event(
+                    &event_tx,
+                    ArbEvent::new(
+                        "kol_trade_copied",
+                        EventSource::Agent(AgentType::Executor),
+                        kol_topics::TRADE_COPIED,
+                        serde_json::json!({
+                            "kol_id": kol_id,
+                            "token_mint": token_mint,
+                            "trade_type": trade_type,
+                            "copy_trade_id": result.copy_trade_id,
+                            "sol_amount": result.sol_amount,
+                            "tx_signature": result.tx_signature,
+                            "latency_ms": result.latency_ms,
+                        }),
+                    ),
+                )
+                .await;
 
                 Ok(())
             }

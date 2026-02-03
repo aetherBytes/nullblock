@@ -3,9 +3,12 @@ use std::sync::Arc;
 use tokio::sync::{broadcast, RwLock};
 use uuid::Uuid;
 
-use crate::consensus::{ConsensusEngine, format_edge_context};
+use crate::consensus::{format_edge_context, ConsensusEngine};
 use crate::error::AppResult;
-use crate::events::{ArbEvent, AgentType, AtomicityLevel, EventSource, edge as edge_topics, strategy as strategy_topics};
+use crate::events::{
+    edge as edge_topics, strategy as strategy_topics, AgentType, ArbEvent, AtomicityLevel,
+    EventSource,
+};
 use crate::models::{Edge, EdgeStatus, RiskParams, Signal, Strategy};
 
 pub struct StrategyEngine {
@@ -44,29 +47,35 @@ impl StrategyEngine {
         let mut strategies = self.strategies.write().await;
         strategies.insert(strategy_id, strategy.clone());
 
-        crate::events::broadcast_event(&self.event_tx, ArbEvent::new(
-            "strategy_created",
-            EventSource::Agent(AgentType::StrategyEngine),
-            strategy_topics::CREATED,
-            serde_json::json!({
-                "strategy_id": strategy_id,
-                "name": strategy.name,
-                "execution_mode": format!("{:?}", strategy.execution_mode),
-            }),
-        ));
+        crate::events::broadcast_event(
+            &self.event_tx,
+            ArbEvent::new(
+                "strategy_created",
+                EventSource::Agent(AgentType::StrategyEngine),
+                strategy_topics::CREATED,
+                serde_json::json!({
+                    "strategy_id": strategy_id,
+                    "name": strategy.name,
+                    "execution_mode": format!("{:?}", strategy.execution_mode),
+                }),
+            ),
+        );
     }
 
     pub async fn remove_strategy(&self, strategy_id: Uuid) -> bool {
         let mut strategies = self.strategies.write().await;
         if strategies.remove(&strategy_id).is_some() {
-            crate::events::broadcast_event(&self.event_tx, ArbEvent::new(
-                "strategy_deleted",
-                EventSource::Agent(AgentType::StrategyEngine),
-                strategy_topics::DELETED,
-                serde_json::json!({
-                    "strategy_id": strategy_id,
-                }),
-            ));
+            crate::events::broadcast_event(
+                &self.event_tx,
+                ArbEvent::new(
+                    "strategy_deleted",
+                    EventSource::Agent(AgentType::StrategyEngine),
+                    strategy_topics::DELETED,
+                    serde_json::json!({
+                        "strategy_id": strategy_id,
+                    }),
+                ),
+            );
             true
         } else {
             false
@@ -77,59 +86,93 @@ impl StrategyEngine {
         let mut strategies = self.strategies.write().await;
         if let Some(strategy) = strategies.get_mut(&strategy_id) {
             strategy.is_active = enabled;
-            let topic = if enabled { strategy_topics::ENABLED } else { strategy_topics::DISABLED };
-            crate::events::broadcast_event(&self.event_tx, ArbEvent::new(
-                if enabled { "strategy_enabled" } else { "strategy_disabled" },
-                EventSource::Agent(AgentType::StrategyEngine),
-                topic,
-                serde_json::json!({
-                    "strategy_id": strategy_id,
-                    "enabled": enabled,
-                }),
-            ));
+            let topic = if enabled {
+                strategy_topics::ENABLED
+            } else {
+                strategy_topics::DISABLED
+            };
+            crate::events::broadcast_event(
+                &self.event_tx,
+                ArbEvent::new(
+                    if enabled {
+                        "strategy_enabled"
+                    } else {
+                        "strategy_disabled"
+                    },
+                    EventSource::Agent(AgentType::StrategyEngine),
+                    topic,
+                    serde_json::json!({
+                        "strategy_id": strategy_id,
+                        "enabled": enabled,
+                    }),
+                ),
+            );
             Ok(())
         } else {
-            Err(crate::error::AppError::NotFound(format!("Strategy {} not found", strategy_id)))
+            Err(crate::error::AppError::NotFound(format!(
+                "Strategy {} not found",
+                strategy_id
+            )))
         }
     }
 
-    pub async fn set_risk_params(&self, strategy_id: Uuid, risk_params: crate::models::RiskParams) -> AppResult<Strategy> {
+    pub async fn set_risk_params(
+        &self,
+        strategy_id: Uuid,
+        risk_params: crate::models::RiskParams,
+    ) -> AppResult<Strategy> {
         let mut strategies = self.strategies.write().await;
         if let Some(strategy) = strategies.get_mut(&strategy_id) {
             strategy.risk_params = risk_params;
             strategy.updated_at = chrono::Utc::now();
-            crate::events::broadcast_event(&self.event_tx, ArbEvent::new(
-                "strategy_risk_updated",
-                EventSource::Agent(AgentType::StrategyEngine),
-                strategy_topics::UPDATED,
-                serde_json::json!({
-                    "strategy_id": strategy_id,
-                    "risk_params": serde_json::to_value(&strategy.risk_params).unwrap_or_default(),
-                }),
-            ));
+            crate::events::broadcast_event(
+                &self.event_tx,
+                ArbEvent::new(
+                    "strategy_risk_updated",
+                    EventSource::Agent(AgentType::StrategyEngine),
+                    strategy_topics::UPDATED,
+                    serde_json::json!({
+                        "strategy_id": strategy_id,
+                        "risk_params": serde_json::to_value(&strategy.risk_params).unwrap_or_default(),
+                    }),
+                ),
+            );
             Ok(strategy.clone())
         } else {
-            Err(crate::error::AppError::NotFound(format!("Strategy {} not found", strategy_id)))
+            Err(crate::error::AppError::NotFound(format!(
+                "Strategy {} not found",
+                strategy_id
+            )))
         }
     }
 
-    pub async fn set_execution_mode(&self, strategy_id: Uuid, execution_mode: String) -> AppResult<Strategy> {
+    pub async fn set_execution_mode(
+        &self,
+        strategy_id: Uuid,
+        execution_mode: String,
+    ) -> AppResult<Strategy> {
         let mut strategies = self.strategies.write().await;
         if let Some(strategy) = strategies.get_mut(&strategy_id) {
             strategy.execution_mode = execution_mode.clone();
             strategy.updated_at = chrono::Utc::now();
-            crate::events::broadcast_event(&self.event_tx, ArbEvent::new(
-                "strategy_execution_mode_updated",
-                EventSource::Agent(AgentType::StrategyEngine),
-                strategy_topics::UPDATED,
-                serde_json::json!({
-                    "strategy_id": strategy_id,
-                    "execution_mode": execution_mode,
-                }),
-            ));
+            crate::events::broadcast_event(
+                &self.event_tx,
+                ArbEvent::new(
+                    "strategy_execution_mode_updated",
+                    EventSource::Agent(AgentType::StrategyEngine),
+                    strategy_topics::UPDATED,
+                    serde_json::json!({
+                        "strategy_id": strategy_id,
+                        "execution_mode": execution_mode,
+                    }),
+                ),
+            );
             Ok(strategy.clone())
         } else {
-            Err(crate::error::AppError::NotFound(format!("Strategy {} not found", strategy_id)))
+            Err(crate::error::AppError::NotFound(format!(
+                "Strategy {} not found",
+                strategy_id
+            )))
         }
     }
 
@@ -145,10 +188,17 @@ impl StrategyEngine {
 
     pub async fn get_strategy_by_type(&self, strategy_type: &str) -> Option<Strategy> {
         let strategies = self.strategies.read().await;
-        strategies.values().find(|s| s.strategy_type == strategy_type).cloned()
+        strategies
+            .values()
+            .find(|s| s.strategy_type == strategy_type)
+            .cloned()
     }
 
-    pub async fn update_strategy(&self, strategy_id: Uuid, request: crate::models::UpdateStrategyRequest) -> AppResult<Strategy> {
+    pub async fn update_strategy(
+        &self,
+        strategy_id: Uuid,
+        request: crate::models::UpdateStrategyRequest,
+    ) -> AppResult<Strategy> {
         let mut strategies = self.strategies.write().await;
         if let Some(strategy) = strategies.get_mut(&strategy_id) {
             if let Some(name) = request.name {
@@ -168,37 +218,49 @@ impl StrategyEngine {
             }
             strategy.updated_at = chrono::Utc::now();
 
-            crate::events::broadcast_event(&self.event_tx, ArbEvent::new(
-                "strategy_updated",
-                EventSource::Agent(AgentType::StrategyEngine),
-                strategy_topics::UPDATED,
-                serde_json::json!({
-                    "strategy_id": strategy_id,
-                    "name": strategy.name,
-                }),
-            ));
+            crate::events::broadcast_event(
+                &self.event_tx,
+                ArbEvent::new(
+                    "strategy_updated",
+                    EventSource::Agent(AgentType::StrategyEngine),
+                    strategy_topics::UPDATED,
+                    serde_json::json!({
+                        "strategy_id": strategy_id,
+                        "name": strategy.name,
+                    }),
+                ),
+            );
 
             Ok(strategy.clone())
         } else {
-            Err(crate::error::AppError::NotFound(format!("Strategy {} not found", strategy_id)))
+            Err(crate::error::AppError::NotFound(format!(
+                "Strategy {} not found",
+                strategy_id
+            )))
         }
     }
 
     pub async fn reset_stats(&self, strategy_id: Uuid) -> AppResult<()> {
         let strategies = self.strategies.read().await;
         if strategies.contains_key(&strategy_id) {
-            crate::events::broadcast_event(&self.event_tx, ArbEvent::new(
-                "strategy_stats_reset",
-                EventSource::Agent(AgentType::StrategyEngine),
-                strategy_topics::UPDATED,
-                serde_json::json!({
-                    "strategy_id": strategy_id,
-                    "stats_reset": true,
-                }),
-            ));
+            crate::events::broadcast_event(
+                &self.event_tx,
+                ArbEvent::new(
+                    "strategy_stats_reset",
+                    EventSource::Agent(AgentType::StrategyEngine),
+                    strategy_topics::UPDATED,
+                    serde_json::json!({
+                        "strategy_id": strategy_id,
+                        "stats_reset": true,
+                    }),
+                ),
+            );
             Ok(())
         } else {
-            Err(crate::error::AppError::NotFound(format!("Strategy {} not found", strategy_id)))
+            Err(crate::error::AppError::NotFound(format!(
+                "Strategy {} not found",
+                strategy_id
+            )))
         }
     }
 
@@ -211,19 +273,22 @@ impl StrategyEngine {
             strategy.is_active = false;
 
             // Emit a kill event - this signals all components to stop any in-flight operations
-            crate::events::broadcast_event(&self.event_tx, ArbEvent::new(
-                "strategy_killed",
-                EventSource::Agent(AgentType::StrategyEngine),
-                strategy_topics::DISABLED,
-                serde_json::json!({
-                    "strategy_id": strategy_id,
-                    "strategy_name": strategy_name,
-                    "killed": true,
-                    "action": "emergency_stop",
-                    "cancel_pending_edges": true,
-                    "cancel_pending_approvals": true,
-                }),
-            ));
+            crate::events::broadcast_event(
+                &self.event_tx,
+                ArbEvent::new(
+                    "strategy_killed",
+                    EventSource::Agent(AgentType::StrategyEngine),
+                    strategy_topics::DISABLED,
+                    serde_json::json!({
+                        "strategy_id": strategy_id,
+                        "strategy_name": strategy_name,
+                        "killed": true,
+                        "action": "emergency_stop",
+                        "cancel_pending_edges": true,
+                        "cancel_pending_approvals": true,
+                    }),
+                ),
+            );
 
             tracing::warn!(
                 strategy_id = %strategy_id,
@@ -233,7 +298,10 @@ impl StrategyEngine {
 
             Ok(strategy_name)
         } else {
-            Err(crate::error::AppError::NotFound(format!("Strategy {} not found", strategy_id)))
+            Err(crate::error::AppError::NotFound(format!(
+                "Strategy {} not found",
+                strategy_id
+            )))
         }
     }
 
@@ -264,20 +332,23 @@ impl StrategyEngine {
 
             let edge = self.create_edge_from_signal(signal, strategy);
 
-            crate::events::broadcast_event(&self.event_tx, ArbEvent::new(
-                "edge_detected",
-                EventSource::Agent(AgentType::StrategyEngine),
-                edge_topics::DETECTED,
-                serde_json::json!({
-                    "edge_id": edge.id,
-                    "signal_id": signal.id,
-                    "strategy_id": strategy.id,
-                    "execution_mode": &strategy.execution_mode,
-                    "token_mint": signal.token_mint,
-                    "estimated_profit_bps": signal.estimated_profit_bps,
-                    "route_data": edge.route_data,
-                }),
-            ));
+            crate::events::broadcast_event(
+                &self.event_tx,
+                ArbEvent::new(
+                    "edge_detected",
+                    EventSource::Agent(AgentType::StrategyEngine),
+                    edge_topics::DETECTED,
+                    serde_json::json!({
+                        "edge_id": edge.id,
+                        "signal_id": signal.id,
+                        "strategy_id": strategy.id,
+                        "execution_mode": &strategy.execution_mode,
+                        "token_mint": signal.token_mint,
+                        "estimated_profit_bps": signal.estimated_profit_bps,
+                        "route_data": edge.route_data,
+                    }),
+                ),
+            );
 
             return Some(MatchResult {
                 signal_id: signal.id,
@@ -299,8 +370,7 @@ impl StrategyEngine {
     fn signal_matches_strategy(&self, signal: &Signal, strategy: &Strategy) -> bool {
         let signal_venue_str = format!("{:?}", signal.venue_type).to_lowercase();
         let venue_matches = strategy.venue_types.iter().any(|vt| {
-            vt.to_lowercase() == signal_venue_str ||
-            vt.to_lowercase().contains(&signal_venue_str)
+            vt.to_lowercase() == signal_venue_str || vt.to_lowercase().contains(&signal_venue_str)
         });
 
         if !venue_matches {
@@ -308,20 +378,22 @@ impl StrategyEngine {
         }
 
         // For bonding curve strategies, differentiate scanner vs sniper by progress
-        let progress = signal.metadata.get("progress_percent")
+        let progress = signal
+            .metadata
+            .get("progress_percent")
             .and_then(|v| v.as_f64())
             .unwrap_or(0.0);
 
         match strategy.strategy_type.as_str() {
-            "graduation_snipe" => {
-                progress >= 85.0
-            },
+            "graduation_snipe" => progress >= 85.0,
             "raydium_snipe" => {
-                let source = signal.metadata.get("signal_source")
+                let source = signal
+                    .metadata
+                    .get("signal_source")
                     .and_then(|v| v.as_str())
                     .unwrap_or("");
                 source == "raydium_snipe"
-            },
+            }
             _ => true,
         }
     }
@@ -343,7 +415,10 @@ impl StrategyEngine {
         let mut route_data = signal.metadata.clone();
         if let Some(ref mint) = signal.token_mint {
             if let serde_json::Value::Object(ref mut map) = route_data {
-                map.insert("token_mint".to_string(), serde_json::Value::String(mint.clone()));
+                map.insert(
+                    "token_mint".to_string(),
+                    serde_json::Value::String(mint.clone()),
+                );
             }
         }
 
@@ -402,7 +477,9 @@ impl StrategyEngine {
                     // Cleanup old entries if > 10000 to prevent unbounded growth
                     if processed.len() > 10_000 {
                         processed.clear();
-                        tracing::debug!("🗑️ Cleared processed_signals cache (exceeded 10k entries)");
+                        tracing::debug!(
+                            "🗑️ Cleared processed_signals cache (exceeded 10k entries)"
+                        );
                     }
                 }
                 results.push(result);
@@ -464,22 +541,26 @@ impl StrategyEngine {
                     .await
                 {
                     Ok(consensus_result) => {
-                        let event = consensus_engine.create_consensus_event(edge.id, &consensus_result);
+                        let event =
+                            consensus_engine.create_consensus_event(edge.id, &consensus_result);
                         crate::events::broadcast_event(&self.event_tx, event);
 
                         if !consensus_result.approved {
-                            crate::events::broadcast_event(&self.event_tx, ArbEvent::new(
-                                "edge_rejected_by_consensus",
-                                EventSource::Agent(AgentType::StrategyEngine),
-                                edge_topics::REJECTED,
-                                serde_json::json!({
-                                    "edge_id": edge.id,
-                                    "signal_id": signal.id,
-                                    "strategy_id": strategy.id,
-                                    "agreement_score": consensus_result.agreement_score,
-                                    "reasoning": consensus_result.reasoning_summary,
-                                }),
-                            ));
+                            crate::events::broadcast_event(
+                                &self.event_tx,
+                                ArbEvent::new(
+                                    "edge_rejected_by_consensus",
+                                    EventSource::Agent(AgentType::StrategyEngine),
+                                    edge_topics::REJECTED,
+                                    serde_json::json!({
+                                        "edge_id": edge.id,
+                                        "signal_id": signal.id,
+                                        "strategy_id": strategy.id,
+                                        "agreement_score": consensus_result.agreement_score,
+                                        "reasoning": consensus_result.reasoning_summary,
+                                    }),
+                                ),
+                            );
 
                             return Some(MatchResult {
                                 signal_id: signal.id,
@@ -510,21 +591,24 @@ impl StrategyEngine {
                 }
             }
 
-            crate::events::broadcast_event(&self.event_tx, ArbEvent::new(
-                "edge_detected",
-                EventSource::Agent(AgentType::StrategyEngine),
-                edge_topics::DETECTED,
-                serde_json::json!({
-                    "edge_id": edge.id,
-                    "signal_id": signal.id,
-                    "strategy_id": strategy.id,
-                    "execution_mode": &strategy.execution_mode,
-                    "token_mint": signal.token_mint,
-                    "estimated_profit_bps": signal.estimated_profit_bps,
-                    "consensus_required": requires_consensus,
-                    "route_data": edge.route_data,
-                }),
-            ));
+            crate::events::broadcast_event(
+                &self.event_tx,
+                ArbEvent::new(
+                    "edge_detected",
+                    EventSource::Agent(AgentType::StrategyEngine),
+                    edge_topics::DETECTED,
+                    serde_json::json!({
+                        "edge_id": edge.id,
+                        "signal_id": signal.id,
+                        "strategy_id": strategy.id,
+                        "execution_mode": &strategy.execution_mode,
+                        "token_mint": signal.token_mint,
+                        "estimated_profit_bps": signal.estimated_profit_bps,
+                        "consensus_required": requires_consensus,
+                        "route_data": edge.route_data,
+                    }),
+                ),
+            );
 
             return Some(MatchResult {
                 signal_id: signal.id,
@@ -547,7 +631,10 @@ impl StrategyEngine {
         let mut results = Vec::new();
 
         for signal in signals {
-            if let Some(result) = self.match_signal_with_consensus(&signal, consensus_engine).await {
+            if let Some(result) = self
+                .match_signal_with_consensus(&signal, consensus_engine)
+                .await
+            {
                 results.push(result);
             }
         }

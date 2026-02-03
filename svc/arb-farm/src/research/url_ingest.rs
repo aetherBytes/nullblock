@@ -1,8 +1,8 @@
+use chrono::{DateTime, Utc};
 use reqwest::Client;
 use scraper::{Html, Selector};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
-use chrono::{DateTime, Utc};
 
 use crate::error::AppResult;
 
@@ -28,7 +28,8 @@ impl ContentType {
             }
         } else if url_lower.contains("medium.com")
             || url_lower.contains("substack.com")
-            || url_lower.contains("mirror.xyz") {
+            || url_lower.contains("mirror.xyz")
+        {
             ContentType::Article
         } else if url_lower.contains("docs.") || url_lower.contains("/docs/") {
             ContentType::Documentation
@@ -82,7 +83,8 @@ impl UrlIngester {
     pub async fn ingest(&self, url: &str) -> AppResult<IngestResult> {
         let content_type = ContentType::from_url(url);
 
-        let response = self.client
+        let response = self
+            .client
             .get(url)
             .header("User-Agent", &self.user_agent)
             .send()
@@ -146,20 +148,16 @@ impl UrlIngester {
 
     fn extract_author(&self, document: &Html, content_type: &ContentType) -> Option<String> {
         let selectors = match content_type {
-            ContentType::Tweet | ContentType::Thread => vec![
-                "meta[property='og:title']",
-                "[data-testid='User-Name']",
-            ],
+            ContentType::Tweet | ContentType::Thread => {
+                vec!["meta[property='og:title']", "[data-testid='User-Name']"]
+            }
             ContentType::Article => vec![
                 "meta[name='author']",
                 "meta[property='article:author']",
                 "[rel='author']",
                 ".author",
             ],
-            _ => vec![
-                "meta[name='author']",
-                ".author",
-            ],
+            _ => vec!["meta[name='author']", ".author"],
         };
 
         for selector_str in selectors {
@@ -201,27 +199,10 @@ impl UrlIngester {
                 "article",
                 "meta[property='og:description']",
             ],
-            ContentType::Article => vec![
-                "article",
-                ".post-content",
-                ".article-content",
-                "main",
-            ],
-            ContentType::Documentation => vec![
-                "main",
-                ".content",
-                "article",
-            ],
-            ContentType::Forum => vec![
-                ".post-content",
-                ".comment",
-                "main",
-            ],
-            ContentType::Unknown => vec![
-                "main",
-                "article",
-                "body",
-            ],
+            ContentType::Article => vec!["article", ".post-content", ".article-content", "main"],
+            ContentType::Documentation => vec!["main", ".content", "article"],
+            ContentType::Forum => vec![".post-content", ".comment", "main"],
+            ContentType::Unknown => vec!["main", "article", "body"],
         };
 
         for selector_str in selectors {
@@ -278,10 +259,7 @@ impl UrlIngester {
             cleaned = cleaned.replace(pattern, "");
         }
 
-        cleaned
-            .split_whitespace()
-            .collect::<Vec<_>>()
-            .join(" ")
+        cleaned.split_whitespace().collect::<Vec<_>>().join(" ")
     }
 
     fn extract_token_mentions(&self, content: &str) -> Vec<String> {

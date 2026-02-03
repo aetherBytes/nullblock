@@ -1,19 +1,17 @@
-use std::sync::Arc;
+use chrono::Utc;
 use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::Arc;
 use std::time::Duration;
 use tokio::sync::{broadcast, mpsc};
 use tracing::{debug, error, info, warn};
 use uuid::Uuid;
-use chrono::Utc;
 
 use crate::error::AppResult;
-use crate::events::{AgentType, ArbEvent, EventSource, topics};
+use crate::events::{topics, AgentType, ArbEvent, EventSource};
 
 use super::curve_builder::CurveTransactionBuilder;
 use super::position_command::{CommandSource, ExitCommand, PositionCommand};
-use super::position_manager::{
-    BaseCurrency, ExitReason, ExitSignal, ExitUrgency, PositionManager,
-};
+use super::position_manager::{BaseCurrency, ExitReason, ExitSignal, ExitUrgency, PositionManager};
 use super::transaction_builder::TransactionBuilder;
 
 const PRICE_FETCH_TIMEOUT_SECS: u64 = 10;
@@ -134,18 +132,26 @@ impl PositionMonitor {
             "Retrying PendingExit {}/{} for {} (cycle {})",
             position_index + 1,
             pending_exit_positions.len(),
-            position.token_symbol.as_deref().unwrap_or(&position.token_mint[..8]),
+            position
+                .token_symbol
+                .as_deref()
+                .unwrap_or(&position.token_mint[..8]),
             retry_index
         );
 
         let (current_price, is_dead_token) = if let Some(ref curve_builder) = self.curve_builder {
             match curve_builder.get_curve_state(&position.token_mint).await {
                 Ok(state) if state.virtual_token_reserves > 0 && state.virtual_sol_reserves > 0 => {
-                    let price = state.virtual_sol_reserves as f64 / state.virtual_token_reserves as f64;
+                    let price =
+                        state.virtual_sol_reserves as f64 / state.virtual_token_reserves as f64;
                     (price, false)
                 }
                 Ok(state) if state.is_complete => {
-                    match self.tx_builder.get_token_price(&position.token_mint, BaseCurrency::Sol).await {
+                    match self
+                        .tx_builder
+                        .get_token_price(&position.token_mint, BaseCurrency::Sol)
+                        .await
+                    {
                         Ok(price) if price > 1e-10 => (price, false),
                         Ok(_) => {
                             warn!(
@@ -163,10 +169,15 @@ impl PositionMonitor {
                         }
                     }
                 }
-                Ok(state) if state.virtual_token_reserves == 0 || state.virtual_sol_reserves == 0 => {
+                Ok(state)
+                    if state.virtual_token_reserves == 0 || state.virtual_sol_reserves == 0 =>
+                {
                     warn!(
                         "DEAD TOKEN DETECTED (zero reserves): {} - skipping retries",
-                        position.token_symbol.as_deref().unwrap_or(&position.token_mint[..8])
+                        position
+                            .token_symbol
+                            .as_deref()
+                            .unwrap_or(&position.token_mint[..8])
                     );
                     (0.0, true)
                 }
@@ -179,7 +190,10 @@ impl PositionMonitor {
         let (reason, urgency) = if is_dead_token {
             warn!(
                 "Dead token {} - attempting salvage sell with maximum slippage",
-                position.token_symbol.as_deref().unwrap_or(&position.token_mint[..8])
+                position
+                    .token_symbol
+                    .as_deref()
+                    .unwrap_or(&position.token_mint[..8])
             );
             (ExitReason::Salvage, ExitUrgency::Critical)
         } else {
@@ -190,41 +204,68 @@ impl PositionMonitor {
             position_id: position.id,
             reason,
             exit_percent: 100.0,
-            current_price: if is_dead_token { position.entry_price } else { current_price },
+            current_price: if is_dead_token {
+                position.entry_price
+            } else {
+                current_price
+            },
             triggered_at: chrono::Utc::now(),
             urgency,
         };
 
         info!(
             "Retrying {} for {} | Price: {:.10} | Entry: {:.10}",
-            if is_dead_token { "Salvage" } else { "PendingExit" },
-            position.token_symbol.as_deref().unwrap_or(&position.token_mint[..8]),
+            if is_dead_token {
+                "Salvage"
+            } else {
+                "PendingExit"
+            },
+            position
+                .token_symbol
+                .as_deref()
+                .unwrap_or(&position.token_mint[..8]),
             signal.current_price,
             position.entry_price
         );
 
-        let cmd = PositionCommand::Exit(ExitCommand::new(signal.clone(), CommandSource::PendingRetry));
+        let cmd = PositionCommand::Exit(ExitCommand::new(
+            signal.clone(),
+            CommandSource::PendingRetry,
+        ));
         if let Err(e) = self.command_tx.send(cmd).await {
             if is_dead_token {
                 warn!(
                     "Salvage sell command failed for {}: {} - marking as orphaned",
-                    position.token_symbol.as_deref().unwrap_or(&position.token_mint[..8]),
+                    position
+                        .token_symbol
+                        .as_deref()
+                        .unwrap_or(&position.token_mint[..8]),
                     e
                 );
-                if let Err(e) = self.position_manager.mark_position_orphaned(position.id).await {
+                if let Err(e) = self
+                    .position_manager
+                    .mark_position_orphaned(position.id)
+                    .await
+                {
                     error!("Failed to mark dead token position as orphaned: {}", e);
                 }
             } else {
                 warn!(
                     "Pending exit retry command failed for {}: {}",
-                    position.token_symbol.as_deref().unwrap_or(&position.token_mint[..8]),
+                    position
+                        .token_symbol
+                        .as_deref()
+                        .unwrap_or(&position.token_mint[..8]),
                     e
                 );
             }
         } else {
             info!(
                 "Queued exit command for {} (source: PendingRetry)",
-                position.token_symbol.as_deref().unwrap_or(&position.token_mint[..8])
+                position
+                    .token_symbol
+                    .as_deref()
+                    .unwrap_or(&position.token_mint[..8])
             );
         }
 
@@ -238,9 +279,9 @@ impl PositionMonitor {
             return self.config.price_check_interval_secs;
         }
 
-        let has_at_risk = positions.iter().any(|p|
-            p.unrealized_pnl_percent > 10.0 && p.momentum.velocity < 0.0
-        );
+        let has_at_risk = positions
+            .iter()
+            .any(|p| p.unrealized_pnl_percent > 10.0 && p.momentum.velocity < 0.0);
 
         let has_profitable = positions.iter().any(|p| p.unrealized_pnl_percent > 5.0);
 
@@ -259,7 +300,10 @@ impl PositionMonitor {
             return Ok(());
         }
 
-        info!("Processing {} HIGH PRIORITY exit retries", priority_ids.len());
+        info!(
+            "Processing {} HIGH PRIORITY exit retries",
+            priority_ids.len()
+        );
 
         for position_id in priority_ids {
             let position = match self.position_manager.get_position(position_id).await {
@@ -272,17 +316,27 @@ impl PositionMonitor {
 
             let (current_price, is_dead_token) = if let Some(curve_builder) = &self.curve_builder {
                 match curve_builder.get_curve_state(&position.token_mint).await {
-                    Ok(state) if state.virtual_token_reserves > 0 && state.virtual_sol_reserves > 0 => {
-                        let price = state.virtual_sol_reserves as f64 / state.virtual_token_reserves as f64;
+                    Ok(state)
+                        if state.virtual_token_reserves > 0 && state.virtual_sol_reserves > 0 =>
+                    {
+                        let price =
+                            state.virtual_sol_reserves as f64 / state.virtual_token_reserves as f64;
                         (price, false)
                     }
                     Ok(state) if state.is_complete => {
-                        match self.tx_builder.get_token_price(&position.token_mint, BaseCurrency::Sol).await {
+                        match self
+                            .tx_builder
+                            .get_token_price(&position.token_mint, BaseCurrency::Sol)
+                            .await
+                        {
                             Ok(price) if price > 1e-10 => (price, false),
                             _ => {
                                 warn!(
                                     "DEAD TOKEN (priority): {} - graduated but no DEX liquidity",
-                                    position.token_symbol.as_deref().unwrap_or(&position.token_mint[..8])
+                                    position
+                                        .token_symbol
+                                        .as_deref()
+                                        .unwrap_or(&position.token_mint[..8])
                                 );
                                 (0.0, true)
                             }
@@ -291,7 +345,10 @@ impl PositionMonitor {
                     Ok(_) => {
                         warn!(
                             "DEAD TOKEN (priority): {} - zero reserves",
-                            position.token_symbol.as_deref().unwrap_or(&position.token_mint[..8])
+                            position
+                                .token_symbol
+                                .as_deref()
+                                .unwrap_or(&position.token_mint[..8])
                         );
                         (0.0, true)
                     }
@@ -304,7 +361,10 @@ impl PositionMonitor {
             let (reason, price_to_use, log_prefix) = if is_dead_token {
                 warn!(
                     "Dead token {} in priority queue - attempting salvage sell",
-                    position.token_symbol.as_deref().unwrap_or(&position.token_mint[..8])
+                    position
+                        .token_symbol
+                        .as_deref()
+                        .unwrap_or(&position.token_mint[..8])
                 );
                 (ExitReason::Salvage, position.entry_price, "SALVAGE")
             } else {
@@ -323,8 +383,15 @@ impl PositionMonitor {
             info!(
                 "{}: {} | Using {} slippage",
                 log_prefix,
-                position.token_symbol.as_deref().unwrap_or(&position.token_mint[..8]),
-                if is_dead_token { "SALVAGE (90%)" } else { "EMERGENCY" }
+                position
+                    .token_symbol
+                    .as_deref()
+                    .unwrap_or(&position.token_mint[..8]),
+                if is_dead_token {
+                    "SALVAGE (90%)"
+                } else {
+                    "EMERGENCY"
+                }
             );
 
             let cmd = PositionCommand::Exit(ExitCommand::new(signal, CommandSource::PriorityRetry));
@@ -332,17 +399,21 @@ impl PositionMonitor {
                 if is_dead_token {
                     error!(
                         "Salvage sell command failed for {}: {} - marking as orphaned",
-                        position.token_symbol.as_deref().unwrap_or(&position.token_mint[..8]),
+                        position
+                            .token_symbol
+                            .as_deref()
+                            .unwrap_or(&position.token_mint[..8]),
                         e
                     );
-                    if let Err(e) = self.position_manager.mark_position_orphaned(position_id).await {
+                    if let Err(e) = self
+                        .position_manager
+                        .mark_position_orphaned(position_id)
+                        .await
+                    {
                         error!("Failed to mark priority dead token as orphaned: {}", e);
                     }
                 } else {
-                    error!(
-                        "Priority exit command failed for {}: {}",
-                        position_id, e
-                    );
+                    error!("Priority exit command failed for {}: {}", position_id, e);
                     self.position_manager
                         .record_priority_exit_failure(position_id, false)
                         .await;
@@ -360,7 +431,10 @@ impl PositionMonitor {
             return Ok(());
         }
 
-        debug!("Checking {} open positions for exit conditions", positions.len());
+        debug!(
+            "Checking {} open positions for exit conditions",
+            positions.len()
+        );
 
         let token_mints: Vec<String> = positions.iter().map(|p| p.token_mint.clone()).collect();
 
@@ -372,22 +446,32 @@ impl PositionMonitor {
 
         let mut prices = match tokio::time::timeout(
             Duration::from_secs(PRICE_FETCH_TIMEOUT_SECS),
-            self.tx_builder.get_multiple_token_prices(&unique_mints, BaseCurrency::Sol)
-        ).await {
+            self.tx_builder
+                .get_multiple_token_prices(&unique_mints, BaseCurrency::Sol),
+        )
+        .await
+        {
             Ok(Ok(p)) => p,
             Ok(Err(e)) => {
-                debug!("Jupiter price fetch failed (expected for pre-grad tokens): {}", e);
+                debug!(
+                    "Jupiter price fetch failed (expected for pre-grad tokens): {}",
+                    e
+                );
                 std::collections::HashMap::new()
             }
             Err(_) => {
-                warn!("Jupiter price fetch timed out after {}s", PRICE_FETCH_TIMEOUT_SECS);
+                warn!(
+                    "Jupiter price fetch timed out after {}s",
+                    PRICE_FETCH_TIMEOUT_SECS
+                );
                 std::collections::HashMap::new()
             }
         };
 
         if let Some(curve_builder) = &self.curve_builder {
             let curve_fetch_start = std::time::Instant::now();
-            let global_deadline = curve_fetch_start + Duration::from_secs(GLOBAL_PRICE_FETCH_TIMEOUT_SECS);
+            let global_deadline =
+                curve_fetch_start + Duration::from_secs(GLOBAL_PRICE_FETCH_TIMEOUT_SECS);
 
             for mint in &unique_mints {
                 if std::time::Instant::now() > global_deadline {
@@ -402,11 +486,14 @@ impl PositionMonitor {
                 if !prices.contains_key(mint) {
                     match tokio::time::timeout(
                         Duration::from_secs(PRICE_FETCH_TIMEOUT_SECS),
-                        curve_builder.get_curve_state(mint)
-                    ).await {
+                        curve_builder.get_curve_state(mint),
+                    )
+                    .await
+                    {
                         Ok(Ok(state)) => {
                             if state.virtual_token_reserves > 0 {
-                                let price = state.virtual_sol_reserves as f64 / state.virtual_token_reserves as f64;
+                                let price = state.virtual_sol_reserves as f64
+                                    / state.virtual_token_reserves as f64;
                                 debug!(
                                     mint = %mint,
                                     price = price,
@@ -428,7 +515,9 @@ impl PositionMonitor {
 
         for position in &positions {
             if !prices.contains_key(&position.token_mint) {
-                let is_dead_token = position.exit_config.custom_exit_instructions
+                let is_dead_token = position
+                    .exit_config
+                    .custom_exit_instructions
                     .as_ref()
                     .map(|s| s.contains("DEAD TOKEN"))
                     .unwrap_or(false);
@@ -486,7 +575,8 @@ impl PositionMonitor {
         for signal in all_signals {
             self.emit_exit_signal_event(&signal).await;
 
-            let cmd = PositionCommand::Exit(ExitCommand::new(signal.clone(), CommandSource::Monitor));
+            let cmd =
+                PositionCommand::Exit(ExitCommand::new(signal.clone(), CommandSource::Monitor));
             if let Err(e) = self.command_tx.send(cmd).await {
                 error!(
                     "Failed to queue exit command for position {}: {}",
@@ -526,11 +616,7 @@ impl PositionMonitor {
         }
     }
 
-    pub async fn trigger_manual_exit(
-        &self,
-        position_id: Uuid,
-        exit_percent: f64,
-    ) -> AppResult<()> {
+    pub async fn trigger_manual_exit(&self, position_id: Uuid, exit_percent: f64) -> AppResult<()> {
         let position = self
             .position_manager
             .get_position(position_id)
@@ -554,14 +640,12 @@ impl PositionMonitor {
         })
     }
 
-    pub async fn trigger_exit_with_reason(
-        &self,
-        signal: &ExitSignal,
-    ) -> AppResult<()> {
+    pub async fn trigger_exit_with_reason(&self, signal: &ExitSignal) -> AppResult<()> {
         let cmd = PositionCommand::Exit(ExitCommand::new(signal.clone(), CommandSource::Monitor));
-        self.command_tx.send(cmd).await.map_err(|e| {
-            crate::error::AppError::Internal(format!("Failed to queue exit: {}", e))
-        })
+        self.command_tx
+            .send(cmd)
+            .await
+            .map_err(|e| crate::error::AppError::Internal(format!("Failed to queue exit: {}", e)))
     }
 
     pub async fn get_position_stats(&self) -> super::position_manager::PositionManagerStats {

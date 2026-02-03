@@ -82,13 +82,11 @@ impl ConsensusRepository {
     }
 
     pub async fn get_by_id(&self, id: Uuid) -> AppResult<Option<ConsensusRecord>> {
-        let row = sqlx::query_as::<_, ConsensusRecord>(
-            "SELECT * FROM arb_consensus WHERE id = $1",
-        )
-        .bind(id)
-        .fetch_optional(&self.pool)
-        .await
-        .map_err(|e| AppError::Database(e.to_string()))?;
+        let row = sqlx::query_as::<_, ConsensusRecord>("SELECT * FROM arb_consensus WHERE id = $1")
+            .bind(id)
+            .fetch_optional(&self.pool)
+            .await
+            .map_err(|e| AppError::Database(e.to_string()))?;
 
         Ok(row)
     }

@@ -80,19 +80,24 @@ impl EngramHarvester {
             .or_insert(0) += 1;
         stats.last_harvest_at = Some(chrono::Utc::now());
 
-        crate::events::broadcast_event(&self.event_tx, ArbEvent::new(
-            "engram_created",
-            EventSource::Agent(AgentType::EngramHarvester),
-            engram_topics::CREATED,
-            serde_json::json!({
-                "engram_id": engram_id,
-                "key": key,
-                "engram_type": engram_type.to_string(),
-            }),
-        ));
+        crate::events::broadcast_event(
+            &self.event_tx,
+            ArbEvent::new(
+                "engram_created",
+                EventSource::Agent(AgentType::EngramHarvester),
+                engram_topics::CREATED,
+                serde_json::json!({
+                    "engram_id": engram_id,
+                    "key": key,
+                    "engram_type": engram_type.to_string(),
+                }),
+            ),
+        );
 
         // Spawn async task to sync to remote engrams service (non-blocking)
-        if let (Some(client), Some(wallet)) = (self.engrams_client.clone(), self.wallet_address.clone()) {
+        if let (Some(client), Some(wallet)) =
+            (self.engrams_client.clone(), self.wallet_address.clone())
+        {
             let engram_clone = engram;
             tokio::spawn(async move {
                 let request = CreateEngramRequest {
@@ -100,7 +105,9 @@ impl EngramHarvester {
                     engram_type: engram_clone.engram_type.to_string(),
                     key: engram_clone.key.clone(),
                     content: serde_json::to_string(&engram_clone.content).unwrap_or_default(),
-                    metadata: Some(serde_json::to_value(&engram_clone.metadata).unwrap_or_default()),
+                    metadata: Some(
+                        serde_json::to_value(&engram_clone.metadata).unwrap_or_default(),
+                    ),
                     tags: Some(engram_clone.metadata.tags.clone()),
                     is_public: Some(false),
                 };
@@ -183,8 +190,7 @@ impl EngramHarvester {
             .values()
             .filter(|e| e.engram_type == EngramType::EdgePattern)
             .filter_map(|e| {
-                let content: EdgePatternContent =
-                    serde_json::from_value(e.content.clone()).ok()?;
+                let content: EdgePatternContent = serde_json::from_value(e.content.clone()).ok()?;
 
                 let mut similarity: f64 = 0.0;
 
@@ -234,16 +240,19 @@ impl EngramHarvester {
             let mut stats = self.stats.write().await;
             stats.patterns_matched += 1;
 
-            crate::events::broadcast_event(&self.event_tx, ArbEvent::new(
-                "pattern_matched",
-                EventSource::Agent(AgentType::EngramHarvester),
-                engram_topics::PATTERN_MATCHED,
-                serde_json::json!({
-                    "matches_found": matches.len(),
-                    "edge_type": request.edge_type,
-                    "venue_type": request.venue_type,
-                }),
-            ));
+            crate::events::broadcast_event(
+                &self.event_tx,
+                ArbEvent::new(
+                    "pattern_matched",
+                    EventSource::Agent(AgentType::EngramHarvester),
+                    engram_topics::PATTERN_MATCHED,
+                    serde_json::json!({
+                        "matches_found": matches.len(),
+                        "edge_type": request.edge_type,
+                        "venue_type": request.venue_type,
+                    }),
+                ),
+            );
         }
 
         matches
@@ -302,18 +311,21 @@ impl EngramHarvester {
         let mut stats = self.stats.write().await;
         stats.avoidances_created += 1;
 
-        crate::events::broadcast_event(&self.event_tx, ArbEvent::new(
-            "avoidance_created",
-            EventSource::Agent(AgentType::EngramHarvester),
-            engram_topics::AVOIDANCE_CREATED,
-            serde_json::json!({
-                "engram_id": engram_id,
-                "entity_type": entity_type,
-                "address": address,
-                "category": category,
-                "severity": format!("{:?}", severity),
-            }),
-        ));
+        crate::events::broadcast_event(
+            &self.event_tx,
+            ArbEvent::new(
+                "avoidance_created",
+                EventSource::Agent(AgentType::EngramHarvester),
+                engram_topics::AVOIDANCE_CREATED,
+                serde_json::json!({
+                    "engram_id": engram_id,
+                    "entity_type": entity_type,
+                    "address": address,
+                    "category": category,
+                    "severity": format!("{:?}", severity),
+                }),
+            ),
+        );
 
         Ok(engram_id)
     }
@@ -398,7 +410,10 @@ impl EngramHarvester {
         }
     }
 
-    pub async fn save_strategies(&self, strategies: &[crate::models::Strategy]) -> AppResult<usize> {
+    pub async fn save_strategies(
+        &self,
+        strategies: &[crate::models::Strategy],
+    ) -> AppResult<usize> {
         let mut count = 0;
 
         for strategy in strategies {
@@ -435,15 +450,18 @@ impl EngramHarvester {
             count += 1;
         }
 
-        crate::events::broadcast_event(&self.event_tx, ArbEvent::new(
-            "strategies_saved_to_engrams",
-            EventSource::Agent(AgentType::EngramHarvester),
-            engram_topics::CREATED,
-            serde_json::json!({
-                "count": count,
-                "saved_at": chrono::Utc::now(),
-            }),
-        ));
+        crate::events::broadcast_event(
+            &self.event_tx,
+            ArbEvent::new(
+                "strategies_saved_to_engrams",
+                EventSource::Agent(AgentType::EngramHarvester),
+                engram_topics::CREATED,
+                serde_json::json!({
+                    "count": count,
+                    "saved_at": chrono::Utc::now(),
+                }),
+            ),
+        );
 
         Ok(count)
     }
@@ -478,7 +496,9 @@ impl EngramHarvester {
 
         if let Ok(patterns) = client.search_engrams(pattern_search).await {
             for remote_engram in patterns {
-                if let Ok(content) = serde_json::from_str::<serde_json::Value>(&remote_engram.content) {
+                if let Ok(content) =
+                    serde_json::from_str::<serde_json::Value>(&remote_engram.content)
+                {
                     let mut metadata = EngramMetadata::default();
                     metadata.tags = remote_engram.tags.clone();
 
@@ -509,7 +529,9 @@ impl EngramHarvester {
 
         if let Ok(avoidances) = client.search_engrams(avoidance_search).await {
             for remote_engram in avoidances {
-                if let Ok(content) = serde_json::from_str::<serde_json::Value>(&remote_engram.content) {
+                if let Ok(content) =
+                    serde_json::from_str::<serde_json::Value>(&remote_engram.content)
+                {
                     let mut metadata = EngramMetadata::default();
                     metadata.tags = remote_engram.tags.clone();
 
@@ -540,15 +562,18 @@ impl EngramHarvester {
                 "Restored engrams from remote service"
             );
 
-            crate::events::broadcast_event(&self.event_tx, ArbEvent::new(
-                "engrams_restored",
-                EventSource::Agent(AgentType::EngramHarvester),
-                engram_topics::CREATED,
-                serde_json::json!({
-                    "restored_count": restored_count,
-                    "wallet": wallet,
-                }),
-            ));
+            crate::events::broadcast_event(
+                &self.event_tx,
+                ArbEvent::new(
+                    "engrams_restored",
+                    EventSource::Agent(AgentType::EngramHarvester),
+                    engram_topics::CREATED,
+                    serde_json::json!({
+                        "restored_count": restored_count,
+                        "wallet": wallet,
+                    }),
+                ),
+            );
         }
 
         restored_count

@@ -3,11 +3,11 @@
 
 #![allow(dead_code)]
 
+use super::registry::WALLET_REGISTRY;
 use crate::resources::types::{
     DetectedWallet, InstallPrompt, WalletConnectionRequest, WalletConnectionResponse,
     WalletDetectionResponse, WalletInfo, WalletStatusResponse,
 };
-use super::registry::WALLET_REGISTRY;
 
 pub struct WalletService;
 

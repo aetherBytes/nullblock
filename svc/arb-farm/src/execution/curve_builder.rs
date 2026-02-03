@@ -17,7 +17,9 @@ use crate::venues::curves::math::{
     SellResult, PUMP_FUN_EVENT_AUTHORITY, PUMP_FUN_FEE_PROGRAM, PUMP_FUN_FEE_RECIPIENT,
     PUMP_FUN_GLOBAL_STATE, PUMP_FUN_PROGRAM_ID, TOKEN_2022_PROGRAM_ID,
 };
-use crate::venues::curves::on_chain::{derive_pump_fun_bonding_curve, OnChainCurveState, OnChainFetcher};
+use crate::venues::curves::on_chain::{
+    derive_pump_fun_bonding_curve, OnChainCurveState, OnChainFetcher,
+};
 
 const DEFAULT_COMPUTE_UNITS: u32 = 200_000;
 const DEFAULT_PRIORITY_FEE_MICRO_LAMPORTS: u64 = 10_000_000; // 10x increase for reliable exits (~0.002 SOL per tx)
@@ -52,7 +54,9 @@ where
         where
             D: Deserializer<'de>,
         {
-            deserializer.deserialize_any(StringOrF64InnerVisitor).map(Some)
+            deserializer
+                .deserialize_any(StringOrF64InnerVisitor)
+                .map(Some)
         }
 
         fn visit_f64<E>(self, value: f64) -> Result<Self::Value, E>
@@ -328,10 +332,9 @@ impl CurveTransactionBuilder {
             blockhash: String,
         }
 
-        let data: BlockhashResponse = response
-            .json()
-            .await
-            .map_err(|e| AppError::Internal(format!("Failed to parse blockhash response: {}", e)))?;
+        let data: BlockhashResponse = response.json().await.map_err(|e| {
+            AppError::Internal(format!("Failed to parse blockhash response: {}", e))
+        })?;
 
         solana_sdk::hash::Hash::from_str(&data.result.value.blockhash)
             .map_err(|e| AppError::Internal(format!("Invalid blockhash: {}", e)))
@@ -449,10 +452,7 @@ impl CurveTransactionBuilder {
         })
     }
 
-    pub async fn build_pump_fun_buy(
-        &self,
-        params: &CurveBuyParams,
-    ) -> AppResult<CurveBuildResult> {
+    pub async fn build_pump_fun_buy(&self, params: &CurveBuyParams) -> AppResult<CurveBuildResult> {
         // Validate non-zero SOL amount to prevent wasting network fees
         if params.sol_amount_lamports == 0 {
             return Err(AppError::Validation(
@@ -463,12 +463,10 @@ impl CurveTransactionBuilder {
         // Minimum 0.001 SOL to prevent dust transactions
         const MIN_SOL_LAMPORTS: u64 = 1_000_000; // 0.001 SOL
         if params.sol_amount_lamports < MIN_SOL_LAMPORTS {
-            return Err(AppError::Validation(
-                format!(
-                    "SOL amount {} lamports below minimum {} (0.001 SOL)",
-                    params.sol_amount_lamports, MIN_SOL_LAMPORTS
-                ),
-            ));
+            return Err(AppError::Validation(format!(
+                "SOL amount {} lamports below minimum {} (0.001 SOL)",
+                params.sol_amount_lamports, MIN_SOL_LAMPORTS
+            )));
         }
 
         let curve_state = self
@@ -506,7 +504,8 @@ impl CurveTransactionBuilder {
 
         let tx_bytes = bincode::serialize(&tx)
             .map_err(|e| AppError::Internal(format!("Failed to serialize transaction: {}", e)))?;
-        let tx_base64 = base64::Engine::encode(&base64::engine::general_purpose::STANDARD, &tx_bytes);
+        let tx_base64 =
+            base64::Engine::encode(&base64::engine::general_purpose::STANDARD, &tx_bytes);
 
         let priority_fee_lamports =
             (self.compute_units as u64 * self.priority_fee_micro_lamports) / 1_000_000;
@@ -595,7 +594,8 @@ impl CurveTransactionBuilder {
 
         let tx_bytes = bincode::serialize(&tx)
             .map_err(|e| AppError::Internal(format!("Failed to serialize transaction: {}", e)))?;
-        let tx_base64 = base64::Engine::encode(&base64::engine::general_purpose::STANDARD, &tx_bytes);
+        let tx_base64 =
+            base64::Engine::encode(&base64::engine::general_purpose::STANDARD, &tx_bytes);
 
         let priority_fee_lamports =
             (self.compute_units as u64 * self.priority_fee_micro_lamports) / 1_000_000;
@@ -659,8 +659,12 @@ impl CurveTransactionBuilder {
             ));
         }
 
-        let creator_pubkey = Pubkey::from_str(&curve_state.creator)
-            .map_err(|e| AppError::Internal(format!("Invalid creator address '{}': {}", curve_state.creator, e)))?;
+        let creator_pubkey = Pubkey::from_str(&curve_state.creator).map_err(|e| {
+            AppError::Internal(format!(
+                "Invalid creator address '{}': {}",
+                curve_state.creator, e
+            ))
+        })?;
 
         tracing::debug!(
             mint = %mint,
@@ -668,34 +672,33 @@ impl CurveTransactionBuilder {
             "Building pump.fun buy with creator"
         );
 
-        let user_token_account = get_associated_token_address_with_program_id(&user_pubkey, &mint_pubkey, &token_2022_program);
-
-        let (creator_vault, _) = Pubkey::find_program_address(
-            &[b"creator-vault", creator_pubkey.as_ref()],
-            &program_id,
+        let user_token_account = get_associated_token_address_with_program_id(
+            &user_pubkey,
+            &mint_pubkey,
+            &token_2022_program,
         );
 
-        let (global_volume_accumulator, _) = Pubkey::find_program_address(
-            &[b"global_volume_accumulator"],
-            &program_id,
-        );
+        let (creator_vault, _) =
+            Pubkey::find_program_address(&[b"creator-vault", creator_pubkey.as_ref()], &program_id);
+
+        let (global_volume_accumulator, _) =
+            Pubkey::find_program_address(&[b"global_volume_accumulator"], &program_id);
 
         let (user_volume_accumulator, _) = Pubkey::find_program_address(
             &[b"user_volume_accumulator", user_pubkey.as_ref()],
             &program_id,
         );
 
-        let (fee_config, _) = Pubkey::find_program_address(
-            &[b"fee_config", program_id.as_ref()],
-            &fee_program,
-        );
+        let (fee_config, _) =
+            Pubkey::find_program_address(&[b"fee_config", program_id.as_ref()], &fee_program);
 
-        let create_ata_ix = spl_associated_token_account::instruction::create_associated_token_account_idempotent(
-            &user_pubkey,
-            &user_pubkey,
-            &mint_pubkey,
-            &token_2022_program,
-        );
+        let create_ata_ix =
+            spl_associated_token_account::instruction::create_associated_token_account_idempotent(
+                &user_pubkey,
+                &user_pubkey,
+                &mint_pubkey,
+                &token_2022_program,
+            );
         instructions.push(create_ata_ix);
 
         let buy_discriminator: [u8; 8] = [102, 6, 61, 18, 1, 218, 235, 234];
@@ -705,8 +708,10 @@ impl CurveTransactionBuilder {
             amount: min_tokens_out,
             max_sol_cost: sol_amount,
         };
-        data.extend(borsh::to_vec(&args)
-            .map_err(|e| AppError::Internal(format!("Failed to serialize buy args: {}", e)))?);
+        data.extend(
+            borsh::to_vec(&args)
+                .map_err(|e| AppError::Internal(format!("Failed to serialize buy args: {}", e)))?,
+        );
 
         let buy_ix = Instruction {
             program_id,
@@ -781,8 +786,12 @@ impl CurveTransactionBuilder {
             ));
         }
 
-        let creator_pubkey = Pubkey::from_str(&curve_state.creator)
-            .map_err(|e| AppError::Internal(format!("Invalid creator address '{}': {}", curve_state.creator, e)))?;
+        let creator_pubkey = Pubkey::from_str(&curve_state.creator).map_err(|e| {
+            AppError::Internal(format!(
+                "Invalid creator address '{}': {}",
+                curve_state.creator, e
+            ))
+        })?;
 
         // Log the creator for debugging
         tracing::debug!(
@@ -791,22 +800,22 @@ impl CurveTransactionBuilder {
             "Building pump.fun sell with creator"
         );
 
-        let user_token_account = get_associated_token_address_with_program_id(&user_pubkey, &mint_pubkey, &token_program);
-
-        let (creator_vault, _) = Pubkey::find_program_address(
-            &[b"creator-vault", creator_pubkey.as_ref()],
-            &program_id,
+        let user_token_account = get_associated_token_address_with_program_id(
+            &user_pubkey,
+            &mint_pubkey,
+            &token_program,
         );
+
+        let (creator_vault, _) =
+            Pubkey::find_program_address(&[b"creator-vault", creator_pubkey.as_ref()], &program_id);
 
         tracing::debug!(
             creator_vault = %creator_vault,
             "Derived creator_vault PDA"
         );
 
-        let (fee_config, _) = Pubkey::find_program_address(
-            &[b"fee_config", program_id.as_ref()],
-            &fee_program,
-        );
+        let (fee_config, _) =
+            Pubkey::find_program_address(&[b"fee_config", program_id.as_ref()], &fee_program);
 
         let sell_discriminator: [u8; 8] = [51, 230, 133, 164, 1, 127, 131, 173];
 
@@ -815,8 +824,10 @@ impl CurveTransactionBuilder {
             amount: token_amount,
             min_sol_output: min_sol_out,
         };
-        data.extend(borsh::to_vec(&args)
-            .map_err(|e| AppError::Internal(format!("Failed to serialize sell args: {}", e)))?);
+        data.extend(
+            borsh::to_vec(&args)
+                .map_err(|e| AppError::Internal(format!("Failed to serialize sell args: {}", e)))?,
+        );
 
         let sell_ix = Instruction {
             program_id,
@@ -845,9 +856,7 @@ impl CurveTransactionBuilder {
     }
 
     pub async fn get_curve_state(&self, mint: &str) -> AppResult<OnChainCurveState> {
-        self.on_chain_fetcher
-            .get_pump_fun_bonding_curve(mint)
-            .await
+        self.on_chain_fetcher.get_pump_fun_bonding_curve(mint).await
     }
 
     pub async fn build_post_graduation_sell(
@@ -879,18 +888,13 @@ impl CurveTransactionBuilder {
 
         let quote_url = format!(
             "{}/quote?inputMint={}&outputMint={}&amount={}&slippageBps={}&onlyDirectRoutes=false",
-            jupiter_api_url,
-            params.mint,
-            SOL_MINT,
-            params.token_amount,
-            params.slippage_bps
+            jupiter_api_url, params.mint, SOL_MINT, params.token_amount, params.slippage_bps
         );
 
-        let quote_response = client
-            .get(&quote_url)
-            .send()
-            .await
-            .map_err(|e| AppError::ExternalApi(format!("Jupiter quote request failed: {}", e)))?;
+        let quote_response =
+            client.get(&quote_url).send().await.map_err(|e| {
+                AppError::ExternalApi(format!("Jupiter quote request failed: {}", e))
+            })?;
 
         if !quote_response.status().is_success() {
             let error_text = quote_response.text().await.unwrap_or_default();
@@ -951,7 +955,7 @@ impl CurveTransactionBuilder {
         // Validate we're getting a reasonable output amount
         if expected_sol_out == 0 {
             return Err(AppError::ExternalApi(
-                "Jupiter quote returned zero SOL output - quote invalid".to_string()
+                "Jupiter quote returned zero SOL output - quote invalid".to_string(),
             ));
         }
 
@@ -972,7 +976,9 @@ impl CurveTransactionBuilder {
             transaction_base64: swap_result.swap_transaction,
             expected_sol_out,
             price_impact_percent: price_impact,
-            route_label: quote.route_plan.first()
+            route_label: quote
+                .route_plan
+                .first()
                 .and_then(|r| r.swap_info.label.clone())
                 .unwrap_or_else(|| "Jupiter".to_string()),
         })
@@ -1015,11 +1021,10 @@ impl CurveTransactionBuilder {
 
         tracing::debug!("Raydium quote URL: {}", quote_url);
 
-        let quote_response = client
-            .get(&quote_url)
-            .send()
-            .await
-            .map_err(|e| AppError::ExternalApi(format!("Raydium quote request failed: {}", e)))?;
+        let quote_response =
+            client.get(&quote_url).send().await.map_err(|e| {
+                AppError::ExternalApi(format!("Raydium quote request failed: {}", e))
+            })?;
 
         if !quote_response.status().is_success() {
             let error_text = quote_response.text().await.unwrap_or_default();
@@ -1029,13 +1034,17 @@ impl CurveTransactionBuilder {
             )));
         }
 
-        let quote_text = quote_response.text().await
+        let quote_text = quote_response
+            .text()
+            .await
             .map_err(|e| AppError::ExternalApi(format!("Failed to read Raydium quote: {}", e)))?;
 
         // First check if Raydium returned an error (success: false)
         if let Ok(api_response) = serde_json::from_str::<RaydiumApiResponse>(&quote_text) {
             if api_response.success == Some(false) {
-                let error_msg = api_response.msg.unwrap_or_else(|| "Unknown error".to_string());
+                let error_msg = api_response
+                    .msg
+                    .unwrap_or_else(|| "Unknown error".to_string());
                 return Err(AppError::ExternalApi(format!(
                     "Raydium quote failed: {}",
                     error_msg
@@ -1043,12 +1052,13 @@ impl CurveTransactionBuilder {
             }
         }
 
-        let quote: RaydiumQuoteResponse = serde_json::from_str(&quote_text)
-            .map_err(|e| AppError::ExternalApi(format!(
+        let quote: RaydiumQuoteResponse = serde_json::from_str(&quote_text).map_err(|e| {
+            AppError::ExternalApi(format!(
                 "Failed to parse Raydium quote (response: {}): {}",
                 &quote_text[..200.min(quote_text.len())],
                 e
-            )))?;
+            ))
+        })?;
 
         let swap_url = format!("{}/transaction/swap-base-in", RAYDIUM_API_URL);
         let swap_request = RaydiumSwapRequest {
@@ -1080,11 +1090,12 @@ impl CurveTransactionBuilder {
             .await
             .map_err(|e| AppError::ExternalApi(format!("Failed to parse Raydium swap: {}", e)))?;
 
-        let transaction = swap_result.transaction
+        let transaction = swap_result
+            .transaction
             .or_else(|| swap_result.msg.clone())
-            .ok_or_else(|| AppError::ExternalApi(
-                "Raydium returned no transaction data".to_string()
-            ))?;
+            .ok_or_else(|| {
+                AppError::ExternalApi("Raydium returned no transaction data".to_string())
+            })?;
 
         // CRITICAL: Fail if parsing fails to prevent zero-output trades
         let expected_sol_out: u64 = quote.out_amount.parse().map_err(|e| {
@@ -1097,7 +1108,7 @@ impl CurveTransactionBuilder {
         // Validate we're getting a reasonable output amount
         if expected_sol_out == 0 {
             return Err(AppError::ExternalApi(
-                "Raydium quote returned zero SOL output - quote invalid".to_string()
+                "Raydium quote returned zero SOL output - quote invalid".to_string(),
             ));
         }
 
@@ -1141,12 +1152,10 @@ impl CurveTransactionBuilder {
         // Minimum 0.001 SOL to prevent dust transactions
         const MIN_SOL_LAMPORTS: u64 = 1_000_000; // 0.001 SOL
         if sol_amount_lamports < MIN_SOL_LAMPORTS {
-            return Err(AppError::Validation(
-                format!(
-                    "SOL amount {} lamports below minimum {} (0.001 SOL)",
-                    sol_amount_lamports, MIN_SOL_LAMPORTS
-                ),
-            ));
+            return Err(AppError::Validation(format!(
+                "SOL amount {} lamports below minimum {} (0.001 SOL)",
+                sol_amount_lamports, MIN_SOL_LAMPORTS
+            )));
         }
 
         let client = reqwest::Client::builder()
@@ -1157,18 +1166,13 @@ impl CurveTransactionBuilder {
         // Quote: SOL -> Token
         let quote_url = format!(
             "{}/quote?inputMint={}&outputMint={}&amount={}&slippageBps={}&onlyDirectRoutes=false",
-            jupiter_api_url,
-            SOL_MINT,
-            mint,
-            sol_amount_lamports,
-            slippage_bps
+            jupiter_api_url, SOL_MINT, mint, sol_amount_lamports, slippage_bps
         );
 
-        let quote_response = client
-            .get(&quote_url)
-            .send()
-            .await
-            .map_err(|e| AppError::ExternalApi(format!("Jupiter quote request failed: {}", e)))?;
+        let quote_response =
+            client.get(&quote_url).send().await.map_err(|e| {
+                AppError::ExternalApi(format!("Jupiter quote request failed: {}", e))
+            })?;
 
         if !quote_response.status().is_success() {
             let error_text = quote_response.text().await.unwrap_or_default();
@@ -1179,26 +1183,29 @@ impl CurveTransactionBuilder {
         }
 
         // Get the response text first so we can try parsing as error or success
-        let response_text = quote_response.text().await
-            .map_err(|e| AppError::ExternalApi(format!("Failed to read Jupiter quote response: {}", e)))?;
+        let response_text = quote_response.text().await.map_err(|e| {
+            AppError::ExternalApi(format!("Failed to read Jupiter quote response: {}", e))
+        })?;
 
         // First try to parse as an error response (Jupiter returns 200 with error JSON for some errors)
         if let Ok(error_response) = serde_json::from_str::<JupiterErrorResponse>(&response_text) {
-            let error_code = error_response.error_code.unwrap_or_else(|| "UNKNOWN".to_string());
+            let error_code = error_response
+                .error_code
+                .unwrap_or_else(|| "UNKNOWN".to_string());
             return Err(AppError::ExternalApi(format!(
                 "Jupiter error ({}): {}",
-                error_code,
-                error_response.error
+                error_code, error_response.error
             )));
         }
 
         // Parse as successful quote response
-        let quote: JupiterQuoteResponse = serde_json::from_str(&response_text)
-            .map_err(|e| AppError::ExternalApi(format!(
+        let quote: JupiterQuoteResponse = serde_json::from_str(&response_text).map_err(|e| {
+            AppError::ExternalApi(format!(
                 "Failed to parse Jupiter quote (response: {}): {}",
                 &response_text[..200.min(response_text.len())],
                 e
-            )))?;
+            ))
+        })?;
 
         let swap_url = format!("{}/swap", jupiter_api_url);
         let swap_request = serde_json::json!({
@@ -1246,7 +1253,7 @@ impl CurveTransactionBuilder {
         // Validate we're getting a reasonable output amount
         if expected_tokens_out == 0 {
             return Err(AppError::ExternalApi(
-                "Jupiter quote returned zero token output - quote invalid".to_string()
+                "Jupiter quote returned zero token output - quote invalid".to_string(),
             ));
         }
 
@@ -1256,7 +1263,9 @@ impl CurveTransactionBuilder {
             transaction_base64: swap_result.swap_transaction,
             expected_tokens_out,
             price_impact_percent: price_impact,
-            route_label: quote.route_plan.first()
+            route_label: quote
+                .route_plan
+                .first()
                 .and_then(|r| r.swap_info.label.clone())
                 .unwrap_or_else(|| "Jupiter".to_string()),
         })
@@ -1264,9 +1273,7 @@ impl CurveTransactionBuilder {
 
     /// Get actual on-chain token balance for a wallet
     pub async fn get_actual_token_balance(&self, owner: &str, mint: &str) -> AppResult<u64> {
-        self.on_chain_fetcher
-            .get_token_balance(owner, mint)
-            .await
+        self.on_chain_fetcher.get_token_balance(owner, mint).await
     }
 
     /// Check if a mint uses Token-2022 or standard SPL Token

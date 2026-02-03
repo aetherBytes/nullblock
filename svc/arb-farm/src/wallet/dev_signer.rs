@@ -78,7 +78,10 @@ impl DevWalletSigner {
         status.wallet_address = self.wallet_address.clone();
         status.turnkey_wallet_id = Some(format!(
             "dev_{}",
-            self.wallet_address.as_ref().map(|a| &a[..8]).unwrap_or("unknown")
+            self.wallet_address
+                .as_ref()
+                .map(|a| &a[..8])
+                .unwrap_or("unknown")
         ));
         status.delegation_status = DelegationStatus::Active;
 
@@ -109,10 +112,7 @@ impl DevWalletSigner {
         Ok(())
     }
 
-    pub async fn validate_transaction(
-        &self,
-        request: &SignRequest,
-    ) -> Result<(), PolicyViolation> {
+    pub async fn validate_transaction(&self, request: &SignRequest) -> Result<(), PolicyViolation> {
         let status = self.wallet_status.read().await;
         let policy = &status.policy;
 
@@ -183,8 +183,9 @@ impl DevWalletSigner {
                 versioned_tx.signatures[0] = sig;
             }
 
-            let bytes = bincode::serialize(&versioned_tx)
-                .map_err(|e| AppError::Internal(format!("Failed to serialize versioned tx: {}", e)))?;
+            let bytes = bincode::serialize(&versioned_tx).map_err(|e| {
+                AppError::Internal(format!("Failed to serialize versioned tx: {}", e))
+            })?;
             (bytes, sig)
         } else if let Ok(mut legacy_tx) = bincode::deserialize::<Transaction>(&tx_bytes) {
             debug!(

@@ -35,10 +35,10 @@ pub struct WalletVerifyResponse {
     pub success: bool,
     pub session_token: Option<String>,
     pub message: String,
-    pub user_id: Option<String>,  // User UUID from registration
-    pub registration_error: Option<String>,  // Error if registration failed
+    pub user_id: Option<String>,            // User UUID from registration
+    pub registration_error: Option<String>, // Error if registration failed
     #[serde(default)]
-    pub network: Option<String>,  // Network identifier (ethereum, solana, etc.)
+    pub network: Option<String>, // Network identifier (ethereum, solana, etc.)
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -107,7 +107,11 @@ pub struct WalletStatusResponse {
 pub trait WalletProvider {
     fn get_wallet_info() -> WalletInfo;
     fn create_challenge_message(wallet_address: &str, challenge_id: &str) -> String;
-    fn verify_signature(message: &str, signature: &str, wallet_address: &str) -> Result<bool, String>;
+    fn verify_signature(
+        message: &str,
+        signature: &str,
+        wallet_address: &str,
+    ) -> Result<bool, String>;
 }
 
 // Session management

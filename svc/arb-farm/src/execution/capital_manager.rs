@@ -1,9 +1,9 @@
+use sqlx::PgPool;
 use std::collections::HashMap;
 use std::sync::Arc;
-use sqlx::PgPool;
 use tokio::sync::RwLock;
+use tracing::{debug, info, warn};
 use uuid::Uuid;
-use tracing::{info, warn, debug};
 
 #[derive(Debug, Clone)]
 pub struct CapitalReservation {
@@ -65,12 +65,15 @@ impl CapitalManager {
         for (position_id, strategy_id, amount_lamports, created_at) in rows {
             let amount = amount_lamports as u64;
 
-            reservations.insert(position_id, CapitalReservation {
-                strategy_id,
+            reservations.insert(
                 position_id,
-                amount_lamports: amount,
-                created_at,
-            });
+                CapitalReservation {
+                    strategy_id,
+                    position_id,
+                    amount_lamports: amount,
+                    created_at,
+                },
+            );
 
             *global += amount;
 
@@ -104,7 +107,7 @@ impl CapitalManager {
             ON CONFLICT (position_id) DO UPDATE SET
                 strategy_id = EXCLUDED.strategy_id,
                 amount_lamports = EXCLUDED.amount_lamports
-            "#
+            "#,
         )
         .bind(reservation.position_id)
         .bind(reservation.strategy_id)
@@ -144,12 +147,7 @@ impl CapitalManager {
         *self.total_balance_lamports.read().await
     }
 
-    pub async fn register_strategy(
-        &self,
-        strategy_id: Uuid,
-        max_percent: f64,
-        max_positions: u32,
-    ) {
+    pub async fn register_strategy(&self, strategy_id: Uuid, max_percent: f64, max_positions: u32) {
         let mut allocations = self.strategy_allocations.write().await;
         allocations.insert(
             strategy_id,
@@ -314,7 +312,11 @@ impl CapitalManager {
         Some(reservation.amount_lamports)
     }
 
-    pub async fn release_partial_capital(&self, position_id: Uuid, exit_percent: f64) -> Option<u64> {
+    pub async fn release_partial_capital(
+        &self,
+        position_id: Uuid,
+        exit_percent: f64,
+    ) -> Option<u64> {
         if exit_percent <= 0.0 || exit_percent > 100.0 {
             warn!(
                 "Invalid exit percent {} for partial capital release on position {}",
@@ -330,14 +332,15 @@ impl CapitalManager {
         }?;
 
         // Calculate amount to release (proportional to exit percent), rounded to nearest lamport
-        let release_lamports = ((reservation.amount_lamports as f64) * (exit_percent / 100.0)).round() as u64;
+        let release_lamports =
+            ((reservation.amount_lamports as f64) * (exit_percent / 100.0)).round() as u64;
         let release_lamports = release_lamports.min(reservation.amount_lamports); // Cap at reserved amount
         let new_reserved = reservation.amount_lamports.saturating_sub(release_lamports);
 
         // Update DB first
         if let Some(pool) = &self.db_pool {
             if let Err(e) = sqlx::query(
-                "UPDATE capital_reservations SET amount_lamports = $1 WHERE position_id = $2"
+                "UPDATE capital_reservations SET amount_lamports = $1 WHERE position_id = $2",
             )
             .bind(new_reserved as i64)
             .bind(position_id)
@@ -458,7 +461,11 @@ impl CapitalManager {
         reservations.values().cloned().collect()
     }
 
-    pub async fn register_strategies_equal(&self, strategy_ids: Vec<Uuid>, max_positions_each: u32) {
+    pub async fn register_strategies_equal(
+        &self,
+        strategy_ids: Vec<Uuid>,
+        max_positions_each: u32,
+    ) {
         if strategy_ids.is_empty() {
             return;
         }
@@ -472,7 +479,8 @@ impl CapitalManager {
         );
 
         for strategy_id in strategy_ids {
-            self.register_strategy(strategy_id, equal_percent, max_positions_each).await;
+            self.register_strategy(strategy_id, equal_percent, max_positions_each)
+                .await;
         }
     }
 
@@ -494,8 +502,7 @@ impl CapitalManager {
 
         info!(
             "📊 Rebalanced {} strategies to {:.2}% each",
-            count,
-            equal_percent
+            count, equal_percent
         );
     }
 
@@ -549,7 +556,11 @@ impl CapitalManager {
         });
     }
 
-    async fn fetch_sol_balance(client: &reqwest::Client, rpc_url: &str, wallet_address: &str) -> Result<u64, String> {
+    async fn fetch_sol_balance(
+        client: &reqwest::Client,
+        rpc_url: &str,
+        wallet_address: &str,
+    ) -> Result<u64, String> {
         let request = serde_json::json!({
             "jsonrpc": "2.0",
             "id": 1,
@@ -622,13 +633,19 @@ pub struct GlobalCapitalUsage {
 pub enum CapitalError {
     NoBalance,
     StrategyNotRegistered,
-    MaxPositionsReached { current: u32, max: u32 },
+    MaxPositionsReached {
+        current: u32,
+        max: u32,
+    },
     AllocationExceeded {
         requested: u64,
         available: u64,
         max_percent: f64,
     },
-    InsufficientGlobalCapital { requested: u64, available: u64 },
+    InsufficientGlobalCapital {
+        requested: u64,
+        available: u64,
+    },
 }
 
 impl std::fmt::Display for CapitalError {

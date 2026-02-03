@@ -18,9 +18,10 @@ impl IntoResponse for ProtocolError {
         let (status, error_message) = match self {
             ProtocolError::InvalidRequest(msg) => (StatusCode::BAD_REQUEST, msg),
             ProtocolError::TaskNotFound(msg) => (StatusCode::NOT_FOUND, msg),
-            ProtocolError::AuthenticationRequired => {
-                (StatusCode::UNAUTHORIZED, "Authentication required".to_string())
-            }
+            ProtocolError::AuthenticationRequired => (
+                StatusCode::UNAUTHORIZED,
+                "Authentication required".to_string(),
+            ),
             ProtocolError::InternalError(msg) => (StatusCode::INTERNAL_SERVER_ERROR, msg),
         };
 

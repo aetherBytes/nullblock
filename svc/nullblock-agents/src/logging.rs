@@ -6,8 +6,7 @@ pub fn setup_logging() -> anyhow::Result<()> {
     fs::create_dir_all("logs")?;
 
     // Build the subscriber with environment filter
-    let env_filter = EnvFilter::try_from_default_env()
-        .unwrap_or_else(|_| EnvFilter::new("info"));
+    let env_filter = EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info"));
 
     // Check if we want JSON format
     let use_json = std::env::var("LOG_FORMAT")
@@ -16,20 +15,24 @@ pub fn setup_logging() -> anyhow::Result<()> {
 
     if use_json {
         tracing_subscriber::registry()
-            .with(fmt::layer()
-                .json()
-                .with_current_span(false)
-                .with_span_list(true))
+            .with(
+                fmt::layer()
+                    .json()
+                    .with_current_span(false)
+                    .with_span_list(true),
+            )
             .with(env_filter)
             .init();
     } else {
         tracing_subscriber::registry()
-            .with(fmt::layer()
-                .pretty()
-                .with_target(true)
-                .with_thread_ids(true)
-                .with_file(true)
-                .with_line_number(true))
+            .with(
+                fmt::layer()
+                    .pretty()
+                    .with_target(true)
+                    .with_thread_ids(true)
+                    .with_file(true)
+                    .with_line_number(true),
+            )
             .with(env_filter)
             .init();
     }
@@ -54,11 +57,7 @@ macro_rules! log_agent_startup {
 #[macro_export]
 macro_rules! log_agent_shutdown {
     ($agent:expr) => {
-        tracing::info!(
-            agent = $agent,
-            "🛑 {} shutting down gracefully...",
-            $agent
-        );
+        tracing::info!(agent = $agent, "🛑 {} shutting down gracefully...", $agent);
     };
 }
 

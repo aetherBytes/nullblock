@@ -564,19 +564,17 @@ impl ArbFarmRepository {
         .fetch_one(pool)
         .await?;
 
-        let cows_owned: i64 = sqlx::query_scalar(
-            "SELECT COUNT(*) FROM arbfarm_cows WHERE creator_wallet = $1",
-        )
-        .bind(wallet)
-        .fetch_one(pool)
-        .await?;
+        let cows_owned: i64 =
+            sqlx::query_scalar("SELECT COUNT(*) FROM arbfarm_cows WHERE creator_wallet = $1")
+                .bind(wallet)
+                .fetch_one(pool)
+                .await?;
 
-        let cows_forked: i64 = sqlx::query_scalar(
-            "SELECT COUNT(*) FROM arbfarm_cow_forks WHERE forker_wallet = $1",
-        )
-        .bind(wallet)
-        .fetch_one(pool)
-        .await?;
+        let cows_forked: i64 =
+            sqlx::query_scalar("SELECT COUNT(*) FROM arbfarm_cow_forks WHERE forker_wallet = $1")
+                .bind(wallet)
+                .fetch_one(pool)
+                .await?;
 
         Ok((
             row.get("total_earnings"),

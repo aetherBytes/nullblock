@@ -35,9 +35,15 @@ pub struct RiskConfig {
 }
 
 // DEFENSIVE defaults - matches ExitConfig::for_defensive()
-fn default_take_profit() -> f64 { 15.0 }   // DEFENSIVE: 15% TP (strong momentum extends)
-fn default_trailing_stop() -> f64 { 8.0 }  // DEFENSIVE: 8% trailing stop
-fn default_time_limit() -> u32 { 5 }       // DEFENSIVE: 5 min
+fn default_take_profit() -> f64 {
+    15.0
+} // DEFENSIVE: 15% TP (strong momentum extends)
+fn default_trailing_stop() -> f64 {
+    8.0
+} // DEFENSIVE: 8% trailing stop
+fn default_time_limit() -> u32 {
+    5
+} // DEFENSIVE: 5 min
 
 impl Default for RiskConfig {
     fn default() -> Self {
@@ -79,15 +85,15 @@ impl RiskConfig {
         Self {
             max_position_sol: 5.0,
             daily_loss_limit_sol: 2.0,
-            max_drawdown_percent: 13.0,         // DEFENSIVE: 13% stop loss (widened from 10% per LLM consensus)
+            max_drawdown_percent: 13.0, // DEFENSIVE: 13% stop loss (widened from 10% per LLM consensus)
             max_concurrent_positions: 10,
             max_position_per_token_sol: 2.0,
             cooldown_after_loss_ms: 2000,
             volatility_scaling_enabled: true,
             auto_pause_on_drawdown: false,
-            take_profit_percent: 15.0,          // DEFENSIVE: 15% TP
-            trailing_stop_percent: 8.0,         // DEFENSIVE: 8% trailing
-            time_limit_minutes: 5,              // DEFENSIVE: 5 min
+            take_profit_percent: 15.0,  // DEFENSIVE: 15% TP
+            trailing_stop_percent: 8.0, // DEFENSIVE: 8% trailing
+            time_limit_minutes: 5,      // DEFENSIVE: 5 min
         }
     }
 
@@ -116,15 +122,15 @@ impl RiskConfig {
         Self {
             max_position_sol: 10.0,
             daily_loss_limit_sol: 5.0,
-            max_drawdown_percent: 40.0,         // 40% stop loss (matches default)
+            max_drawdown_percent: 40.0, // 40% stop loss (matches default)
             max_concurrent_positions: 20,
             max_position_per_token_sol: 5.0,
             cooldown_after_loss_ms: 1000,
             volatility_scaling_enabled: false,
             auto_pause_on_drawdown: false,
-            take_profit_percent: 100.0,         // Same tiered exit
-            trailing_stop_percent: 20.0,        // Same trailing
-            time_limit_minutes: 15,             // Same time limit
+            take_profit_percent: 100.0,  // Same tiered exit
+            trailing_stop_percent: 20.0, // Same trailing
+            time_limit_minutes: 15,      // Same time limit
         }
     }
 }
@@ -201,7 +207,16 @@ impl RiskManager {
 
         let today = chrono::Utc::now().date_naive();
 
-        let row: Option<(Uuid, chrono::NaiveDate, i64, i64, i32, i32, i32, Option<chrono::DateTime<chrono::Utc>>)> = sqlx::query_as(
+        let row: Option<(
+            Uuid,
+            chrono::NaiveDate,
+            i64,
+            i64,
+            i32,
+            i32,
+            i32,
+            Option<chrono::DateTime<chrono::Utc>>,
+        )> = sqlx::query_as(
             r#"
             SELECT id, date, total_profit_lamports, total_loss_lamports,
                    trade_count, winning_trades, losing_trades, last_loss_at
@@ -353,7 +368,10 @@ impl RiskManager {
 
         // Check 6: Minimum profit threshold
         // Use proper rounding: (p + 5000) / 10000 to avoid truncation bias
-        let profit_bps = edge.estimated_profit_lamports.map(|p| ((p + 5000) / 10000) as u16).unwrap_or(0);
+        let profit_bps = edge
+            .estimated_profit_lamports
+            .map(|p| ((p + 5000) / 10000) as u16)
+            .unwrap_or(0);
         if profit_bps < strategy_params.min_profit_bps {
             violations.push(RiskViolation {
                 rule: "min_profit".to_string(),
@@ -369,10 +387,10 @@ impl RiskManager {
         // For atomic trades, relax some checks
         if edge.atomicity == AtomicityLevel::FullyAtomic && edge.simulated_profit_guaranteed {
             // Remove blocking violations for guaranteed-profit atomic trades
-            violations.retain(|v| {
-                v.rule != "max_risk_score" && v.rule != "min_profit"
-            });
-            passed = violations.iter().all(|v| v.severity != ViolationSeverity::Block);
+            violations.retain(|v| v.rule != "max_risk_score" && v.rule != "min_profit");
+            passed = violations
+                .iter()
+                .all(|v| v.severity != ViolationSeverity::Block);
         }
 
         // Calculate adjusted size based on volatility if enabled
@@ -415,7 +433,8 @@ impl RiskManager {
             return None;
         }
 
-        let net_pnl_sol = (stats.total_profit_lamports - stats.total_loss_lamports.abs()) as f64 / 1e9;
+        let net_pnl_sol =
+            (stats.total_profit_lamports - stats.total_loss_lamports.abs()) as f64 / 1e9;
 
         if net_pnl_sol < -self.config.daily_loss_limit_sol {
             return Some(RiskViolation {
@@ -466,7 +485,8 @@ impl RiskManager {
 
         if let Some(last_loss) = stats.last_loss_at {
             let elapsed = chrono::Utc::now().signed_duration_since(last_loss);
-            let cooldown = chrono::Duration::milliseconds(self.config.cooldown_after_loss_ms as i64);
+            let cooldown =
+                chrono::Duration::milliseconds(self.config.cooldown_after_loss_ms as i64);
 
             if elapsed < cooldown {
                 let remaining = cooldown - elapsed;
@@ -564,7 +584,8 @@ impl RiskManager {
             date: stats.date.to_string(),
             total_profit_sol: stats.total_profit_lamports as f64 / 1e9,
             total_loss_sol: stats.total_loss_lamports as f64 / 1e9,
-            net_pnl_sol: (stats.total_profit_lamports - stats.total_loss_lamports.abs()) as f64 / 1e9,
+            net_pnl_sol: (stats.total_profit_lamports - stats.total_loss_lamports.abs()) as f64
+                / 1e9,
             trade_count: stats.trade_count,
             win_rate: if stats.trade_count > 0 {
                 stats.winning_trades as f64 / stats.trade_count as f64

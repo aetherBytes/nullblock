@@ -13,7 +13,10 @@ pub struct AgentCard {
     #[serde(rename = "preferredTransport", skip_serializing_if = "Option::is_none")]
     pub preferred_transport: Option<TransportProtocol>,
 
-    #[serde(rename = "additionalInterfaces", skip_serializing_if = "Option::is_none")]
+    #[serde(
+        rename = "additionalInterfaces",
+        skip_serializing_if = "Option::is_none"
+    )]
     pub additional_interfaces: Option<Vec<AgentInterface>>,
 
     #[serde(rename = "iconUrl", skip_serializing_if = "Option::is_none")]
@@ -43,7 +46,10 @@ pub struct AgentCard {
 
     pub skills: Vec<AgentSkill>,
 
-    #[serde(rename = "supportsAuthenticatedExtendedCard", skip_serializing_if = "Option::is_none")]
+    #[serde(
+        rename = "supportsAuthenticatedExtendedCard",
+        skip_serializing_if = "Option::is_none"
+    )]
     pub supports_authenticated_extended_card: Option<bool>,
 
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -64,7 +70,10 @@ pub struct AgentCapabilities {
     #[serde(rename = "pushNotifications", skip_serializing_if = "Option::is_none")]
     pub push_notifications: Option<bool>,
 
-    #[serde(rename = "stateTransitionHistory", skip_serializing_if = "Option::is_none")]
+    #[serde(
+        rename = "stateTransitionHistory",
+        skip_serializing_if = "Option::is_none"
+    )]
     pub state_transition_history: Option<bool>,
 
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -138,9 +147,7 @@ pub enum SecurityScheme {
         bearer_format: Option<String>,
     },
     #[serde(rename = "oauth2")]
-    OAuth2 {
-        flows: serde_json::Value,
-    },
+    OAuth2 { flows: serde_json::Value },
     #[serde(rename = "openIdConnect")]
     OpenIdConnect {
         #[serde(rename = "openIdConnectUrl")]
