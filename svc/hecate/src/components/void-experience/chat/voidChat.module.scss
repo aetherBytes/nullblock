@@ -677,12 +677,12 @@ $void-purple: #b967ff;
   }
 }
 
-// History panel - frosted glass container
+// History panel - frosted glass container (now includes input form)
 .historyPopup {
   position: fixed;
   top: 80px;
   right: 20px;
-  bottom: 120px;
+  bottom: 20px;
   width: 40vw;
   min-width: 350px;
   max-width: 80vw;
@@ -692,6 +692,7 @@ $void-purple: #b967ff;
   border: 1px solid rgba($void-blue, 0.12);
   border-radius: 12px;
   padding: 16px;
+  padding-bottom: 0; // Input form handles bottom padding
   display: flex;
   flex-direction: column;
   pointer-events: auto;
@@ -712,13 +713,28 @@ $void-purple: #b967ff;
     width: auto !important; // Override inline style on mobile
     min-width: unset;
     top: 60px;
-    bottom: 100px;
+    bottom: 12px;
   }
 
   // Elevated state when other panels (like MemCache) are open
   &.elevated {
     background: rgba(8, 8, 18, 0.92);
     border-color: rgba(99, 102, 241, 0.3);
+  }
+
+  // Input form inside the panel
+  .inputForm {
+    flex-shrink: 0;
+    margin: 0 -16px; // Extend to panel edges
+    margin-top: auto; // Push to bottom
+  }
+
+  .inputContainer {
+    border-radius: 0 0 12px 12px; // Match panel corners
+    border-top: 1px solid rgba($void-blue, 0.15);
+    border-bottom: none;
+    border-left: none;
+    border-right: none;
   }
 }
 

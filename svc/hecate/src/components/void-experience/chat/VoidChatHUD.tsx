@@ -747,67 +747,67 @@ const VoidChatHUD: React.FC<VoidChatHUDProps> = ({
               })
             )}
           </div>
-        </div>
-        <form onSubmit={handleSubmit} className={styles.inputForm}>
-          <div
-            className={`${styles.inputContainer} ${energyState === 'charging' ? styles.charging : ''} ${energyState === 'firing' ? styles.firing : ''} ${energyState === 'processing' ? styles.processing : ''} ${glowActive ? styles.receiving : ''}`}
-          >
-            <button
-              type="button"
-              className={styles.collapseToggle}
-              onClick={() => setIsCollapsed(true)}
-              aria-label="Collapse chat"
+          <form onSubmit={handleSubmit} className={styles.inputForm}>
+            <div
+              className={`${styles.inputContainer} ${energyState === 'charging' ? styles.charging : ''} ${energyState === 'firing' ? styles.firing : ''} ${energyState === 'processing' ? styles.processing : ''} ${glowActive ? styles.receiving : ''}`}
             >
-              <svg
-                width="16"
-                height="16"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
+              <button
+                type="button"
+                className={styles.collapseToggle}
+                onClick={() => setIsCollapsed(true)}
+                aria-label="Collapse chat"
               >
-                <polyline points="9 18 15 12 9 6" />
-              </svg>
-            </button>
-            {showCommandDropdown && (
-              <CommandDropdown
-                commands={filteredCommands}
-                selectedIndex={commandSelectedIndex}
-                onSelect={handleCommandSelect}
-                onClose={() => setShowCommandDropdown(false)}
-                query={input}
+                <svg
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <polyline points="9 18 15 12 9 6" />
+                </svg>
+              </button>
+              {showCommandDropdown && (
+                <CommandDropdown
+                  commands={filteredCommands}
+                  selectedIndex={commandSelectedIndex}
+                  onSelect={handleCommandSelect}
+                  onClose={() => setShowCommandDropdown(false)}
+                  query={input}
+                />
+              )}
+              <textarea
+                ref={inputRef}
+                value={input}
+                onChange={handleInputChange}
+                onKeyDown={handleKeyDown}
+                placeholder={
+                  agentHealthStatus === 'unhealthy'
+                    ? '⚠️ Configure API keys first...'
+                    : energyState === 'processing'
+                      ? `Awaiting ${activeAgent} response...`
+                      : 'Chat with Hecate... (type / for commands)'
+                }
+                className={styles.voidInput}
+                disabled={energyState !== 'idle' || agentHealthStatus === 'unhealthy'}
+                rows={1}
               />
-            )}
-            <textarea
-              ref={inputRef}
-              value={input}
-              onChange={handleInputChange}
-              onKeyDown={handleKeyDown}
-              placeholder={
-                agentHealthStatus === 'unhealthy'
-                  ? '⚠️ Configure API keys first...'
-                  : energyState === 'processing'
-                    ? `Awaiting ${activeAgent} response...`
-                    : 'Chat with Hecate... (type / for commands)'
-              }
-              className={styles.voidInput}
-              disabled={energyState !== 'idle' || agentHealthStatus === 'unhealthy'}
-              rows={1}
-            />
-            <button
-              type="submit"
-              className={styles.sendButton}
-              disabled={
-                energyState !== 'idle' || !input.trim() || agentHealthStatus === 'unhealthy'
-              }
-              aria-label="Send message"
-            >
-              ➤
-            </button>
-          </div>
-        </form>
+              <button
+                type="submit"
+                className={styles.sendButton}
+                disabled={
+                  energyState !== 'idle' || !input.trim() || agentHealthStatus === 'unhealthy'
+                }
+                aria-label="Send message"
+              >
+                ➤
+              </button>
+            </div>
+          </form>
+        </div>
       </div>
     </div>
   );
