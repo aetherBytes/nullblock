@@ -205,6 +205,55 @@ These issues are acceptable for local development but MUST be resolved before de
 | P8 | Migrations not fully idempotent (ALTER TABLE without guards) | MEDIUM | Wrap in IF EXISTS checks |
 | P9 | No auto migration runner at startup | MEDIUM | Add sqlx::migrate!() or document manual step |
 
+## NullBlock Content Service (NEW - Phase 1+2)
+
+**Purpose**: Social media content generation + posting service for Nullblock brand  
+**Status**: Architecture planned, Phase 1+2 core implementation in progress  
+**Port**: 8002 (routes through Erebus at 3000)  
+**Database**: PostgreSQL (separate from Erebus/Agents)
+
+**Agent Framework**: N.E.X.U.S.
+- **N**etwork: Coordination ability
+- **E**xecution: Task completion speed
+- **X**pansion: Learning & scaling
+- **U**tility: Practical ROI
+- **S**ecurity: Verifiability & trust
+
+### Themes (Tone: Cheerfully Inevitable + Professionally Apocalyptic)
+1. **MORNING_INSIGHT** - Daily motivation (9 AM) - Infrastructure/protocols
+2. **PROGRESS_UPDATE** - Dev milestones (3 PM) - Progress transparency
+3. **EDUCATIONAL** - Deep dives (Wed noon) - Agentic workflows explainers
+4. **EERIE_FUN** - Dark AI humor (Sun 6 PM) - Original voice, not Fallout refs
+5. **COMMUNITY** - Engagement (6 PM daily) - Polls + questions
+
+### Key Guidelines
+- **Focus**: Infrastructure, protocols, agentic networks, open economy
+- **Avoid**: Financial advice, token shilling, day trading mentions, Fallout IP references
+- **Brand**: "Picks and shovels for the agentic age"
+- **Tone**: Corporate dystopia + dark humor, cheerfully inevitable, professionally apocalyptic
+- **Voice**: Original Nullblock (not Vault-Tec/Fallout lingo) - internal docs can reference the vibe, but posted content is pure Nullblock
+
+### Database Tables
+- `content_queue` - Generated content pending review/posting
+- `content_metrics` - Engagement stats (likes, retweets, impressions)
+- `content_templates` - Theme definitions with variants
+
+### API Routes (via Erebus)
+- `POST /api/content/generate` - Generate content from theme
+- `GET /api/content/queue` - List pending content
+- `POST /api/content/queue/:id/post` - Post to X/Twitter
+- `GET /api/content/posted` - List posted content with metrics
+
+### MCP Tools (exposed via nullblock-protocols)
+- `generate_content` - Generate themed content
+- `post_content` - Post content to platform
+- `schedule_content` - Schedule automated generation
+
+### Crossroads Integration
+- Listed as `Tool` type
+- Metadata: themes, platforms, mcp_tools
+- Ready for ClawHub import
+
 ### Audit False Alarms (Verified OK)
 - Jito timeout — already has comprehensive Helius fallback (position_executor.rs:696-730)
 - Exit queue unbounded — actually uses bounded mpsc channel, not Vec (position_executor.rs:50-67)
