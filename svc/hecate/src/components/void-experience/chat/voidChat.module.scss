@@ -158,6 +158,7 @@ $void-purple: #b967ff;
 
 .inputContainer {
   position: relative;
+  z-index: 10009; // Above historyPopup (10007) so CommandDropdown appears on top
   display: flex;
   align-items: center;
   gap: 0.5rem;
