@@ -684,7 +684,8 @@ $void-purple: #b967ff;
   right: 20px;
   bottom: 120px;
   width: 40vw;
-  min-width: 450px;
+  min-width: 350px;
+  max-width: 80vw;
   background: rgba(8, 8, 18, 0.75);
   backdrop-filter: blur(20px) saturate(1.2);
   -webkit-backdrop-filter: blur(20px) saturate(1.2);
@@ -697,16 +698,18 @@ $void-purple: #b967ff;
   animation: historyFadeIn 0.5s ease-out;
   z-index: 10007;
   box-sizing: border-box;
-  transition: background 0.3s ease, z-index 0.1s ease;
+  transition: background 0.3s ease, z-index 0.1s ease, width 0.1s ease;
 
-  @media (max-width: 1024px) {
-    width: 50vw;
+  // Disable transitions while resizing for smooth drag
+  &.resizing {
+    transition: none;
+    user-select: none;
   }
 
   @media (max-width: 768px) {
     right: 12px;
     left: 12px;
-    width: auto;
+    width: auto !important; // Override inline style on mobile
     min-width: unset;
     top: 60px;
     bottom: 100px;
@@ -716,6 +719,50 @@ $void-purple: #b967ff;
   &.elevated {
     background: rgba(8, 8, 18, 0.92);
     border-color: rgba(99, 102, 241, 0.3);
+  }
+}
+
+// Resize handle on left edge
+.resizeHandle {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 6px;
+  cursor: ew-resize;
+  background: transparent;
+  z-index: 10;
+  transition: background 0.2s ease;
+
+  &:hover {
+    background: rgba($void-blue, 0.3);
+  }
+
+  &:active {
+    background: rgba($void-blue, 0.5);
+  }
+
+  // Visual indicator line
+  &::after {
+    content: '';
+    position: absolute;
+    left: 2px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 2px;
+    height: 40px;
+    background: rgba($void-blue, 0.2);
+    border-radius: 1px;
+    transition: background 0.2s ease, height 0.2s ease;
+  }
+
+  &:hover::after {
+    background: rgba($void-blue, 0.6);
+    height: 60px;
+  }
+
+  @media (max-width: 768px) {
+    display: none; // Hide resize handle on mobile
   }
 }
 

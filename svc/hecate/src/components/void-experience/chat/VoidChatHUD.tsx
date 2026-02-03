@@ -140,6 +140,18 @@ const VoidChatHUD: React.FC<VoidChatHUDProps> = ({
   const [isCollapsed, setIsCollapsed] = useState(true);
   const [userExpandedChat, setUserExpandedChat] = useState(false);
 
+  // Resizable panel state
+  const [panelWidth, setPanelWidth] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('hecate-chat-width');
+      return saved ? parseInt(saved, 10) : Math.min(window.innerWidth * 0.4, 600);
+    }
+    return 500;
+  });
+  const [isResizing, setIsResizing] = useState(false);
+  const resizeStartX = useRef(0);
+  const resizeStartWidth = useRef(0);
+
   // Slash command state
   const [showCommandDropdown, setShowCommandDropdown] = useState(false);
   const [commandSelectedIndex, setCommandSelectedIndex] = useState(0);
@@ -568,6 +580,37 @@ const VoidChatHUD: React.FC<VoidChatHUDProps> = ({
     return null;
   }
 
+  // Resize handlers for draggable panel width
+  const handleResizeStart = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    setIsResizing(true);
+    resizeStartX.current = e.clientX;
+    resizeStartWidth.current = panelWidth;
+  }, [panelWidth]);
+
+  useEffect(() => {
+    if (!isResizing) return;
+
+    const handleMouseMove = (e: MouseEvent) => {
+      const delta = resizeStartX.current - e.clientX; // Dragging left increases width
+      const newWidth = Math.max(350, Math.min(window.innerWidth * 0.8, resizeStartWidth.current + delta));
+      setPanelWidth(newWidth);
+    };
+
+    const handleMouseUp = () => {
+      setIsResizing(false);
+      localStorage.setItem('hecate-chat-width', panelWidth.toString());
+    };
+
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [isResizing, panelWidth]);
+
   // Expand chat from collapsed state → full open
   const handleExpand = useCallback(() => {
     setIsCollapsed(false);
@@ -613,7 +656,15 @@ const VoidChatHUD: React.FC<VoidChatHUDProps> = ({
   ) : (
     <div className={styles.voidChatContainer}>
       <div className={styles.voidInputBar}>
-        <div className={`${styles.historyPopup} ${hasOverlappingPanels ? styles.elevated : ''}`}>
+        <div
+          className={`${styles.historyPopup} ${hasOverlappingPanels ? styles.elevated : ''} ${isResizing ? styles.resizing : ''}`}
+          style={{ width: panelWidth }}
+        >
+          <div
+            className={styles.resizeHandle}
+            onMouseDown={handleResizeStart}
+            title="Drag to resize"
+          />
           <div className={styles.historyHeader}>
             <div className={styles.historyTitleContainer}>
               <span
