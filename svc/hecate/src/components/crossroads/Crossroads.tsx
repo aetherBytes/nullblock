@@ -72,6 +72,9 @@ const Crossroads: React.FC<CrossroadsProps> = ({
             onConnectWallet={() => {
               onConnectWallet();
             }}
+            onNavigateCrossroads={() => {
+              setCurrentView('marketplace');
+            }}
             animationPhase={animationPhase}
           />
         );

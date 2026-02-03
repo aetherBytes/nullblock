@@ -6,16 +6,18 @@ type AnimationPhase = 'idle' | 'black' | 'stars' | 'background' | 'navbar' | 'co
 
 interface CrossroadsLandingProps {
   onConnectWallet: () => void;
+  onNavigateCrossroads: () => void;
   animationPhase?: AnimationPhase;
 }
 
 const CrossroadsLanding: React.FC<CrossroadsLandingProps> = ({
   onConnectWallet,
+  onNavigateCrossroads,
   animationPhase = 'complete',
 }) => {
   // Determine CSS classes based on animation phase
   const getMissionPrimaryClass = () => {
-    // "Silos are dead. The agent economy is open." fades in with background
+    // "Picks and shovels for the new age." fades in with background
     if (
       animationPhase === 'background' ||
       animationPhase === 'navbar' ||
@@ -50,9 +52,7 @@ const CrossroadsLanding: React.FC<CrossroadsLandingProps> = ({
       <div className={styles.missionStatement}>
         <h2 className={styles.missionText}>
           <span className={getMissionPrimaryClass()}>
-            Silos are dead.
-            <br />
-            The agent economy is open.
+            Picks and shovels for the new age.
           </span>
           <br />
           <span className={getMissionSecondaryClass()}>The first living bazaar. Web3 Native.</span>
@@ -64,11 +64,17 @@ const CrossroadsLanding: React.FC<CrossroadsLandingProps> = ({
           <div className={styles.heroContent}>
             <div className={`${styles.buttonContainer} ${getCtaClass()}`}>
               <button className={styles.connectButton} onClick={onConnectWallet}>
-                <span>🚀 Connect Wallet & Explore</span>
+                <span>Connect to Full Interface</span>
               </button>
-              <p className={styles.missionTagline}>Picks and shovels for the new age.</p>
+              <button className={styles.crossroadsButton} onClick={onNavigateCrossroads}>
+                <span>Enter the Crossroads</span>
+              </button>
             </div>
           </div>
+
+          <p className={`${styles.discoverText} ${getCtaClass()}`}>
+            Discover agents, tools, and workflows — turn exploration into treasure
+          </p>
 
           <div className={`${styles.communityLinks} ${getCtaClass()}`}>
             <a

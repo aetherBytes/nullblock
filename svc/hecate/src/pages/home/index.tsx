@@ -515,20 +515,6 @@ const Home: React.FC = () => {
         hasOverlappingPanels={activeHudTab === 'memcache' || activeHudTab === 'crossroads'}
       />
 
-      {/* Pre-login Hero Text */}
-      {!connectedAddress &&
-        (!initialSession.hasSession || hasLoggedOut) &&
-        currentAnimationPhase !== 'black' && (
-          <div
-            className={`${styles.heroOverlay} ${currentAnimationPhase === 'complete' ? styles.heroComplete : ''}`}
-          >
-            <h1 className={styles.heroTitle}>The Living Directory</h1>
-            <p className={styles.heroSubtitle}>
-              Discover agents, tools, and workflows — turn exploration into treasure
-            </p>
-          </div>
-        )}
-
       <div className={`${styles.scene} ${showHUD ? styles.hudActive : ''}`} />
 
       {showHUD &&
