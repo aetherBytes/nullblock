@@ -81,6 +81,7 @@ const CurvePanel: React.FC<CurvePanelProps> = ({ onError, onSuccess }) => {
   const [selectedCandidate, setSelectedCandidate] = useState<GraduationCandidate | null>(null);
 
   const [configStrategy, setConfigStrategy] = useState<Strategy | null>(null);
+  // @ts-ignore
   const [strategyCurveParams, setStrategyCurveParams] = useState<Record<string, CurveStrategyParams>>({});
 
   const fetchCandidates = useCallback(async () => {
@@ -151,7 +152,8 @@ const CurvePanel: React.FC<CurvePanelProps> = ({ onError, onSuccess }) => {
         setSnipePositions(positions);
       }
       if (statsRes.success && statsRes.data) {
-        setSniperStats(statsRes.data);
+        const sniperData = statsRes.data as any;
+        setSniperStats(sniperData.stats || sniperData);
       }
     } catch (e) {
       onError('Failed to fetch snipe positions');
@@ -339,7 +341,7 @@ const CurvePanel: React.FC<CurvePanelProps> = ({ onError, onSuccess }) => {
     try {
       const res = await arbFarmService.emergencyExitAllPositions();
       if (res.success && res.data) {
-        const { positions_exited, positions_failed, message } = res.data;
+        const { positions_failed, message } = res.data;
         if (positions_failed > 0) {
           onError(`${message} - Check console for details`);
           console.error('Emergency exit results:', res.data.results);
@@ -416,7 +418,7 @@ const CurvePanel: React.FC<CurvePanelProps> = ({ onError, onSuccess }) => {
       return strategyCurveParams[strategyId];
     }
     return {
-      mode: 'graduation_sniper',
+      mode: 'graduation_arbitrage',
       min_graduation_progress: 70,
       max_graduation_progress: 98,
       min_volume_24h_sol: 10,

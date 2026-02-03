@@ -218,7 +218,7 @@ export const useArbFarm = (options: UseArbFarmOptions = {}): UseArbFarmResult =>
   const [tradesError, setTradesError] = useState<string | null>(null);
 
   const [scannerStatus, setScannerStatus] = useState<ScannerStatus | null>(null);
-  const [signals, setSignals] = useState<Signal[]>([]);
+  const [signals, _setSignals] = useState<Signal[]>([]);
   const [scannerLoading, setScannerLoading] = useState(false);
   const [scannerError, setScannerError] = useState<string | null>(null);
 

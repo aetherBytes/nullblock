@@ -40,8 +40,7 @@ const CurveCandidateCard: React.FC<CurveCandidateCardProps> = ({
       if (opportunityScore.recommendation === 'strong_buy') return { label: 'BUY', class: styles.recBuy };
       if (opportunityScore.recommendation === 'buy') return { label: 'BUY', class: styles.recBuy };
       if (opportunityScore.recommendation === 'hold') return { label: 'HOLD', class: styles.recHold };
-      if (opportunityScore.recommendation === 'sell') return { label: 'SELL', class: styles.recSell };
-      if (opportunityScore.recommendation === 'strong_sell') return { label: 'SELL', class: styles.recSell };
+      if (opportunityScore.recommendation === 'avoid') return { label: 'AVOID', class: styles.recSell };
     }
     if (momentum_score >= 70 && risk_score <= 40) return { label: 'HOT', class: styles.recBuy };
     if (momentum_score <= 30 || risk_score >= 70) return { label: 'RISKY', class: styles.recSell };

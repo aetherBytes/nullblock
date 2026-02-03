@@ -95,7 +95,7 @@ const TokenDetailModal: React.FC<TokenDetailModalProps> = ({
       if (!mint) return;
       setLoadingMetrics(true);
       try {
-        const res = await arbFarmService.getCurveMetrics(mint, venue);
+        const res = await arbFarmService.getCurveMetrics(mint);
         if (res.success && res.data) {
           setMetrics(res.data);
         }

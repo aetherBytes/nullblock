@@ -48,11 +48,6 @@ interface VoidScopesProps {
   hasApiKey?: boolean;
 }
 
-const SCOPE_OPTIONS: { id: ScopeType; label: string; icon: string }[] = [
-  { id: 'tasks', label: 'Tasks', icon: '◈' },
-  { id: 'agents', label: 'Agents', icon: '◉' },
-  { id: 'model-info', label: 'Model Info', icon: '◎' },
-];
 
 // Task helpers
 const getStatusIcon = (status: TaskState): string => {
@@ -135,11 +130,11 @@ const getCategoryIcon = (category: string): string => {
 const VoidScopes: React.FC<VoidScopesProps> = ({
   isActive = true,
   isOpen = false,
-  onOpenChange,
+  onOpenChange: _onOpenChange,
   taskManagement,
   modelManagement,
   availableModels = [],
-  activeAgent,
+  activeAgent: _activeAgent,
   setActiveAgent,
   hasApiKey = false,
 }) => {
@@ -159,10 +154,9 @@ const VoidScopes: React.FC<VoidScopesProps> = ({
 
     return !isFree;
   };
-  const [selectedScope, setSelectedScope] = useState<ScopeType>(null);
-  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [selectedScope] = useState<ScopeType>(null);
+  const [, setIsDropdownOpen] = useState(false);
   const [expandedCard, setExpandedCard] = useState<string | null>(null); // All collapsed by default
-  const dropdownRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
   // Toggle card expansion (accordion style - only one at a time)
@@ -236,36 +230,6 @@ const VoidScopes: React.FC<VoidScopesProps> = ({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const handleScopeSelect = (scopeId: ScopeType) => {
-    setSelectedScope(scopeId);
-    setIsDropdownOpen(false);
-    onOpenChange?.(true);
-  };
-
-  const handleToggleDropdown = () => {
-    // Toggle dropdown to show/hide scope options
-    // Keep selected scope open - only close via X button or by selecting another scope
-    setIsDropdownOpen(!isDropdownOpen);
-  };
-
-  const handleClose = () => {
-    setSelectedScope(null);
-    setIsDropdownOpen(false);
-    setSelectedTaskId(null);
-    setShowTaskForm(false);
-    setSelectedAgentId(null);
-    onOpenChange?.(false);
-  };
-
-  const getSelectedLabel = () => {
-    if (!selectedScope) {
-      return 'SCOPES';
-    }
-
-    const scope = SCOPE_OPTIONS.find((s) => s.id === selectedScope);
-
-    return scope ? scope.label.toUpperCase() : 'SCOPES';
-  };
 
   // ============================================
   // TASKS SCOPE
@@ -1091,37 +1055,6 @@ const VoidScopes: React.FC<VoidScopesProps> = ({
     );
   };
 
-  // ============================================
-  // RENDER SCOPE CONTENT
-  // ============================================
-
-  const renderScopeContent = () => {
-    switch (selectedScope) {
-      case 'tasks':
-        if (showTaskForm) {
-          return renderTaskForm();
-        }
-
-        if (selectedTaskId) {
-          return renderTaskDetails();
-        }
-
-        return renderTaskList();
-
-      case 'agents':
-        if (selectedAgentId) {
-          return renderAgentDetails();
-        }
-
-        return renderAgentList();
-
-      case 'model-info':
-        return renderModelInfo();
-
-      default:
-        return null;
-    }
-  };
 
   if (!isActive) {
     return null;

@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React from 'react';
 import { useChat } from '../../hooks/useChat';
 import { useModelManagement } from '../../hooks/useModelManagement';
 import VoidChatHUD from './chat/VoidChatHUD';

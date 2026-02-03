@@ -91,7 +91,6 @@ import type {
   CurveBuildResult,
   SimulatedTrade,
   PnLSummary,
-  LearningInsight,
   LearningInsightsResponse,
   RiskLevel,
   RiskLevelParams,
@@ -186,7 +185,7 @@ class ArbFarmService {
 
       return {
         success: response.ok,
-        data: response.ok ? actualData : undefined,
+        data: response.ok ? (actualData as T | undefined) : undefined,
         error: response.ok
           ? undefined
           : (responseJson?.message as string) || (responseJson?.error as string) || 'Request failed',
@@ -235,19 +234,21 @@ class ArbFarmService {
 
       const stats = statsRes.data;
       const pnl = pnlRes.data;
+      const edgesData: Edge[] = Array.isArray(edgesRes.data) ? edgesRes.data : (edgesRes.data as unknown as { edges?: Edge[] })?.edges || [];
+      const tradesData: Trade[] = Array.isArray(tradesRes.data) ? tradesRes.data : (tradesRes.data as unknown as { trades?: Trade[] })?.trades || [];
+      const alertsData: ThreatAlert[] = Array.isArray(alertsRes.data) ? alertsRes.data : (alertsRes.data as unknown as { alerts?: ThreatAlert[] })?.alerts || [];
       const summary: DashboardSummary = {
-        total_profit_sol: pnl?.total_sol ?? stats?.net_pnl_sol ?? 0,
+        total_profit_sol: pnl?.total_sol ?? stats?.net_profit_sol ?? 0,
         today_profit_sol: pnl?.today_sol ?? 0,
         week_profit_sol: pnl?.week_sol ?? 0,
         win_rate: pnl?.win_rate ?? stats?.win_rate ?? 0,
-        active_opportunities: pnl?.active_positions ?? (Array.isArray(edgesRes.data) ? edgesRes.data : edgesRes.data?.edges)?.filter((e: Edge) => e.status === 'detected')?.length ?? 0,
-        pending_approvals:
-          (Array.isArray(edgesRes.data) ? edgesRes.data : edgesRes.data?.edges)?.filter((e: Edge) => e.status === 'pending_approval')?.length || 0,
+        active_opportunities: pnl?.active_positions ?? edgesData.filter((e: Edge) => e.status === 'detected').length ?? 0,
+        pending_approvals: edgesData.filter((e: Edge) => e.status === 'pending_approval').length || 0,
         executed_today: pnl?.total_trades ?? stats?.total_trades ?? 0,
         swarm_health: swarmRes.data!,
-        top_opportunities: (Array.isArray(edgesRes.data) ? edgesRes.data : edgesRes.data?.edges) || [],
-        recent_trades: (Array.isArray(tradesRes.data) ? tradesRes.data : tradesRes.data?.trades) || [],
-        recent_alerts: (Array.isArray(alertsRes.data) ? alertsRes.data : alertsRes.data?.alerts) || [],
+        top_opportunities: edgesData,
+        recent_trades: tradesData,
+        recent_alerts: alertsData,
         pnl_reset_at: pnl?.pnl_reset_at,
       };
 

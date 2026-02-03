@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import type { Strategy, CurveStrategyParams, CurveStrategyMode } from '../../../../types/arbfarm';
+// @ts-ignore
 import { CURVE_STRATEGY_MODE_LABELS } from '../../../../types/arbfarm';
 import { arbFarmService } from '../../../../common/services/arbfarm-service';
 import styles from '../arbfarm.module.scss';
@@ -14,9 +15,8 @@ interface CurveStrategyConfigModalProps {
 }
 
 const STRATEGY_MODE_OPTIONS: { value: CurveStrategyMode; label: string; description: string }[] = [
-  { value: 'graduation_sniper', label: 'Graduation Sniper', description: 'Target tokens approaching graduation' },
-  { value: 'volume_rider', label: 'Volume Rider', description: 'Follow high volume momentum' },
-  { value: 'early_entry', label: 'Early Entry', description: 'Enter tokens early in lifecycle' },
+  { value: 'graduation_arbitrage', label: 'Graduation Arbitrage', description: 'Target tokens approaching graduation' },
+  { value: 'scalp_on_curve', label: 'Scalp on Curve', description: 'Follow high volume momentum' },
   { value: 'fast_snipe', label: 'Fast Snipe', description: 'Aggressive quick entries' },
 ];
 

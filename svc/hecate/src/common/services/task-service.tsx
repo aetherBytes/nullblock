@@ -48,10 +48,9 @@ class TaskService {
 
       const headers: Record<string, string> = {
         'Content-Type': 'application/json',
-        ...options.headers,
+        ...(options.headers as Record<string, string>),
       };
 
-      // Add wallet context headers if available
       if (this.walletAddress) {
         headers['x-wallet-address'] = this.walletAddress;
       }
@@ -62,13 +61,13 @@ class TaskService {
 
       const url = `${this.erebusUrl}/api/agents/tasks${endpoint}`;
 
-      console.log('🌐 Making request to:', url);
-      console.log('📋 Headers:', headers);
-      console.log('📋 Options:', options);
+      console.log('Making request to:', url);
+      console.log('Headers:', headers);
+      console.log('Options:', options);
 
       const response = await fetch(url, {
-        headers,
         ...options,
+        headers,
       });
 
       console.log('📤 Response status:', response.status);

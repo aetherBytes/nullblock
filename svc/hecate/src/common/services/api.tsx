@@ -90,7 +90,7 @@ const fetchUserProfile = async (publicKey: string): Promise<UserProfileData> => 
 };
 
 // Function to get user's ascent level data
-const fetchAscentLevel = async (publicKey: string): Promise<AscentLevelData> => {
+const fetchAscentLevel = async (_publicKey: string): Promise<AscentLevelData> => {
   try {
     // For now, return mock data since the backend endpoint doesn't exist yet
     // In a real implementation, this would call the backend API

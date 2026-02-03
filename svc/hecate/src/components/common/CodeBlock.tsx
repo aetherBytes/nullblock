@@ -2,14 +2,14 @@ import React, { useState } from 'react';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import styles from './CodeBlock.module.scss';
 
-const customTheme = {
+const customTheme: { [key: string]: React.CSSProperties } = {
   'code[class*="language-"]': {
     color: '#f8f8f2',
     background: 'rgba(185, 103, 255, 0.1)',
     textShadow: '0 1px rgba(0, 0, 0, 0.3)',
     fontFamily: 'Consolas, Monaco, "Andale Mono", "Ubuntu Mono", monospace',
     fontSize: '0.85em',
-    textAlign: 'left',
+    textAlign: 'left' as const,
     whiteSpace: 'pre',
     wordSpacing: 'normal',
     wordBreak: 'normal',
@@ -23,7 +23,7 @@ const customTheme = {
     textShadow: '0 1px rgba(0, 0, 0, 0.3)',
     fontFamily: 'Consolas, Monaco, "Andale Mono", "Ubuntu Mono", monospace',
     fontSize: '0.85em',
-    textAlign: 'left',
+    textAlign: 'left' as const,
     whiteSpace: 'pre',
     wordSpacing: 'normal',
     wordBreak: 'normal',

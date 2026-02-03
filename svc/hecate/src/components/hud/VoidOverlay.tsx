@@ -46,7 +46,7 @@ const VoidOverlay: React.FC<VoidOverlayProps> = ({
   const [welcomeFading, setWelcomeFading] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const settingsRef = useRef<HTMLDivElement>(null);
-  const memcacheRef = useRef<HTMLElement>(null);
+  const memcacheRef = useRef<HTMLDivElement>(null);
 
   const { unlockedTabs } = useWalletTools(publicKey || null, { autoFetch: true });
 

@@ -44,7 +44,7 @@ export const exportTaskToPDF = (task: Task): void => {
       ['Created', new Date(task.created_at).toLocaleString()],
       ...(task.started_at ? [['Started', new Date(task.started_at).toLocaleString()]] : []),
       ...(task.completed_at ? [['Completed', new Date(task.completed_at).toLocaleString()]] : []),
-      ...(task.assigned_agent ? [['Assigned Agent', task.assigned_agent]] : []),
+      ...(task.assigned_agent_id ? [['Assigned Agent', task.assigned_agent_id]] : []),
       ...(task.action_duration
         ? [['Duration', `${(task.action_duration / 1000).toFixed(2)}s`]]
         : []),
@@ -154,7 +154,7 @@ export const exportTaskToPDF = (task: Task): void => {
     doc.text('Conversation History', 15, yPos);
     yPos += 7;
 
-    task.history.forEach((msg: any, idx: number) => {
+    task.history.forEach((msg: any, _idx: number) => {
       if (yPos > 270) {
         doc.addPage();
         yPos = 20;

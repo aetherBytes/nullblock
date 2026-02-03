@@ -52,7 +52,7 @@ interface UseTaskManagementReturn {
 export const useTaskManagement = (
   walletPublicKey?: string | null,
   initialFilter: TaskFilter = {},
-  autoSubscribe: boolean = true,
+  _autoSubscribe: boolean = true,
   addChatNotification?: (
     taskId: string,
     taskName: string,
@@ -81,7 +81,7 @@ export const useTaskManagement = (
 
   // Refs for cleanup
   const isConnectedRef = useRef(false);
-  const activeTaskIdsRef = useRef<Set<string>>(new Set());
+  useRef<Set<string>>(new Set());
 
   // Computed state
   const filteredTasks = Array.isArray(tasks)
@@ -102,7 +102,7 @@ export const useTaskManagement = (
           return false;
         }
 
-        if (filter.assigned_agent && task.assigned_agent !== filter.assigned_agent) {
+        if (filter.assigned_agent_id && task.assigned_agent_id !== filter.assigned_agent_id) {
           return false;
         }
 
@@ -198,7 +198,7 @@ export const useTaskManagement = (
     [activeTask, tasks, addChatNotification],
   );
 
-  const sseHook = useSSE({
+  useSSE({
     onTaskUpdate: handleTaskUpdate,
     onError: (error) => {
       setError(error.message);
@@ -249,7 +249,7 @@ export const useTaskManagement = (
         const chain =
           walletType === 'phantom' ? 'solana' : walletType === 'metamask' ? 'ethereum' : 'solana';
 
-        taskService.setWalletContext(walletPublicKey, chain);
+        taskService.setWalletContext(walletPublicKey ?? null, chain);
 
         const connected = await taskService.connect();
 

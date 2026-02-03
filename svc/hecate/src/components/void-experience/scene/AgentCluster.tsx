@@ -2,7 +2,7 @@ import { Html, useGLTF } from '@react-three/drei';
 import { useFrame } from '@react-three/fiber';
 import React, { useRef, useState, useMemo } from 'react';
 import * as THREE from 'three';
-import type { ClusterData } from '../VoidExperience';
+import { type ClusterData } from '../VoidExperience';
 
 const HECATE_MODEL_PATH = '/models/hecate-orb.glb';
 
@@ -347,7 +347,7 @@ interface AgentClusterProps {
 const AgentCluster: React.FC<AgentClusterProps> = ({
   cluster,
   basePosition,
-  isHovered,
+  isHovered: _isHovered,
   isSelected = false,
   onHover,
   onClick,

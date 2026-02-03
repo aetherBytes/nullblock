@@ -27,7 +27,7 @@ const NAV_ITEMS: { id: ConsensusTab; icon: string; label: string; section: strin
   { id: 'api', icon: '🔌', label: 'API', section: 'System' },
 ];
 
-const ConsensusView: React.FC<ConsensusViewProps> = ({ embedded = false }) => {
+const ConsensusView: React.FC<ConsensusViewProps> = ({ embedded: _embedded = false }) => {
   const [activeTab, setActiveTab] = useState<ConsensusTab>('dashboard');
   const [config, setConfig] = useState<ConsensusConfig | null>(null);
   const [stats, setStats] = useState<ConsensusStatsResponse | null>(null);
@@ -50,7 +50,7 @@ const ConsensusView: React.FC<ConsensusViewProps> = ({ embedded = false }) => {
       ]);
 
       if (configRes.success && configRes.data) {
-        const configData = configRes.data as { config?: ConsensusConfig } & ConsensusConfig;
+        const configData = configRes.data as unknown as { config?: ConsensusConfig } & ConsensusConfig;
         setConfig(configData.config || configData);
       }
       if (statsRes.success && statsRes.data) {
@@ -719,7 +719,7 @@ const ConsensusView: React.FC<ConsensusViewProps> = ({ embedded = false }) => {
                 <div key={idx} className={styles.messageItem}>
                   <div className={styles.messageHeader}>
                     <span className={styles.messageRole}>{msg.role}</span>
-                    {msg.model && <span className={styles.messageModel}>{msg.model}</span>}
+                    {(msg as any).model && <span className={styles.messageModel}>{(msg as any).model}</span>}
                   </div>
                   <p className={styles.messageContent}>{msg.content}</p>
                 </div>

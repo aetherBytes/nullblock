@@ -177,3 +177,21 @@ export interface TaskUpdateRequest {
   priority?: TaskPriority;
   outcome?: TaskOutcome;
 }
+
+export type EventType =
+  | 'price_change'
+  | 'market_opportunity'
+  | 'user_interaction'
+  | 'agent_completion'
+  | 'system_alert'
+  | 'threshold_breach'
+  | 'new_data';
+
+export interface TaskEvent {
+  id: string;
+  type: EventType;
+  data: Record<string, any>;
+  source: string;
+  timestamp: Date;
+  processed: boolean;
+}

@@ -137,7 +137,7 @@ const VoidChatHUD: React.FC<VoidChatHUDProps> = ({
   const [hasUnreadMessages, setHasUnreadMessages] = useState(false);
   const [showTooltip, setShowTooltip] = useState(false);
   const [hasAcknowledgedFirst, setHasAcknowledgedFirst] = useState(false);
-  const [isHydrated, setIsHydrated] = useState(false);
+  const [_isHydrated, setIsHydrated] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState(hasOverlappingPanels);
   const [userExpandedChat, setUserExpandedChat] = useState(false);
 

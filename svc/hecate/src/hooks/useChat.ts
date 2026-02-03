@@ -222,7 +222,7 @@ export const useChat = (_publicKey: string | null) => {
       }
 
       // Check if this is an image generation request
-      const isImageRequest = isImageGenerationRequest(message);
+      isImageGenerationRequest(message);
 
       const response = await agentService.chatWithAgent(activeAgent, message);
 

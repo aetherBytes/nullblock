@@ -21,7 +21,7 @@ interface NullblockLogoProps {
 
 const NullblockLogo: React.FC<NullblockLogoProps> = ({
   state = 'base',
-  theme = 'dark',
+  theme: _theme = 'dark',
   onClick,
   title,
   size = 'medium',

@@ -18,7 +18,7 @@ const OpportunityDetailModal: React.FC<OpportunityDetailModalProps> = ({
   onClose,
   onQuickBuy,
   onTrack,
-  onSuccess,
+  onSuccess: _onSuccess,
   onError,
 }) => {
   const [metrics, setMetrics] = useState<DetailedCurveMetrics | null>(null);
@@ -34,7 +34,7 @@ const OpportunityDetailModal: React.FC<OpportunityDetailModalProps> = ({
       setLoading(true);
       try {
         const [metricsRes, scoreRes] = await Promise.all([
-          arbFarmService.getCurveMetrics(token.mint, token.venue),
+          arbFarmService.getCurveMetrics(token.mint),
           arbFarmService.getOpportunityScore(token.mint),
         ]);
         if (metricsRes.success && metricsRes.data) {
@@ -154,7 +154,7 @@ const OpportunityDetailModal: React.FC<OpportunityDetailModalProps> = ({
         <div className={styles.scoreGrid}>
           <div className={styles.scoreCard}>
             <span className={styles.scoreLabel}>Overall Score</span>
-            <span className={styles.scoreValue}>{(score?.overall ?? momentum_score ?? 0).toFixed(0)}/100</span>
+            <span className={styles.scoreValue}>{(score?.overall_score ?? momentum_score ?? 0).toFixed(0)}/100</span>
           </div>
           <div className={styles.scoreCard}>
             <span className={styles.scoreLabel}>Momentum</span>

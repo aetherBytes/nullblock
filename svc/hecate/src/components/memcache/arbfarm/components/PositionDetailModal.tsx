@@ -40,7 +40,7 @@ const PositionDetailModal: React.FC<PositionDetailModalProps> = ({
       }
       setLoadingMetrics(true);
       try {
-        const res = await arbFarmService.getCurveMetrics(position.token_mint, position.venue);
+        const res = await arbFarmService.getCurveMetrics(position.token_mint);
         if (res.success && res.data) {
           setMetrics(res.data);
         }

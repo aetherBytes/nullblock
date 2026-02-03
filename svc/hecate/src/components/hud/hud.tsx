@@ -1,14 +1,14 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useApiKeyCheck } from '../../hooks/useApiKeyCheck';
-import { useAuthentication } from '../../hooks/useAuthentication';
+import { useAuthentication as _useAuthentication } from '../../hooks/useAuthentication';
 import { useChat } from '../../hooks/useChat';
 import { useEventSystem } from '../../hooks/useEventSystem';
 import { useLogs } from '../../hooks/useLogs';
 import { useModelManagement } from '../../hooks/useModelManagement';
 import { useTaskManagement } from '../../hooks/useTaskManagement';
 import { useUserProfile } from '../../hooks/useUserProfile';
-import { Task, TaskCreationRequest } from '../../types/tasks';
-import { UserProfile } from '../../types/user';
+import type { Task as _Task, TaskCreationRequest as _TaskCreationRequest } from '../../types/tasks';
+import type { UserProfile as _UserProfile } from '../../types/user';
 import Crossroads from '../crossroads/Crossroads';
 import type { MemCacheSection } from '../memcache';
 import { MemCache } from '../memcache';
@@ -52,23 +52,13 @@ interface HUDProps {
   ) => void;
 }
 
-interface AscentLevel {
-  level: number;
-  title: string;
-  description: string;
-  progress: number;
-  nextLevel: number;
-  nextTitle: string;
-  nextDescription: string;
-  accolades: string[];
-}
 
 const HUD: React.FC<HUDProps> = ({
   publicKey,
   onDisconnect,
   onConnectWallet,
   theme = 'light',
-  onThemeChange,
+  onThemeChange: _onThemeChange,
   initialTab = null,
   onToggleMobileMenu,
   loginAnimationPhase = 'idle',
@@ -127,9 +117,9 @@ const HUD: React.FC<HUDProps> = ({
   const { hasApiKeys } = useApiKeyCheck(userProfile?.id || null);
 
   // Tab functionality state
-  const [autoScroll, setAutoScroll] = useState(true);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [logFilter, setLogFilter] = useState<
+  const [autoScroll, _setAutoScroll] = useState(true);
+  const [_searchTerm, _setSearchTerm] = useState('');
+  const [_logFilter, _setLogFilter] = useState<
     'all' | 'info' | 'warning' | 'error' | 'success' | 'debug'
   >('all');
   const logsEndRef = useRef<HTMLDivElement>(null);
@@ -139,17 +129,16 @@ const HUD: React.FC<HUDProps> = ({
   const [isLoadingCategory, setIsLoadingCategory] = useState(false);
   const [showModelDropdown, setShowModelDropdown] = useState(false);
   const [modelSearchQuery, setModelSearchQuery] = useState('');
-  const [isSearchingModels, setIsSearchingModels] = useState(false);
-  const [searchResults, setSearchResults] = useState<any[]>([]);
-  const [searchSubmitted, setSearchSubmitted] = useState(false);
+  const [_isSearchingModels, setIsSearchingModels] = useState(false);
+  const [_searchResults, setSearchResults] = useState<any[]>([]);
+  const [_searchSubmitted, setSearchSubmitted] = useState(false);
   const [showSearchDropdown, setShowSearchDropdown] = useState(false);
   const modelDropdownRef = useRef<HTMLDivElement>(null);
   const searchDropdownRef = useRef<HTMLDivElement>(null);
-  const [modelInfo, setModelInfo] = useState<any>(null);
-  const [isLoadingModelInfo, setIsLoadingModelInfo] = useState(false);
-  const [showFullDescription, setShowFullDescription] = useState(false);
+
+  const [_showFullDescription, _setShowFullDescription] = useState(false);
   const [showModelSelection, setShowModelSelection] = useState(false);
-  const [activeQuickAction, setActiveQuickAction] = useState<string | null>(null);
+  const [activeQuickAction, _setActiveQuickAction] = useState<string | null>(null);
 
   // Use custom hooks
   const chat = useChat(publicKey);
@@ -423,63 +412,6 @@ const HUD: React.FC<HUDProps> = ({
   //   }
   // }, [chat.chatMessages, chat.chatAutoScroll, chat.isUserScrolling]);
 
-  const loadModelInfo = async (modelName?: string) => {
-    if (isLoadingModelInfo) {
-      return;
-    }
-
-    try {
-      setIsLoadingModelInfo(true);
-
-      const { hecateAgent } = await import('../../common/services/hecate-agent');
-
-      const connected = await hecateAgent.connect();
-
-      if (!connected) {
-        return;
-      }
-
-      const currentModelName = modelName || modelManagement.currentSelectedModel;
-
-      if (!currentModelName) {
-        setModelInfo({ error: 'No model currently selected' });
-
-        return;
-      }
-
-      let currentModelInfo = modelManagement.availableModels?.find(
-        (model: any) => model.name === currentModelName,
-      );
-
-      if (!currentModelInfo && modelManagement.availableModels.length === 0) {
-        await modelManagement.loadAvailableModels();
-        currentModelInfo = modelManagement.availableModels?.find(
-          (model: any) => model.name === currentModelName,
-        );
-      }
-
-      if (!currentModelInfo) {
-        setModelInfo({
-          error: `Model ${currentModelName} not found in available models (${modelManagement.availableModels.length} cached)`,
-        });
-
-        return;
-      }
-
-      const enrichedModelInfo = {
-        ...currentModelInfo,
-        is_current: currentModelName === modelManagement.currentSelectedModel,
-        info_loaded_at: new Date().toISOString(),
-      };
-
-      setModelInfo(enrichedModelInfo);
-    } catch (error) {
-      console.error('Error loading model info:', error);
-      setModelInfo({ error: (error as Error).message });
-    } finally {
-      setIsLoadingModelInfo(false);
-    }
-  };
 
   const fuzzyMatch = (text: string, query: string): { matches: boolean; score: number } => {
     const textLower = text.toLowerCase();
@@ -691,47 +623,6 @@ const HUD: React.FC<HUDProps> = ({
     }
   };
 
-  // Legacy functions for stats display (using cached data)
-
-  const getLatestModels = (models: any[], limit: number = 10) => {
-    const filtered = models.filter((model) => {
-      if (!model || typeof model !== 'object') {
-        return false;
-      }
-
-      const hasCreatedAt = model.created_at !== undefined && model.created_at !== null;
-      const hasCreated =
-        model.created !== undefined && model.created !== null && model.created !== 0;
-      const isAvailable = model.available !== false;
-
-      return (hasCreatedAt || hasCreated) && isAvailable;
-    });
-
-    if (filtered.length === 0) {
-      return models.filter((model) => model && model.available !== false).slice(0, limit);
-    }
-
-    const sorted = filtered.sort((a, b) => {
-      let aCreated = a.created_at || a.created;
-      let bCreated = b.created_at || b.created;
-
-      if (typeof aCreated === 'string') {
-        aCreated = new Date(aCreated).getTime();
-      }
-
-      if (typeof bCreated === 'string') {
-        bCreated = new Date(bCreated).getTime();
-      }
-
-      if (isNaN(aCreated) || isNaN(bCreated)) {
-        return 0;
-      }
-
-      return bCreated - aCreated;
-    });
-
-    return sorted.slice(0, limit);
-  };
 
   const getFreeModels = (models: any[], limit: number = 10) =>
     models
@@ -770,19 +661,6 @@ const HUD: React.FC<HUDProps> = ({
       .sort((a, b) => (a.display_name || a.name).localeCompare(b.display_name || b.name))
       .slice(0, limit);
 
-  const getInstructModels = (models: any[], limit: number = 10) =>
-    models
-      .filter((model) => {
-        if (!model.available) {
-          return false;
-        }
-
-        const name = (model.display_name || model.name).toLowerCase();
-
-        return name.includes('instruct') || name.includes('it') || name.includes('chat');
-      })
-      .sort((a, b) => (a.display_name || a.name).localeCompare(b.display_name || b.name))
-      .slice(0, limit);
 
   const getImageModels = (models: any[], limit: number = 10) =>
     models
@@ -932,15 +810,6 @@ const HUD: React.FC<HUDProps> = ({
     }
   };
 
-  const handleHecateToggle = (open: boolean) => {
-    // Close other panels when opening Hecate/Studio
-    if (open && mainHudActiveTab !== null) {
-      setMainHudActiveTab(null);
-      setShowCrossroadsMarketplace(false);
-    }
-
-    setHecatePanelOpen(open);
-  };
 
   const handleResetToVoid = () => {
     setMainHudActiveTab(null);

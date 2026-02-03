@@ -44,7 +44,7 @@ const User: FC<TProps> = ({ id, fields, mainStore: { user, suspense, getUser } }
   return (
     <div style={{ paddingLeft: '50px', textAlign: 'left' }}>
       <p>
-        <strong>{field}:</strong> {user?.[field]}
+        <strong>{String(field)}:</strong> {user?.[field]}
       </p>
       {children}
     </div>

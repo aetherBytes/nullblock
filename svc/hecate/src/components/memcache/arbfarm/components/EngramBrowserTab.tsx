@@ -25,6 +25,7 @@ const EngramBrowserTab: React.FC = () => {
   const [engrams, setEngrams] = useState<Engram[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedEngram, setSelectedEngram] = useState<Engram | null>(null);
+  // @ts-ignore
   const [filter, setFilter] = useState<EngramBrowserFilter>({
     limit: 50,
   });

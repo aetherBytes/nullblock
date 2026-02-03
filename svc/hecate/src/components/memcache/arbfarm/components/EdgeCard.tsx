@@ -30,6 +30,7 @@ const EdgeCard: React.FC<EdgeCardProps> = ({
     return `${sol >= 0 ? '+' : ''}${sol.toFixed(4)} SOL`;
   };
 
+  // @ts-ignore
   const formatProfitBps = (lamports: number, inputLamports: number): string => {
     if (inputLamports === 0) {
       return '0 bps';

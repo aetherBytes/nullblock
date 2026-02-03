@@ -3,9 +3,7 @@ import { agentService } from '../../common/services/agent-service';
 import type { Agent } from '../../types/agents';
 import type {
   TaskCreationRequest,
-  TaskType,
   TaskPriority,
-  TaskCategory,
   SubTaskRequest,
 } from '../../types/tasks';
 import styles from './hud.module.scss';
@@ -76,9 +74,6 @@ const TaskCreationForm: React.FC<TaskCreationFormProps> = ({
     fetchAgents();
   }, []);
 
-  const taskTypes: { value: TaskType; label: string }[] = [
-    { value: 'system', label: 'User Generated' },
-  ];
 
   const priorities: { value: TaskPriority; label: string; color: string }[] = [
     { value: 'urgent', label: 'Urgent', color: '#ff3333' },
@@ -87,9 +82,6 @@ const TaskCreationForm: React.FC<TaskCreationFormProps> = ({
     { value: 'low', label: 'Low', color: '#95a5a6' },
   ];
 
-  const categories: { value: TaskCategory; label: string }[] = [
-    { value: 'user_assigned', label: 'User Generated' },
-  ];
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

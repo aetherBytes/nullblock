@@ -44,11 +44,6 @@ interface MCPWalletBalance {
   balance: number;
 }
 
-interface MCPTradingCommandRequest {
-  command: string;
-  parameters: Record<string, any>;
-}
-
 interface MCPTradingCommandResponse {
   success: boolean;
   result: any;
@@ -292,7 +287,7 @@ export const handleMCPError = (error: any): string => {
 // Migration helper - maps old API calls to new MCP calls
 export const migrateToMCP = {
   // Map old wallet data fetch to new MCP calls
-  fetchWalletData: async (publicKey: string) => {
+  fetchWalletData: async (_publicKey: string) => {
     if (!isAuthenticated()) {
       throw new Error('MCP authentication required');
     }
@@ -307,7 +302,7 @@ export const migrateToMCP = {
   },
 
   // Map old user profile to MCP context
-  fetchUserProfile: async (publicKey: string) => {
+  fetchUserProfile: async (_publicKey: string) => {
     if (!isAuthenticated()) {
       throw new Error('MCP authentication required');
     }

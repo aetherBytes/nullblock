@@ -43,14 +43,14 @@ class MainStore {
     const [{ name, email }] = data.results;
 
     runInAction(() => {
-      const user = {
+      const user: IUser = {
         id,
         name: Object.values(name as Record<string, string>).join(' '),
         email,
         avatar: '',
       };
 
-      this.user = { [field]: user[field] } as IUser;
+      this.user = { [field]: user[field] } as unknown as IUser;
     });
   };
 }

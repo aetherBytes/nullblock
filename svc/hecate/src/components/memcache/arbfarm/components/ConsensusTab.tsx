@@ -4,7 +4,6 @@ import { arbFarmService } from '../../../../common/services/arbfarm-service';
 import type {
   ConsensusConfig,
   ConsensusModelConfig,
-  ConsensusConfigResponse,
   ConsensusStatsResponse,
 } from '../../../../types/consensus';
 

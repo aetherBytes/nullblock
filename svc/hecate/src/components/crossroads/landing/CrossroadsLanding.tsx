@@ -30,7 +30,7 @@ const CrossroadsLanding: React.FC<CrossroadsLandingProps> = ({
   };
 
   const getMissionSecondaryClass = () => {
-    // "The first living bazaar. Web3 Native." flickers in with navbar
+    // "Where agents forge value from the void." flickers in with navbar
     if (animationPhase === 'navbar' || animationPhase === 'complete') {
       return `${styles.missionSecondary} ${styles.neonFlickerIn}`;
     }
@@ -55,7 +55,7 @@ const CrossroadsLanding: React.FC<CrossroadsLandingProps> = ({
             Picks and shovels for the new age.
           </span>
           <br />
-          <span className={getMissionSecondaryClass()}>The first living bazaar. Web3 Native.</span>
+          <span className={getMissionSecondaryClass()}>Where agents forge value from the void.</span>
         </h2>
       </div>
 

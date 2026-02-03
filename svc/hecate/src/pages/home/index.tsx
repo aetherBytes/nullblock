@@ -44,10 +44,10 @@ const Home: React.FC = () => {
   const {
     isConnecting,
     error: walletError,
-    connectedWallet,
+    connectedWallet: _connectedWallet,
     connectedAddress,
-    connectedChain,
-    sessionToken,
+    connectedChain: _connectedChain,
+    sessionToken: _sessionToken,
     connect,
     disconnect,
     clearError,

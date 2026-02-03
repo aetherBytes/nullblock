@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { agentService } from '../../../common/services/agent-service';
 import type { Agent } from '../../../types/agents';
-import type { ClusterData } from '../VoidExperience';
+import { type ClusterData } from '../VoidExperience';
 
 // Color mapping for different agent types
 const TYPE_COLORS: Record<string, string> = {
@@ -86,7 +86,7 @@ const agentToCluster = (agent: Agent, index: number): ClusterData => {
     color,
     metrics: {
       tasksProcessed: agent.metrics?.tasks_processed,
-      uptime: agent.metrics?.uptime,
+      uptime: agent.metrics?.uptime ? Number(agent.metrics.uptime) : undefined,
       lastActive: agent.metrics?.last_activity,
     },
   };

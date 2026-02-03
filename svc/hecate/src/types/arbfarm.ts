@@ -194,16 +194,6 @@ export interface VenueStatus {
   error_message?: string;
 }
 
-export interface Signal {
-  id: string;
-  venue_type: VenueType;
-  signal_type: string;
-  confidence: number;
-  estimated_profit_bps: number;
-  token_pair?: string;
-  detected_at: string;
-  metadata: Record<string, unknown>;
-}
 
 // ============================================================================
 // Behavioral Strategy Types (Scanner-driven strategies)

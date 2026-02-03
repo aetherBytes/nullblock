@@ -30,7 +30,7 @@ const SkeletonCard: React.FC = () => (
 const ServiceGrid: React.FC<ServiceGridProps> = ({
   services,
   loading,
-  viewMode = 'grid',
+  viewMode: _viewMode = 'grid',
   onServiceClick,
 }) => {
   if (loading) {

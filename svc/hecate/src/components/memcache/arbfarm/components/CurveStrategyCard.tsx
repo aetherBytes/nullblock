@@ -159,7 +159,7 @@ const CurveStrategyCard: React.FC<CurveStrategyCardProps> = ({
           </span>
         )}
         <span className={styles.riskDetails}>
-          Max: {strategy.risk_params.max_position_sol} SOL | SL: {strategy.risk_params.stop_loss_percent || 0}%
+          Max: {strategy.risk_params.max_position_sol} SOL | Risk: {strategy.risk_params.max_risk_score || 0}
         </span>
       </div>
 

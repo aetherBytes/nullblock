@@ -54,8 +54,8 @@ const Crossroads: React.FC<CrossroadsProps> = ({
     }
   }, [resetToLanding]);
 
-  const handleServiceClick = (service: ServiceListing) => {
-    setSelectedService(service);
+  const handleServiceClick = (service: unknown) => {
+    setSelectedService(service as ServiceListing);
     setCurrentView('service-detail');
   };
 
@@ -83,8 +83,6 @@ const Crossroads: React.FC<CrossroadsProps> = ({
         return (
           <MarketplaceBrowser
             onServiceClick={handleServiceClick}
-            publicKey={publicKey}
-            onConnectWallet={onConnectWallet}
           />
         );
 

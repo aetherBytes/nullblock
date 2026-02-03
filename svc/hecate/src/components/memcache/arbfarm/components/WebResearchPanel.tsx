@@ -33,6 +33,7 @@ const WebResearchPanel: React.FC = () => {
   const [timeRange, setTimeRange] = useState<'day' | 'week' | 'month' | 'year' | ''>('');
   const [saveToEngrams, setSaveToEngrams] = useState(true);
   const [selectedResult, setSelectedResult] = useState<WebSearchResult | null>(null);
+  // @ts-ignore
   const [fetchedContent, setFetchedContent] = useState<string | null>(null);
   const [analysisResult, setAnalysisResult] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);

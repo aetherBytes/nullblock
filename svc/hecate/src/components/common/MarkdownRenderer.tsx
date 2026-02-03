@@ -3,7 +3,7 @@ import ReactMarkdown from 'react-markdown';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 
 // Create a custom theme to avoid dependency issues
-const customTheme = {
+const customTheme: { [key: string]: React.CSSProperties } = {
   'code[class*="language-"]': {
     color: '#f8f8f2',
     background: 'rgba(185, 103, 255, 0.1)',
@@ -297,7 +297,8 @@ const MarkdownRenderer: React.FC<MarkdownRendererProps> = React.memo(
       <ReactMarkdown
         components={{
           // Custom styling for code blocks with syntax highlighting
-          code: ({ node, inline, className, children, ...props }) => {
+          code: ({ node, className, children, ...props }: any) => {
+            const inline = !(props as any)?.['data-sourcepos'];
             const match = /language-(\w+)/.exec(className || '');
             const language = match ? match[1] : '';
 
@@ -392,7 +393,7 @@ const MarkdownRenderer: React.FC<MarkdownRendererProps> = React.memo(
     prevProps.content === nextProps.content &&
     prevProps.className === nextProps.className &&
     prevProps.images?.length === nextProps.images?.length &&
-    prevProps.images?.every((img, idx) => img.url === nextProps.images?.[idx]?.url),
+    (prevProps.images?.every((img, idx) => img.url === nextProps.images?.[idx]?.url) ?? true),
 );
 
 MarkdownRenderer.displayName = 'MarkdownRenderer';

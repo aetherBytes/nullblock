@@ -4,7 +4,6 @@ import {
   NULLBLOCK_SERVICE_COWS,
   type NullBlockServiceCow,
 } from '../../../constants/nullblock';
-import type { ArbFarmCowSummary } from '../../../types/arbfarm';
 import styles from './stash.module.scss';
 
 interface OwnedTool {
@@ -97,7 +96,7 @@ const StashView: React.FC<StashViewProps> = ({ walletAddress }) => {
     const totalCows = ownedCows.length;
     const totalTools = ownedTools.length;
     const activeTools = ownedTools.filter((t) => t.isActive).length;
-    const fullyOwnedCows = ownedCows.filter((c) => c.isFullyOwned).length;
+    const _fullyOwnedCows = ownedCows.filter((c) => c.isFullyOwned).length; void _fullyOwnedCows;
     const pendingUnlocks = unlockProgress.filter((u) => u.percent > 0 && u.percent < 100);
 
     return (

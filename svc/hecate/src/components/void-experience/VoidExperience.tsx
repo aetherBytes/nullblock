@@ -6,6 +6,20 @@ import styles from './VoidExperience.module.scss';
 import VoidHUD from './VoidHUD';
 import VoidScene from './scene/VoidScene';
 
+export interface ClusterData {
+  id: string;
+  name: string;
+  type: 'agent' | 'protocol' | 'tool' | 'service';
+  status: 'healthy' | 'unhealthy' | 'unknown';
+  description: string;
+  color: string;
+  metrics?: {
+    tasksProcessed?: number;
+    uptime?: number;
+    lastActive?: string;
+  };
+}
+
 interface VoidExperienceProps {
   publicKey: string | null;
   theme?: 'null' | 'light' | 'dark';

@@ -1,7 +1,6 @@
-import React from 'react';
-import styles from './modal.module.scss'; // Assume you have corresponding CSS
+import styles from './modal.module.scss';
 
-const Modal = ({ children, isVisible, onClose }) => {
+const Modal = ({ children, isVisible, onClose }: { children: React.ReactNode; isVisible: boolean; onClose: () => void }) => {
   if (!isVisible) {
     return null;
   }

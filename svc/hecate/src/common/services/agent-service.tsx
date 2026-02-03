@@ -1,5 +1,4 @@
 import type { Agent, AgentServiceResponse, AgentDiscoveryResponse } from '../../types/agents';
-import { AgentType, AgentStatus } from '../../types/agents';
 
 class AgentService {
   private erebusUrl: string;
@@ -35,14 +34,14 @@ class AgentService {
 
       const headers: Record<string, string> = {
         'Content-Type': 'application/json',
-        ...options.headers,
+        ...(options.headers as Record<string, string>),
       };
 
       const url = `${this.erebusUrl}${endpoint}`;
 
       const response = await fetch(url, {
-        headers,
         ...options,
+        headers,
       });
 
       const responseJson = await response.json();

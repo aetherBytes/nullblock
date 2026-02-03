@@ -1,6 +1,7 @@
 import React from 'react';
 import styles from '../crossroads.module.scss';
-import type { FilterState, ServiceCategory } from '../types';
+import type { FilterState } from '../types';
+import type { ServiceCategory } from '../shared/CategoryBadge';
 
 interface FilterSidebarProps {
   filters: FilterState;

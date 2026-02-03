@@ -40,7 +40,7 @@ const ScannerHUD: React.FC<ScannerHUDProps> = ({
   liveTrades = [],
   recentTrades = [],
   onTradeClick,
-  onViewPosition,
+  onViewPosition: _onViewPosition,
   onSignalClick,
   onContenderClick,
   onToggleMonitor,
@@ -67,6 +67,7 @@ const ScannerHUD: React.FC<ScannerHUDProps> = ({
 
   const [toggling, setToggling] = useState<string | null>(null);
   const [isScannerToggling, setIsScannerToggling] = useState(false);
+  // @ts-ignore
   const [error, setError] = useState<string | null>(null);
   const [consensusEnabled, setConsensusEnabled] = useState<boolean>(true);
   const [consensusLastQueried, setConsensusLastQueried] = useState<string | null>(null);
@@ -196,6 +197,7 @@ const ScannerHUD: React.FC<ScannerHUDProps> = ({
     }
   };
 
+  // @ts-ignore
   const handleToggleAll = async (active: boolean) => {
     setToggling('all');
     try {
@@ -502,7 +504,7 @@ const ScannerHUD: React.FC<ScannerHUDProps> = ({
             {scannerStatus?.is_running ? 'Scanner Running' : 'Scanner Stopped'}
           </span>
           <span className={styles.scannerStats}>
-            {scannerStatus?.stats?.total_scans || 0} scans · {scannerStatus?.stats?.total_signals || 0} signals
+            {scannerStatus?.stats?.venues_scanned || 0} scans · {scannerStatus?.stats?.total_signals || 0} signals
           </span>
         </div>
         <div className={styles.scannerInfo}>

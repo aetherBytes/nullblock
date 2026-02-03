@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 import type * as THREE from 'three';
-import type { ClusterData } from '../VoidExperience';
+import { type ClusterData } from '../VoidExperience';
 import { useAgentClusters } from '../hooks/useAgentClusters';
 import AgentCluster from './AgentCluster';
 

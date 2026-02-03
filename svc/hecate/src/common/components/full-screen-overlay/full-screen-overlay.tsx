@@ -1,7 +1,6 @@
-import React from 'react';
-import styles from './fsoverlay.module.scss'; // Path to your SCSS file
+import styles from './fsoverlay.module.scss';
 
-const FullScreenOverlay = ({ isVisible, onClose, children }) => {
+const FullScreenOverlay = ({ isVisible, onClose, children }: { isVisible: boolean; onClose: () => void; children: React.ReactNode }) => {
   if (!isVisible) {
     return null;
   }

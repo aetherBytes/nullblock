@@ -8,7 +8,6 @@ import type {
   DiscoveryResponse,
   MCPTool,
   DiscoveredAgent,
-  DiscoveredProtocol,
 } from '../../types/crossroads';
 
 const EREBUS_API_BASE_URL = import.meta.env.VITE_EREBUS_API_URL || 'http://localhost:3000';

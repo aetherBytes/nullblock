@@ -8,9 +8,9 @@ interface TradeHistoryCardProps {
 }
 
 const TradeHistoryCard: React.FC<TradeHistoryCardProps> = ({ trade, compact = false }) => {
-  const isProfit = trade.profit_lamports > 0;
-  const profitSol = trade.profit_lamports / 1_000_000_000;
-  const gasSol = trade.gas_cost_lamports / 1_000_000_000;
+  const isProfit = (trade.profit_lamports ?? 0) > 0;
+  const profitSol = (trade.profit_lamports ?? 0) / 1_000_000_000;
+  const gasSol = (trade.gas_cost_lamports ?? 0) / 1_000_000_000;
   const netProfit = profitSol - gasSol;
 
   const formatSol = (sol: number): string => `${sol >= 0 ? '+' : ''}${sol.toFixed(4)} SOL`;
@@ -61,7 +61,7 @@ const TradeHistoryCard: React.FC<TradeHistoryCardProps> = ({ trade, compact = fa
       </div>
 
       <div className={styles.tradePrices}>
-        <span>Entry: {trade.entry_price.toFixed(6)}</span>
+        <span>Entry: {trade.entry_price?.toFixed(6)}</span>
         {trade.exit_price && <span>Exit: {trade.exit_price.toFixed(6)}</span>}
       </div>
 

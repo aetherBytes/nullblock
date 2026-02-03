@@ -110,9 +110,9 @@ const ModelInfo: React.FC<ModelInfoProps> = ({
 
   const renderQuickAction = (
     action: string,
-    icon: string,
+    _icon: string,
     label: string,
-    getModels: (models: any[]) => any[],
+    _getModels: (models: any[]) => any[],
   ) => (
     <button
       onClick={() => {
