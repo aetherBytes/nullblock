@@ -4,6 +4,7 @@ import React, { Suspense, useState, useCallback, useRef, useEffect } from 'react
 import * as THREE from 'three';
 import styles from './VoidExperience.module.scss';
 import VoidHUD from './VoidHUD';
+import VoidChatHUD from './chat/VoidChatHUD';
 import VoidScene from './scene/VoidScene';
 
 export interface ClusterData {
@@ -169,7 +170,7 @@ const VoidExperience: React.FC<VoidExperienceProps> = ({
         <Preload all />
       </Canvas>
 
-      {/* VoidHUD only shown when logged in */}
+      {/* Full VoidHUD when logged in */}
       {isLoggedIn && (
         <VoidHUD
           publicKey={publicKey}
@@ -180,6 +181,16 @@ const VoidExperience: React.FC<VoidExperienceProps> = ({
           hecatePanelOpen={hecatePanelOpen}
           onHecatePanelChange={onHecatePanelChange}
           hasOverlappingPanels={hasOverlappingPanels}
+        />
+      )}
+
+      {/* Pre-login chat - Hecate available with free models before wallet connection */}
+      {!isLoggedIn && loginAnimationPhase === 'complete' && (
+        <VoidChatHUD
+          publicKey={null}
+          isActive
+          glowActive={glowActive}
+          agentHealthStatus="healthy"
         />
       )}
     </div>

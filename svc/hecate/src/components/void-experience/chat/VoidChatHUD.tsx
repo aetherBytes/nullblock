@@ -133,12 +133,11 @@ const VoidChatHUD: React.FC<VoidChatHUDProps> = ({
   const [energyState, setEnergyState] = useState<EnergyState>('idle');
   const [messages, setMessages] = useState<VoidMessage[]>([]);
   const [hasInteracted, setHasInteracted] = useState(false);
-  const [showHistory, setShowHistory] = useState(false);
   const [hasUnreadMessages, setHasUnreadMessages] = useState(false);
   const [showTooltip, setShowTooltip] = useState(false);
   const [hasAcknowledgedFirst, setHasAcknowledgedFirst] = useState(false);
   const [_isHydrated, setIsHydrated] = useState(false);
-  const [isCollapsed, setIsCollapsed] = useState(hasOverlappingPanels);
+  const [isCollapsed, setIsCollapsed] = useState(true);
   const [userExpandedChat, setUserExpandedChat] = useState(false);
 
   // Slash command state
@@ -207,9 +206,8 @@ const VoidChatHUD: React.FC<VoidChatHUDProps> = ({
         timestamp: new Date(),
       };
       setMessages((prev) => [...prev, agentMsg]);
-      setShowHistory(true);
+      setIsCollapsed(false);
     } else if (command.action === 'tools') {
-      // Show tool list
       const toolListText = getToolListText();
       const agentMsg: VoidMessage = {
         id: `tools-${Date.now()}`,
@@ -218,7 +216,7 @@ const VoidChatHUD: React.FC<VoidChatHUDProps> = ({
         timestamp: new Date(),
       };
       setMessages((prev) => [...prev, agentMsg]);
-      setShowHistory(true);
+      setIsCollapsed(false);
     } else {
       // Insert command as message to send to agent
       const commandMsg = `Use the ${command.name.replace('/', '')} tool to help me.`;
@@ -232,8 +230,8 @@ const VoidChatHUD: React.FC<VoidChatHUDProps> = ({
   const pendingMessageRef = useRef<{ message: string; msgId: string } | null>(null);
   const tooltipTimerRef = useRef<NodeJS.Timeout | null>(null);
   const hasShownWelcomeRef = useRef(false);
-  const lastPanelStateRef = useRef(false);
-  const showHistoryRef = useRef(false);
+  const lastPanelStateRef = useRef(true);
+  const isCollapsedRef = useRef(true);
 
   // Mark as hydrated on client mount (SSR-safe)
   // Chat is ephemeral - no persistence across page refresh
@@ -247,13 +245,10 @@ const VoidChatHUD: React.FC<VoidChatHUDProps> = ({
   // Only auto-expand if user hasn't manually expanded while panel was open
   useEffect(() => {
     if (hasOverlappingPanels) {
-      // Collapse chat when memcache/crossroads opens (unless user is actively using it)
       if (!isProcessing && !userExpandedChat) {
         setIsCollapsed(true);
-        setShowHistory(false);
       }
     } else {
-      // Panel closed - reset user expansion state
       setUserExpandedChat(false);
     }
   }, [hasOverlappingPanels, isProcessing]);
@@ -288,19 +283,14 @@ const VoidChatHUD: React.FC<VoidChatHUDProps> = ({
 
         setMessages((prev) => [...prev, agentMsg]);
 
-        // Start tooltip timer only if:
-        // 1. User hasn't acknowledged the first message feature yet
-        // 2. History panel is currently closed (user didn't see the message)
-        if (!hasAcknowledgedFirst && !showHistoryRef.current) {
-          // Clear any existing timer
+        // Start tooltip timer if chat is collapsed and user hasn't acknowledged
+        if (!hasAcknowledgedFirst && isCollapsedRef.current) {
           if (tooltipTimerRef.current) {
             clearTimeout(tooltipTimerRef.current);
           }
 
-          // Show tooltip after 10 seconds if history is still closed
           tooltipTimerRef.current = setTimeout(() => {
-            // Double-check history is still closed when timer fires
-            if (!showHistoryRef.current) {
+            if (isCollapsedRef.current) {
               setShowTooltip(true);
             }
           }, 10000);
@@ -368,8 +358,7 @@ const VoidChatHUD: React.FC<VoidChatHUDProps> = ({
           timestamp: new Date(),
         };
         setMessages((prev) => [...prev, agentMsg]);
-        setShowHistory(true);
-        // Restore focus to input
+        setIsCollapsed(false);
         setTimeout(() => inputRef.current?.focus(), 100);
         return;
       }
@@ -386,8 +375,8 @@ const VoidChatHUD: React.FC<VoidChatHUDProps> = ({
 
       setMessages((prev) => [...prev, userMsg]);
 
-      // Auto-open chat history when message is sent
-      setShowHistory(true);
+      // Auto-expand chat when message is sent
+      setIsCollapsed(false);
       setHasUnreadMessages(false);
 
       if (!hasInteracted) {
@@ -475,19 +464,19 @@ const VoidChatHUD: React.FC<VoidChatHUDProps> = ({
     }
   }, [input]);
 
-  // Scroll to bottom when history opens or new messages arrive
+  // Scroll to bottom when chat opens or new messages arrive
   useEffect(() => {
-    if (showHistory && historyRef.current) {
+    if (!isCollapsed && historyRef.current) {
       historyRef.current.scrollTop = historyRef.current.scrollHeight;
     }
-  }, [showHistory, messages]);
+  }, [isCollapsed, messages]);
 
-  // Trigger notification glow when receiving agent response (if history is closed)
+  // Trigger notification glow when receiving agent response (if collapsed)
   useEffect(() => {
-    if (glowActive && !showHistory && messages.length > 0) {
+    if (glowActive && isCollapsed && messages.length > 0) {
       setHasUnreadMessages(true);
     }
-  }, [glowActive, showHistory, messages.length]);
+  }, [glowActive, isCollapsed, messages.length]);
 
   // Cleanup tooltip timer on unmount
   useEffect(
@@ -499,15 +488,13 @@ const VoidChatHUD: React.FC<VoidChatHUDProps> = ({
     [],
   );
 
-  // When history is opened, mark as acknowledged and clear tooltip
+  // When chat is expanded, mark as acknowledged and clear tooltip
   useEffect(() => {
-    if (showHistory) {
-      // User is viewing history, so they've acknowledged messages
+    if (!isCollapsed) {
       if (!hasAcknowledgedFirst) {
         setHasAcknowledgedFirst(true);
       }
 
-      // Clear any pending tooltip timer
       if (tooltipTimerRef.current) {
         clearTimeout(tooltipTimerRef.current);
         tooltipTimerRef.current = null;
@@ -515,26 +502,26 @@ const VoidChatHUD: React.FC<VoidChatHUDProps> = ({
 
       setShowTooltip(false);
     }
-  }, [showHistory, hasAcknowledgedFirst]);
+  }, [isCollapsed, hasAcknowledgedFirst]);
 
   // Sync with external showHistory control (from Hecate panel toggle)
-  // Open AND close history based on external control
+  // External true → expand, external false → collapse
   useEffect(() => {
     if (externalShowHistory !== undefined) {
-      setShowHistory(externalShowHistory);
+      setIsCollapsed(!externalShowHistory);
     }
   }, [externalShowHistory]);
 
-  // Keep showHistoryRef in sync for use in callbacks/timers
+  // Keep isCollapsedRef in sync for use in callbacks/timers
   useEffect(() => {
-    showHistoryRef.current = showHistory;
-  }, [showHistory]);
+    isCollapsedRef.current = isCollapsed;
+  }, [isCollapsed]);
 
-  // Show Hecate welcome/return message when Studio opens
+  // Show Hecate welcome/return message when chat expands
   useEffect(() => {
-    const panelJustOpened = externalShowHistory === true && lastPanelStateRef.current === false;
+    const panelJustOpened = !isCollapsed && lastPanelStateRef.current === true;
 
-    lastPanelStateRef.current = externalShowHistory || false;
+    lastPanelStateRef.current = isCollapsed;
 
     if (panelJustOpened && activeAgent === 'hecate') {
       // Use functional update to check messages without dependency
@@ -575,133 +562,150 @@ const VoidChatHUD: React.FC<VoidChatHUDProps> = ({
         return prev;
       });
     }
-  }, [externalShowHistory, activeAgent]);
+  }, [isCollapsed, activeAgent]);
 
   if (!isActive) {
     return null;
   }
 
-  // Expand chat when there are unread messages or user interacts
+  // Expand chat from collapsed state → full open
   const handleExpand = useCallback(() => {
     setIsCollapsed(false);
-    // Track that user manually expanded while overlapping panel is open
     if (hasOverlappingPanels) {
       setUserExpandedChat(true);
     }
-    if (messages.length > 0) {
-      setShowHistory(true);
-    }
-  }, [messages.length, hasOverlappingPanels]);
+    setHasUnreadMessages(false);
+  }, [hasOverlappingPanels]);
 
-  // Use portal to render at body level, escaping VoidExperience's stacking context
-  const chatContent = (
-    <div className={`${styles.voidChatContainer} ${isCollapsed ? styles.collapsed : ''}`}>
-      {/* Input bar */}
+  // Two states only: collapsed (toggle button) or fully open (history + input)
+  const chatContent = isCollapsed ? (
+    <div className={`${styles.voidChatContainer} ${styles.collapsed}`}>
       <div className={styles.voidInputBar}>
-        {/* Chat History Popup */}
-        {showHistory && (
-          <div className={`${styles.historyPopup} ${hasOverlappingPanels ? styles.elevated : ''}`}>
-            <div className={styles.historyHeader}>
-              <div className={styles.historyTitleContainer}>
-                <span
-                  className={styles.historyAgentName}
-                  onClick={() => {
-                    if (setActiveAgent) {
-                      setActiveAgent(activeAgent === 'hecate' ? 'siren' : 'hecate');
-                    }
-                  }}
-                  title={`Click to switch to ${activeAgent === 'hecate' ? 'Siren' : 'Hecate'}`}
-                >
-                  {activeAgent.toUpperCase()}
-                </span>
-                <span className={styles.historyModelName}>:{formatModelName(currentModel)}</span>
-                {agentHealthStatus === 'unhealthy' && (
-                  <span className={styles.healthWarning} title="API keys required">
-                    ⚠️
-                  </span>
-                )}
-              </div>
-              <button
-                className={styles.historyClose}
-                onClick={() => setShowHistory(false)}
-                aria-label="Close history"
-              >
-                <svg
-                  width="16"
-                  height="16"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                >
-                  <path d="M18 6L6 18M6 6l12 12" />
-                </svg>
-              </button>
+        <div className={styles.inputContainer}>
+          <button
+            type="button"
+            className={`${styles.collapseToggle} ${styles.isCollapsed} ${hasUnreadMessages ? styles.hasUpdates : ''}`}
+            onClick={handleExpand}
+            aria-label="Open Hecate chat"
+          >
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <polyline points="15 18 9 12 15 6" />
+            </svg>
+          </button>
+          {showTooltip && (
+            <div className={styles.unreadTooltip}>
+              <span>HECATE awaits your attention</span>
+              <div className={styles.tooltipArrow} />
             </div>
-            <div className={styles.historyContent} ref={historyRef}>
-              {messages.length === 0 ? (
-                <div className={styles.historyEmpty}>No transmissions yet...</div>
-              ) : (
-                messages.map((msg) => {
-                  const images = getImagesForMessage ? getImagesForMessage(msg.id) : [];
-
-                  return (
-                    <div
-                      key={msg.id}
-                      className={`${styles.historyMessage} ${msg.sender === 'user' ? styles.historyUser : styles.historyAgent} ${msg.isTaskResult ? styles.historyTaskResult : ''}`}
-                    >
-                      <div className={styles.historyMeta}>
-                        <span className={styles.historySender}>
-                          {msg.sender === 'user' ? 'You' : activeAgent.toUpperCase()}
-                        </span>
-                        <span className={styles.historyTime}>
-                          {msg.timestamp.toLocaleTimeString([], {
-                            hour: '2-digit',
-                            minute: '2-digit',
-                          })}
-                        </span>
-                      </div>
-                      {msg.isTaskResult && (
-                        <div className={styles.taskResultHeader}>
-                          <div className={styles.taskResultBadge}>
-                            <span className={styles.taskIcon}>✅</span>
-                            <span className={styles.taskLabel}>Task Result</span>
-                            {msg.taskName && (
-                              <span className={styles.taskName}>"{msg.taskName}"</span>
-                            )}
-                          </div>
-                          {msg.processingTime && (
-                            <span className={styles.processingTime}>⏱️ {msg.processingTime}ms</span>
-                          )}
-                        </div>
-                      )}
-                      <div className={styles.historyText}>
-                        <MarkdownRenderer content={msg.text} images={images} />
-                      </div>
-                    </div>
-                  );
-                })
+          )}
+        </div>
+      </div>
+    </div>
+  ) : (
+    <div className={styles.voidChatContainer}>
+      <div className={styles.voidInputBar}>
+        <div className={`${styles.historyPopup} ${hasOverlappingPanels ? styles.elevated : ''}`}>
+          <div className={styles.historyHeader}>
+            <div className={styles.historyTitleContainer}>
+              <span
+                className={styles.historyAgentName}
+                onClick={() => {
+                  if (setActiveAgent) {
+                    setActiveAgent(activeAgent === 'hecate' ? 'siren' : 'hecate');
+                  }
+                }}
+                title={`Click to switch to ${activeAgent === 'hecate' ? 'Siren' : 'Hecate'}`}
+              >
+                {activeAgent.toUpperCase()}
+              </span>
+              <span className={styles.historyModelName}>:{formatModelName(currentModel)}</span>
+              {agentHealthStatus === 'unhealthy' && (
+                <span className={styles.healthWarning} title="API keys required">
+                  ⚠️
+                </span>
               )}
             </div>
+            <button
+              className={styles.historyClose}
+              onClick={() => setIsCollapsed(true)}
+              aria-label="Close chat"
+            >
+              <svg
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+              >
+                <path d="M18 6L6 18M6 6l12 12" />
+              </svg>
+            </button>
           </div>
-        )}
+          <div className={styles.historyContent} ref={historyRef}>
+            {messages.length === 0 ? (
+              <div className={styles.historyEmpty}>No transmissions yet...</div>
+            ) : (
+              messages.map((msg) => {
+                const images = getImagesForMessage ? getImagesForMessage(msg.id) : [];
+
+                return (
+                  <div
+                    key={msg.id}
+                    className={`${styles.historyMessage} ${msg.sender === 'user' ? styles.historyUser : styles.historyAgent} ${msg.isTaskResult ? styles.historyTaskResult : ''}`}
+                  >
+                    <div className={styles.historyMeta}>
+                      <span className={styles.historySender}>
+                        {msg.sender === 'user' ? 'You' : activeAgent.toUpperCase()}
+                      </span>
+                      <span className={styles.historyTime}>
+                        {msg.timestamp.toLocaleTimeString([], {
+                          hour: '2-digit',
+                          minute: '2-digit',
+                        })}
+                      </span>
+                    </div>
+                    {msg.isTaskResult && (
+                      <div className={styles.taskResultHeader}>
+                        <div className={styles.taskResultBadge}>
+                          <span className={styles.taskIcon}>✅</span>
+                          <span className={styles.taskLabel}>Task Result</span>
+                          {msg.taskName && (
+                            <span className={styles.taskName}>"{msg.taskName}"</span>
+                          )}
+                        </div>
+                        {msg.processingTime && (
+                          <span className={styles.processingTime}>⏱️ {msg.processingTime}ms</span>
+                        )}
+                      </div>
+                    )}
+                    <div className={styles.historyText}>
+                      <MarkdownRenderer content={msg.text} images={images} />
+                    </div>
+                  </div>
+                );
+              })
+            )}
+          </div>
+        </div>
         <form onSubmit={handleSubmit} className={styles.inputForm}>
           <div
             className={`${styles.inputContainer} ${energyState === 'charging' ? styles.charging : ''} ${energyState === 'firing' ? styles.firing : ''} ${energyState === 'processing' ? styles.processing : ''} ${glowActive ? styles.receiving : ''}`}
           >
-            {/* Collapse/Expand toggle */}
             <button
               type="button"
-              className={`${styles.collapseToggle} ${isCollapsed ? styles.isCollapsed : ''} ${hasUnreadMessages ? styles.hasUpdates : ''}`}
-              onClick={() => {
-                if (isCollapsed) {
-                  handleExpand();
-                } else {
-                  setIsCollapsed(true);
-                  setShowHistory(false);
-                }
-              }}
-              aria-label={isCollapsed ? 'Expand chat' : 'Collapse chat'}
+              className={styles.collapseToggle}
+              onClick={() => setIsCollapsed(true)}
+              aria-label="Collapse chat"
             >
               <svg
                 width="16"
@@ -713,76 +717,9 @@ const VoidChatHUD: React.FC<VoidChatHUDProps> = ({
                 strokeLinecap="round"
                 strokeLinejoin="round"
               >
-                {isCollapsed ? (
-                  <polyline points="15 18 9 12 15 6" />
-                ) : (
-                  <polyline points="9 18 15 12 9 6" />
-                )}
+                <polyline points="9 18 15 12 9 6" />
               </svg>
             </button>
-
-            {/* History toggle button - hidden when collapsed unless unread */}
-            {(!isCollapsed || hasUnreadMessages) && (
-              <button
-                type="button"
-                className={`${styles.historyToggle} ${showHistory ? styles.historyActive : ''} ${messages.length === 0 ? styles.historyDisabled : ''} ${hasUnreadMessages && !showHistory ? styles.historyNotification : ''}`}
-                onClick={() => {
-                  if (isCollapsed) {
-                    handleExpand();
-                    return;
-                  }
-                  if (messages.length > 0) {
-                    const newShowHistory = !showHistory;
-
-                    setShowHistory(newShowHistory);
-
-                    if (newShowHistory) {
-                      setHasUnreadMessages(false);
-
-                      // Clear tooltip timer and hide tooltip
-                      if (tooltipTimerRef.current) {
-                        clearTimeout(tooltipTimerRef.current);
-                        tooltipTimerRef.current = null;
-                      }
-
-                      setShowTooltip(false);
-
-                      // Mark that user has acknowledged first message
-                      if (!hasAcknowledgedFirst) {
-                        setHasAcknowledgedFirst(true);
-                      }
-                    }
-                  }
-                }}
-                aria-label="Toggle chat history"
-                disabled={messages.length === 0 && !isCollapsed}
-              >
-                <svg
-                  width="24"
-                  height="24"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2.5"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  style={{
-                    transform: showHistory ? 'rotate(0deg)' : 'rotate(180deg)',
-                    transition: 'transform 0.3s ease',
-                  }}
-                >
-                  <polyline points="6 9 12 15 18 9" />
-                </svg>
-              </button>
-            )}
-            {/* Tooltip for unread message reminder */}
-            {showTooltip && !showHistory && (
-              <div className={styles.unreadTooltip}>
-                <span>HECATE awaits your attention</span>
-                <div className={styles.tooltipArrow} />
-              </div>
-            )}
-            {/* Slash command dropdown */}
             {showCommandDropdown && (
               <CommandDropdown
                 commands={filteredCommands}

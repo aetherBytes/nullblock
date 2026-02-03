@@ -162,8 +162,11 @@ $void-purple: #b967ff;
   align-items: center;
   gap: 0.5rem;
   padding: 1rem;
-  background: rgba(0, 0, 0, 0.4);
+  background: rgba(8, 8, 18, 0.8);
+  backdrop-filter: blur(20px) saturate(1.2);
+  -webkit-backdrop-filter: blur(20px) saturate(1.2);
   border-top: 1px solid rgba($void-blue, 0.25);
+  border-radius: 0 0 12px 12px;
   transition: all 0.3s ease;
   min-height: 60px;
 
@@ -673,7 +676,7 @@ $void-purple: #b967ff;
   }
 }
 
-// History panel - floating void text, no container
+// History panel - frosted glass container
 .historyPopup {
   position: fixed;
   top: 80px;
@@ -681,7 +684,12 @@ $void-purple: #b967ff;
   bottom: 120px;
   width: 40vw;
   min-width: 450px;
-  background: transparent;
+  background: rgba(8, 8, 18, 0.75);
+  backdrop-filter: blur(20px) saturate(1.2);
+  -webkit-backdrop-filter: blur(20px) saturate(1.2);
+  border: 1px solid rgba($void-blue, 0.12);
+  border-radius: 12px;
+  padding: 16px;
   display: flex;
   flex-direction: column;
   pointer-events: auto;
@@ -705,10 +713,8 @@ $void-purple: #b967ff;
 
   // Elevated state when other panels (like MemCache) are open
   &.elevated {
-    background: rgba(10, 10, 20, 0.95);
-    border: 1px solid rgba(99, 102, 241, 0.3);
-    border-radius: 12px;
-    padding: 16px;
+    background: rgba(8, 8, 18, 0.92);
+    border-color: rgba(99, 102, 241, 0.3);
   }
 }
 
