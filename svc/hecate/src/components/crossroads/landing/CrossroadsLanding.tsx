@@ -30,7 +30,7 @@ const CrossroadsLanding: React.FC<CrossroadsLandingProps> = ({
   };
 
   const getMissionSecondaryClass = () => {
-    // "Where agents forge value from the void." flickers in with navbar
+    // "Agents are the new users. Own the tools that own the future." flickers in with navbar
     if (animationPhase === 'navbar' || animationPhase === 'complete') {
       return `${styles.missionSecondary} ${styles.neonFlickerIn}`;
     }
@@ -55,7 +55,7 @@ const CrossroadsLanding: React.FC<CrossroadsLandingProps> = ({
             Picks and shovels for the new age.
           </span>
           <br />
-          <span className={getMissionSecondaryClass()}>Where agents forge value from the void.</span>
+          <span className={getMissionSecondaryClass()}>Agents are the new users. Own the tools that own the future.</span>
         </h2>
       </div>
 
