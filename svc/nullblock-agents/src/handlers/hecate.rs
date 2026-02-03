@@ -1098,13 +1098,28 @@ pub async fn get_history(
 }
 
 pub async fn get_tools(State(state): State<AppState>) -> Result<Json<serde_json::Value>, AppError> {
+    use crate::mcp::tools::get_all_tools;
+
     let agent = state.hecate_agent.read().await;
-    let tools = agent.get_mcp_tools().await?;
+    let external_tools = agent.get_mcp_tools().await?;
+
+    // Get local hecate tools (hecate_remember, hecate_cleanup, etc.)
+    let local_tools = get_all_tools();
+    let local_tools_json: Vec<serde_json::Value> = local_tools
+        .into_iter()
+        .map(|t| serde_json::to_value(t).unwrap_or_default())
+        .collect();
 
     Ok(Json(json!({
         "status": "success",
         "timestamp": chrono::Utc::now().to_rfc3339(),
-        "data": tools
+        "data": {
+            "external_mcp": external_tools,
+            "hecate_tools": local_tools_json,
+            "hecate_tool_names": local_tools_json.iter()
+                .filter_map(|t| t.get("name").and_then(|n| n.as_str()))
+                .collect::<Vec<_>>()
+        }
     })))
 }
 
