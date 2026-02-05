@@ -20,6 +20,12 @@ pub enum AppError {
     #[error("Model not available: {0}")]
     ModelNotAvailable(String),
 
+    #[error("Not found: {0}")]
+    NotFound(String),
+
+    #[error("Forbidden: {0}")]
+    Forbidden(String),
+
     #[error("LLM request failed: {0}")]
     LLMRequestFailed(String),
 
@@ -87,6 +93,10 @@ impl AppError {
             | AppError::InvalidModelConfig(_)
             | AppError::BadRequest(_) => StatusCode::BAD_REQUEST,
 
+            AppError::NotFound(_) => StatusCode::NOT_FOUND,
+
+            AppError::Forbidden(_) => StatusCode::FORBIDDEN,
+
             AppError::TaskAlreadyActioned(_) => StatusCode::CONFLICT,
 
             AppError::AuthError(_) => StatusCode::UNAUTHORIZED,
@@ -117,6 +127,8 @@ impl AppError {
             AppError::AgentNotInitialized => "agent_not_initialized",
             AppError::AgentNotRunning => "agent_not_running",
             AppError::ModelNotAvailable(_) => "model_not_available",
+            AppError::NotFound(_) => "not_found",
+            AppError::Forbidden(_) => "forbidden",
             AppError::LLMRequestFailed(_) => "llm_request_failed",
             AppError::LLMError(_) => "llm_error",
             AppError::InvalidModelConfig(_) => "invalid_model_config",

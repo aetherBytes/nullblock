@@ -1,4 +1,5 @@
 import type { Agent, AgentServiceResponse, AgentDiscoveryResponse } from '../../types/agents';
+import type { SessionListResponse, SessionResponse } from '../../types/sessions';
 
 class AgentService {
   private erebusUrl: string;
@@ -121,6 +122,42 @@ class AgentService {
     return this.makeRequest<boolean>(`/api/agents/${agentName}/clear`, {
       method: 'POST',
     });
+  }
+
+  // Session Management Operations
+  async listSessions(walletAddress: string, limit: number = 20): Promise<AgentServiceResponse<SessionListResponse>> {
+    return this.makeRequest<SessionListResponse>(
+      `/api/agents/hecate/sessions?wallet_address=${encodeURIComponent(walletAddress)}&limit=${limit}`
+    );
+  }
+
+  async createSession(walletAddress: string): Promise<AgentServiceResponse<SessionResponse>> {
+    return this.makeRequest<SessionResponse>('/api/agents/hecate/sessions/new', {
+      method: 'POST',
+      body: JSON.stringify({ wallet_address: walletAddress }),
+    });
+  }
+
+  async getSession(walletAddress: string, sessionId: string): Promise<AgentServiceResponse<SessionResponse>> {
+    return this.makeRequest<SessionResponse>(
+      `/api/agents/hecate/sessions/${sessionId}?wallet_address=${encodeURIComponent(walletAddress)}`
+    );
+  }
+
+  async resumeSession(walletAddress: string, sessionId: string): Promise<AgentServiceResponse<SessionResponse>> {
+    return this.makeRequest<SessionResponse>(`/api/agents/hecate/sessions/${sessionId}/resume`, {
+      method: 'POST',
+      body: JSON.stringify({ wallet_address: walletAddress }),
+    });
+  }
+
+  async deleteSession(walletAddress: string, sessionId: string): Promise<AgentServiceResponse<void>> {
+    return this.makeRequest<void>(
+      `/api/agents/hecate/sessions/${sessionId}?wallet_address=${encodeURIComponent(walletAddress)}`,
+      {
+        method: 'DELETE',
+      }
+    );
   }
 
   // Utility methods

@@ -81,6 +81,7 @@
 - [MCP Servers](./reference/mcp-servers.md)
 - [Environment Variables](./reference/env-vars.md)
 - [Wallet Integration](./reference/wallet.md)
+- [Dev Wallet Overrides](./reference/dev-wallet.md)
 
 ---
 

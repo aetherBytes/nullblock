@@ -97,6 +97,18 @@ fn create_router(state: server::AppState) -> Router {
         .route("/hecate/history", get(hecate::get_history))
         .route("/hecate/model-info", get(hecate::get_model_info))
         .route("/hecate/tools", get(hecate::get_tools))
+        // Hecate session endpoints
+        .route("/hecate/sessions", get(hecate::list_sessions))
+        .route("/hecate/sessions/new", post(hecate::create_session))
+        .route("/hecate/sessions/:session_id", get(hecate::get_session))
+        .route(
+            "/hecate/sessions/:session_id",
+            delete(hecate::delete_session),
+        )
+        .route(
+            "/hecate/sessions/:session_id/resume",
+            post(hecate::resume_session),
+        )
         // Moros agent endpoints
         .route("/moros/chat", post(moros::chat))
         .route("/moros/health", get(moros::health))

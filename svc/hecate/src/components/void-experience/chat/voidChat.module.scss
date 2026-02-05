@@ -901,6 +901,36 @@ $void-purple: #b967ff;
   font-family: 'Courier New', monospace;
 }
 
+.headerActions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.sessionsButton {
+  width: 24px;
+  height: 24px;
+  border-radius: 4px;
+  border: none;
+  background: rgba($void-blue, 0.1);
+  color: rgba($void-blue, 0.7);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+
+  &:hover {
+    background: rgba($void-blue, 0.2);
+    color: $void-blue;
+  }
+
+  svg {
+    width: 14px;
+    height: 14px;
+  }
+}
+
 .historyClose {
   width: 20px;
   height: 20px;

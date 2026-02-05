@@ -1466,7 +1466,7 @@ impl AppState {
             realtime_monitor,
             graduation_sniper,
             wallet_max_position_sol: Arc::new(RwLock::new(10.0)),
-            consensus_scheduler_paused: Arc::new(AtomicBool::new(false)),
+            consensus_scheduler_paused: Arc::new(AtomicBool::new(true)), // ALWAYS start paused - manual trigger only
             consensus_last_queried: Arc::new(RwLock::new(None)),
         })
     }

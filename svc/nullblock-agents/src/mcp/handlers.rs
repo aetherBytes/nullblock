@@ -25,6 +25,10 @@ pub async fn execute_tool(
         "hecate_cleanup" => handle_hecate_cleanup(engrams_client, args).await,
         "hecate_pin_engram" => handle_hecate_pin(engrams_client, args).await,
         "hecate_unpin_engram" => handle_hecate_unpin(engrams_client, args).await,
+        "hecate_new_session" => handle_hecate_new_session(engrams_client, args).await,
+        "hecate_list_sessions" => handle_hecate_list_sessions(engrams_client, args).await,
+        "hecate_resume_session" => handle_hecate_resume_session(engrams_client, args).await,
+        "hecate_delete_session" => handle_hecate_delete_session(engrams_client, args).await,
         "moros_remember" => handle_moros_remember(engrams_client, args).await,
         "moros_cleanup" => handle_hecate_cleanup(engrams_client, args).await,
         "moros_pin_engram" => handle_hecate_pin(engrams_client, args).await,
@@ -453,5 +457,185 @@ async fn handle_hecate_unpin(client: &Arc<EngramsClient>, args: Value) -> McpToo
             McpToolResult::success(serde_json::json!({"unpinned": true, "id": id}).to_string())
         }
         Err(e) => McpToolResult::error(format!("Failed to unpin engram: {}", e)),
+    }
+}
+
+// ==================== Session Management Handlers ====================
+
+async fn handle_hecate_new_session(client: &Arc<EngramsClient>, args: Value) -> McpToolResult {
+    let wallet_address = match args.get("wallet_address").and_then(|v| v.as_str()) {
+        Some(w) => w.to_string(),
+        None => return McpToolResult::error("Missing required field: wallet_address"),
+    };
+
+    let session_id = uuid::Uuid::new_v4().to_string();
+    let now = chrono::Utc::now().to_rfc3339();
+
+    let session_content = serde_json::json!({
+        "session_id": session_id,
+        "title": "New conversation",
+        "message_count": 0,
+        "messages": [],
+        "created_at": now,
+        "updated_at": now
+    });
+
+    let key = format!("chat.session.{}", session_id);
+
+    let request = CreateEngramRequest {
+        wallet_address: wallet_address.clone(),
+        engram_type: "conversation".to_string(),
+        key: key.clone(),
+        content: session_content.to_string(),
+        metadata: None,
+        tags: Some(vec![
+            "chat".to_string(),
+            "session".to_string(),
+            "hecate".to_string(),
+        ]),
+        is_public: Some(false),
+    };
+
+    match client.create_engram(request).await {
+        Ok(engram) => {
+            let result = serde_json::json!({
+                "success": true,
+                "session_id": session_id,
+                "engram_id": engram.id,
+                "title": "New conversation",
+                "message_count": 0,
+                "created_at": now,
+                "updated_at": now
+            });
+            McpToolResult::success(result.to_string())
+        }
+        Err(e) => McpToolResult::error(format!("Failed to create session: {}", e)),
+    }
+}
+
+async fn handle_hecate_list_sessions(client: &Arc<EngramsClient>, args: Value) -> McpToolResult {
+    let wallet_address = match args.get("wallet_address").and_then(|v| v.as_str()) {
+        Some(w) => w.to_string(),
+        None => return McpToolResult::error("Missing required field: wallet_address"),
+    };
+
+    let limit = args.get("limit").and_then(|v| v.as_i64()).or(Some(20));
+
+    let request = SearchRequest {
+        wallet_address: Some(wallet_address.clone()),
+        engram_type: Some("conversation".to_string()),
+        query: None,
+        tags: Some(vec!["session".to_string(), "hecate".to_string()]),
+        limit,
+        offset: None,
+    };
+
+    match client.search_engrams(request).await {
+        Ok(engrams) => {
+            let mut sessions: Vec<serde_json::Value> = engrams
+                .into_iter()
+                .filter(|e| e.wallet_address == wallet_address)
+                .filter_map(|engram| {
+                    let content: serde_json::Value = serde_json::from_str(&engram.content).ok()?;
+                    Some(serde_json::json!({
+                        "session_id": content.get("session_id")?.as_str()?,
+                        "engram_id": engram.id,
+                        "title": content.get("title")?.as_str().unwrap_or("Untitled"),
+                        "message_count": content.get("message_count")?.as_u64().unwrap_or(0),
+                        "created_at": content.get("created_at")?.as_str()?,
+                        "updated_at": content.get("updated_at")?.as_str()?,
+                        "is_pinned": engram.tags.contains(&"pinned".to_string())
+                    }))
+                })
+                .collect();
+
+            sessions.sort_by(|a, b| {
+                let a_time = a.get("updated_at").and_then(|v| v.as_str()).unwrap_or("");
+                let b_time = b.get("updated_at").and_then(|v| v.as_str()).unwrap_or("");
+                b_time.cmp(a_time)
+            });
+
+            let result = serde_json::json!({
+                "success": true,
+                "sessions": sessions,
+                "count": sessions.len()
+            });
+            McpToolResult::success(result.to_string())
+        }
+        Err(e) => McpToolResult::error(format!("Failed to list sessions: {}", e)),
+    }
+}
+
+async fn handle_hecate_resume_session(client: &Arc<EngramsClient>, args: Value) -> McpToolResult {
+    let wallet_address = match args.get("wallet_address").and_then(|v| v.as_str()) {
+        Some(w) => w,
+        None => return McpToolResult::error("Missing required field: wallet_address"),
+    };
+    let session_id = match args.get("session_id").and_then(|v| v.as_str()) {
+        Some(s) => s,
+        None => return McpToolResult::error("Missing required field: session_id"),
+    };
+
+    let key = format!("chat.session.{}", session_id);
+
+    match client.get_engram_by_wallet_key(wallet_address, &key).await {
+        Ok(Some(engram)) => {
+            if engram.wallet_address != wallet_address {
+                return McpToolResult::error("Cannot access session from another wallet");
+            }
+
+            let content: serde_json::Value = match serde_json::from_str(&engram.content) {
+                Ok(c) => c,
+                Err(e) => return McpToolResult::error(format!("Failed to parse session: {}", e)),
+            };
+
+            let result = serde_json::json!({
+                "success": true,
+                "session": content,
+                "engram_id": engram.id
+            });
+            McpToolResult::success(result.to_string())
+        }
+        Ok(None) => McpToolResult::error(format!("Session {} not found", session_id)),
+        Err(e) => McpToolResult::error(format!("Failed to fetch session: {}", e)),
+    }
+}
+
+async fn handle_hecate_delete_session(client: &Arc<EngramsClient>, args: Value) -> McpToolResult {
+    let wallet_address = match args.get("wallet_address").and_then(|v| v.as_str()) {
+        Some(w) => w,
+        None => return McpToolResult::error("Missing required field: wallet_address"),
+    };
+    let session_id = match args.get("session_id").and_then(|v| v.as_str()) {
+        Some(s) => s,
+        None => return McpToolResult::error("Missing required field: session_id"),
+    };
+
+    let key = format!("chat.session.{}", session_id);
+
+    match client.get_engram_by_wallet_key(wallet_address, &key).await {
+        Ok(Some(engram)) => {
+            if engram.wallet_address != wallet_address {
+                return McpToolResult::error("Cannot delete session from another wallet");
+            }
+
+            if engram.tags.contains(&"pinned".to_string()) {
+                return McpToolResult::error("Cannot delete pinned session. Unpin first.");
+            }
+
+            match client.delete_engram(&engram.id).await {
+                Ok(()) => {
+                    let result = serde_json::json!({
+                        "success": true,
+                        "deleted": true,
+                        "session_id": session_id
+                    });
+                    McpToolResult::success(result.to_string())
+                }
+                Err(e) => McpToolResult::error(format!("Failed to delete session: {}", e)),
+            }
+        }
+        Ok(None) => McpToolResult::error(format!("Session {} not found", session_id)),
+        Err(e) => McpToolResult::error(format!("Failed to fetch session: {}", e)),
     }
 }

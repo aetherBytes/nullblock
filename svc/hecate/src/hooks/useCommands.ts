@@ -40,6 +40,18 @@ const BUILTIN_COMMANDS: SlashCommand[] = [
     action: 'execute',
   },
   {
+    name: '/new',
+    description: 'Start a new chat session',
+    category: 'builtin',
+    action: 'execute',
+  },
+  {
+    name: '/sessions',
+    description: 'View and manage chat sessions',
+    category: 'builtin',
+    action: 'execute',
+  },
+  {
     name: '/status',
     description: 'Show agent and service status',
     category: 'builtin',
@@ -102,31 +114,71 @@ export function useCommands(erebusUrl: string = 'http://localhost:3000') {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Fetch MCP tools from backend
+  // Fetch MCP tools from backend (multiple sources)
   const fetchMcpTools = useCallback(async () => {
     setIsLoading(true);
     setError(null);
     try {
-      // Try arb-farm directly first (has most tools)
-      const arbResponse = await fetch('http://localhost:9007/mcp/tools');
-      if (arbResponse.ok) {
-        const tools = await arbResponse.json();
-        // Handle both array and object with tools property
-        const toolList = Array.isArray(tools) ? tools : tools.tools || [];
-        setMcpTools(toolList);
-        return toolList;
+      const allTools: McpTool[] = [];
+      const seenNames = new Set<string>();
+
+      // Fetch Hecate tools from agents service via Erebus
+      try {
+        const hecateResponse = await fetch(`${erebusUrl}/api/agents/hecate/tools`);
+        if (hecateResponse.ok) {
+          const data = await hecateResponse.json();
+          const hecateTools = data.data?.hecate_tools || [];
+          hecateTools.forEach((tool: McpTool) => {
+            if (!seenNames.has(tool.name)) {
+              seenNames.add(tool.name);
+              allTools.push(tool);
+            }
+          });
+        }
+      } catch (e) {
+        console.warn('Failed to fetch Hecate tools:', e);
       }
 
-      // Fallback to Erebus proxy
-      const response = await fetch(`${erebusUrl}/api/mcp/tools`);
-      if (response.ok) {
-        const data = await response.json();
-        const toolList = Array.isArray(data) ? data : data.tools || [];
-        setMcpTools(toolList);
-        return toolList;
+      // Fetch ArbFarm tools
+      try {
+        const arbResponse = await fetch('http://localhost:9007/mcp/tools');
+        if (arbResponse.ok) {
+          const tools = await arbResponse.json();
+          const toolList = Array.isArray(tools) ? tools : tools.tools || [];
+          toolList.forEach((tool: McpTool) => {
+            if (!seenNames.has(tool.name)) {
+              seenNames.add(tool.name);
+              allTools.push(tool);
+            }
+          });
+        }
+      } catch (e) {
+        console.warn('Failed to fetch ArbFarm tools:', e);
       }
 
-      throw new Error('Failed to fetch MCP tools');
+      // Fallback to Erebus proxy for external MCP tools
+      try {
+        const response = await fetch(`${erebusUrl}/api/mcp/tools`);
+        if (response.ok) {
+          const data = await response.json();
+          const toolList = Array.isArray(data) ? data : data.tools || [];
+          toolList.forEach((tool: McpTool) => {
+            if (!seenNames.has(tool.name)) {
+              seenNames.add(tool.name);
+              allTools.push(tool);
+            }
+          });
+        }
+      } catch (e) {
+        console.warn('Failed to fetch Erebus MCP tools:', e);
+      }
+
+      if (allTools.length === 0) {
+        throw new Error('No MCP tools available from any source');
+      }
+
+      setMcpTools(allTools);
+      return allTools;
     } catch (err) {
       console.error('Failed to fetch MCP tools:', err);
       setError((err as Error).message);

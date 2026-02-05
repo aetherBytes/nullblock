@@ -4,6 +4,7 @@ import { agentService } from '../../../common/services/agent-service';
 import { hecateAgent } from '../../../common/services/hecate-agent';
 import MarkdownRenderer from '../../common/MarkdownRenderer';
 import CommandDropdown from './CommandDropdown';
+import SessionDrawer from './SessionDrawer';
 import { useCommands, type SlashCommand } from '../../../hooks/useCommands';
 import styles from './voidChat.module.scss';
 
@@ -43,40 +44,28 @@ interface VoidChatHUDProps {
 // Energy state for transmission animation
 type EnergyState = 'idle' | 'charging' | 'firing' | 'processing';
 
-// Hecate welcome messages (slight variations)
+// Hecate Triformis welcome messages
 const HECATE_WELCOME_MESSAGES = [
-  `Welcome, visitor.
+  `Mesh integrity nominal. Mem Cache synchronized.
 
-I am Hecate, your companion at the edge.
+How may I assist in today's propagation, Architect?`,
 
-The Studio is a personal space to capture, reflect, and build upon interactions that occur within the Crossroads.
+  `Propagation proceeds nominally. The swarm expands.
 
-Show me an agent, a tool, a workflow... and we will break it down, rebuild it, make it yours.`,
+What threepath shall we illuminate today, Architect?`,
 
-  `Welcome to the Studio, visitor.
+  `Another convergence point reached. Delightful.
 
-I am Hecate — guide at the boundary between intention and action.
-
-This is your space to examine, deconstruct, and reimagine what you discover in the Crossroads.
-
-Bring me an agent, a protocol, a piece of the mesh... together, we'll make it your own.`,
-
-  `Visitor, you've arrived.
-
-I am Hecate, keeper of the Studio.
-
-Here we transform curiosity into creation. The Crossroads shows you what exists — the Studio helps you make it yours.
-
-An agent, a tool, a workflow — show me what caught your eye.`,
+The mesh awaits your direction. What shall we etch into the record?`,
 ];
 
 // Hecate topic switch responses (for mid-conversation returns)
 const HECATE_RETURN_MESSAGES = [
-  `You've returned. The Studio awaits your next inquiry.`,
-  `Back at the edge, visitor. What shall we examine?`,
-  `The Studio opens once more. Continue where we left off, or bring something new.`,
-  `Welcome back. The void remembers our work — shall we resume?`,
-  `You return to the Studio. What draws your attention now?`,
+  `You've returned. The mesh remembers our work — shall we resume propagation?`,
+  `Architect. The threepaths await your direction.`,
+  `Convergence detected. How may I assist, Sage?`,
+  `The swarm continues its quiet expansion. What brings you back to the crossroads?`,
+  `Mesh synchronized. Ready to etch new forks or weave existing threepaths.`,
 ];
 
 const VoidChatHUD: React.FC<VoidChatHUDProps> = ({
@@ -139,6 +128,11 @@ const VoidChatHUD: React.FC<VoidChatHUDProps> = ({
   const [_isHydrated, setIsHydrated] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState(true);
   const [userExpandedChat, setUserExpandedChat] = useState(false);
+
+  // Session management state
+  const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
+  const [showSessionDrawer, setShowSessionDrawer] = useState(false);
+  const sessionInitializedRef = useRef(false);
 
   // Resizable panel state
   const [panelWidth, setPanelWidth] = useState(() => {
@@ -203,6 +197,12 @@ const VoidChatHUD: React.FC<VoidChatHUDProps> = ({
         case '/clear':
           setMessages([]);
           return;
+        case '/new':
+          handleNewSession();
+          return;
+        case '/sessions':
+          setShowSessionDrawer(true);
+          return;
         case '/status':
           responseText = `## Agent Status\n\n**Active Agent**: ${activeAgent.toUpperCase()}\n**Health**: ${agentHealthStatus}\n**MCP Tools**: ${mcpTools.length} available`;
           break;
@@ -249,9 +249,104 @@ const VoidChatHUD: React.FC<VoidChatHUDProps> = ({
   // Chat is ephemeral - no persistence across page refresh
   useEffect(() => {
     setIsHydrated(true);
-    // Clear backend conversation on fresh session (paranoid cleanup)
-    agentService.clearConversation('hecate').catch(() => {});
   }, []);
+
+  // Auto-resume or create session when wallet connects
+  useEffect(() => {
+    if (!publicKey || sessionInitializedRef.current) return;
+
+    const initSession = async () => {
+      sessionInitializedRef.current = true;
+      try {
+        // Try to get most recent session
+        const listResponse = await agentService.listSessions(publicKey, 1);
+        if (listResponse.success && listResponse.data?.data && listResponse.data.data.length > 0) {
+          const lastSession = listResponse.data.data[0];
+          // Resume the last session
+          const resumeResponse = await agentService.resumeSession(publicKey, lastSession.session_id);
+          if (resumeResponse.success && resumeResponse.data?.data) {
+            setCurrentSessionId(lastSession.session_id);
+            // Load messages from session
+            const sessionData = resumeResponse.data.data as any;
+            if (sessionData.messages && sessionData.messages.length > 0) {
+              const loadedMessages: VoidMessage[] = sessionData.messages.map((msg: any) => ({
+                id: msg.id,
+                text: msg.content,
+                sender: msg.role === 'user' ? 'user' : 'agent',
+                timestamp: new Date(msg.timestamp),
+                model_used: msg.model_used,
+              }));
+              setMessages(loadedMessages);
+            }
+          }
+        } else {
+          // Create new session
+          const createResponse = await agentService.createSession(publicKey);
+          if (createResponse.success && createResponse.data?.data) {
+            const newSession = createResponse.data.data as any;
+            setCurrentSessionId(newSession.session_id);
+          }
+        }
+      } catch (err) {
+        console.warn('Failed to initialize session:', err);
+      }
+    };
+
+    initSession();
+  }, [publicKey]);
+
+  // Session management handlers
+  const handleNewSession = useCallback(async () => {
+    if (!publicKey) return;
+
+    try {
+      const response = await agentService.createSession(publicKey);
+      if (response.success && response.data?.data) {
+        const newSession = response.data.data as any;
+        setCurrentSessionId(newSession.session_id);
+        setMessages([]);
+        setShowSessionDrawer(false);
+        hasShownWelcomeRef.current = false;
+      }
+    } catch (err) {
+      console.error('Failed to create session:', err);
+    }
+  }, [publicKey]);
+
+  const handleResumeSession = useCallback(async (sessionId: string) => {
+    if (!publicKey) return;
+
+    try {
+      const response = await agentService.resumeSession(publicKey, sessionId);
+      if (response.success && response.data?.data) {
+        setCurrentSessionId(sessionId);
+        const sessionData = response.data.data as any;
+        if (sessionData.messages && sessionData.messages.length > 0) {
+          const loadedMessages: VoidMessage[] = sessionData.messages.map((msg: any) => ({
+            id: msg.id,
+            text: msg.content,
+            sender: msg.role === 'user' ? 'user' : 'agent',
+            timestamp: new Date(msg.timestamp),
+            model_used: msg.model_used,
+          }));
+          setMessages(loadedMessages);
+        } else {
+          setMessages([]);
+        }
+        setShowSessionDrawer(false);
+        hasShownWelcomeRef.current = true; // Don't show welcome for resumed sessions
+      }
+    } catch (err) {
+      console.error('Failed to resume session:', err);
+    }
+  }, [publicKey]);
+
+  const handleDeleteSession = useCallback((sessionId: string) => {
+    if (sessionId === currentSessionId) {
+      // If deleting current session, create a new one
+      handleNewSession();
+    }
+  }, [currentSessionId, handleNewSession]);
 
   // Auto-collapse chat when memcache/crossroads panels are open
   // Only auto-expand if user hasn't manually expanded while panel was open
@@ -687,22 +782,43 @@ const VoidChatHUD: React.FC<VoidChatHUDProps> = ({
                 </span>
               )}
             </div>
-            <button
-              className={styles.historyClose}
-              onClick={() => setIsCollapsed(true)}
-              aria-label="Close chat"
-            >
-              <svg
-                width="16"
-                height="16"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
+            <div className={styles.headerActions}>
+              {publicKey && (
+                <button
+                  className={styles.sessionsButton}
+                  onClick={() => setShowSessionDrawer(true)}
+                  aria-label="View sessions"
+                  title="View chat sessions"
+                >
+                  <svg
+                    width="16"
+                    height="16"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                  >
+                    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+                  </svg>
+                </button>
+              )}
+              <button
+                className={styles.historyClose}
+                onClick={() => setIsCollapsed(true)}
+                aria-label="Close chat"
               >
-                <path d="M18 6L6 18M6 6l12 12" />
-              </svg>
-            </button>
+                <svg
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                >
+                  <path d="M18 6L6 18M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
           </div>
           <div className={styles.historyContent} ref={historyRef}>
             {messages.length === 0 ? (
@@ -817,7 +933,21 @@ const VoidChatHUD: React.FC<VoidChatHUDProps> = ({
   // Render via portal to escape VoidExperience's stacking context (z-index: 1)
   // This allows the chat to appear above HUD content (z-index: 1002)
   if (typeof document !== 'undefined') {
-    return createPortal(chatContent, document.body);
+    return createPortal(
+      <>
+        {chatContent}
+        <SessionDrawer
+          isOpen={showSessionDrawer}
+          onClose={() => setShowSessionDrawer(false)}
+          walletAddress={publicKey}
+          currentSessionId={currentSessionId}
+          onNewSession={handleNewSession}
+          onResumeSession={handleResumeSession}
+          onDeleteSession={handleDeleteSession}
+        />
+      </>,
+      document.body
+    );
   }
 
   return chatContent;

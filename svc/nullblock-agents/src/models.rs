@@ -530,3 +530,58 @@ pub struct TaskListResponse {
     pub error: Option<String>,
     pub timestamp: DateTime<Utc>,
 }
+
+// ==================== Session Management Types ====================
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SessionMessage {
+    pub id: String,
+    pub role: String,
+    pub content: String,
+    pub timestamp: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub model_used: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SessionData {
+    pub session_id: String,
+    pub title: String,
+    pub message_count: usize,
+    pub messages: Vec<SessionMessage>,
+    pub created_at: String,
+    pub updated_at: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SessionSummary {
+    pub session_id: String,
+    pub engram_id: String,
+    pub title: String,
+    pub message_count: usize,
+    pub created_at: String,
+    pub updated_at: String,
+    pub is_pinned: bool,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct CreateSessionRequest {
+    pub wallet_address: String,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct ResumeSessionRequest {
+    pub wallet_address: String,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct ListSessionsQuery {
+    pub wallet_address: String,
+    pub limit: Option<i64>,
+    pub offset: Option<i64>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct DeleteSessionQuery {
+    pub wallet_address: String,
+}

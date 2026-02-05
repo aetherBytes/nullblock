@@ -1,11 +1,14 @@
 use crate::{
     config::dev_wallet::is_dev_wallet,
     error::AppError,
-    models::{ChatMessageResponse, ChatRequest, ModelSelectionRequest, PersonalityRequest},
+    models::{
+        ChatMessageResponse, ChatRequest, CreateSessionRequest, DeleteSessionQuery,
+        ListSessionsQuery, ModelSelectionRequest, PersonalityRequest, ResumeSessionRequest,
+    },
     server::AppState,
 };
 use axum::{
-    extract::{Query, State},
+    extract::{Path, Query, State},
     Json,
 };
 use serde::Deserialize;
@@ -1269,4 +1272,83 @@ async fn ensure_default_engrams(client: &crate::engrams::EngramsClient, wallet_a
         "🧠 Default engrams created for wallet {}",
         &wallet_address[..8]
     );
+}
+
+// ==================== Session Management Endpoints ====================
+
+pub async fn list_sessions(
+    State(state): State<AppState>,
+    Query(params): Query<ListSessionsQuery>,
+) -> Result<Json<serde_json::Value>, AppError> {
+    let agent = state.hecate_agent.read().await;
+    let sessions = agent
+        .list_sessions(&params.wallet_address, params.limit, params.offset)
+        .await?;
+
+    Ok(Json(json!({
+        "success": true,
+        "data": sessions,
+        "total": sessions.len()
+    })))
+}
+
+pub async fn create_session(
+    State(state): State<AppState>,
+    Json(request): Json<CreateSessionRequest>,
+) -> Result<Json<serde_json::Value>, AppError> {
+    let mut agent = state.hecate_agent.write().await;
+    let session = agent.create_new_session(&request.wallet_address).await?;
+
+    Ok(Json(json!({
+        "success": true,
+        "data": session
+    })))
+}
+
+pub async fn get_session(
+    State(state): State<AppState>,
+    Path(session_id): Path<String>,
+    Query(params): Query<DeleteSessionQuery>,
+) -> Result<Json<serde_json::Value>, AppError> {
+    let agent = state.hecate_agent.read().await;
+    let session = agent
+        .get_session(&params.wallet_address, &session_id)
+        .await?;
+
+    Ok(Json(json!({
+        "success": true,
+        "data": session
+    })))
+}
+
+pub async fn delete_session(
+    State(state): State<AppState>,
+    Path(session_id): Path<String>,
+    Query(params): Query<DeleteSessionQuery>,
+) -> Result<Json<serde_json::Value>, AppError> {
+    let agent = state.hecate_agent.read().await;
+    agent
+        .delete_session(&params.wallet_address, &session_id)
+        .await?;
+
+    Ok(Json(json!({
+        "success": true,
+        "message": format!("Session {} deleted", session_id)
+    })))
+}
+
+pub async fn resume_session(
+    State(state): State<AppState>,
+    Path(session_id): Path<String>,
+    Json(request): Json<ResumeSessionRequest>,
+) -> Result<Json<serde_json::Value>, AppError> {
+    let mut agent = state.hecate_agent.write().await;
+    let session = agent
+        .resume_session(&request.wallet_address, &session_id)
+        .await?;
+
+    Ok(Json(json!({
+        "success": true,
+        "data": session
+    })))
 }

@@ -407,22 +407,10 @@ async fn main() -> anyhow::Result<()> {
         .get_bool("scanner_running")
         .await
         .unwrap_or(None);
-    let persisted_consensus = state
-        .settings_repo
-        .get_bool("consensus_scheduler_enabled")
-        .await
-        .unwrap_or(None);
-
-    // Apply persisted consensus state to the AtomicBool immediately
-    if let Some(enabled) = persisted_consensus {
-        let env_override_consensus = false; // no env var for consensus scheduler
-        if !env_override_consensus {
-            consensus_scheduler_paused.store(!enabled, std::sync::atomic::Ordering::Relaxed);
-            if !enabled {
-                info!("[Consensus] ⏸️ Scheduler paused (restored from saved state)");
-            }
-        }
-    }
+    // CONSENSUS SCHEDULER: Always starts PAUSED (manual trigger only)
+    // Do NOT restore from DB - ignore persisted state to prevent accidental LLM quota consumption
+    // User must explicitly enable via UI or API each session if desired
+    info!("[Consensus] ⏸️ Scheduler disabled by default (manual trigger only)");
 
     let position_repo_for_metrics = state.position_repo.clone();
     let engrams_client_for_metrics = state.engrams_client.clone();

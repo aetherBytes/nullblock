@@ -235,6 +235,7 @@ Enable execution via UI or env vars:
 | Volume Hunter | ON (observe only) | Execution via Execution Engine |
 | Position Monitor | ON | Always runs (detects exit conditions, queues sells) |
 | Position Executor | ON | Always runs (executes queued sell transactions) |
+| Consensus Scheduler | OFF | Manual trigger only (UI/API), ignores DB state |
 
 To disable sniper entirely (stop observing): `ARBFARM_ENABLE_SNIPER=0`
 

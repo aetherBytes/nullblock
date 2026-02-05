@@ -272,6 +272,82 @@ fn get_engram_tools() -> Vec<McpTool> {
 fn get_hecate_tools() -> Vec<McpTool> {
     vec![
         McpTool {
+            name: "hecate_new_session".to_string(),
+            description: "Create a new chat session. This clears the current conversation and starts fresh.".to_string(),
+            input_schema: serde_json::json!({
+                "type": "object",
+                "properties": {
+                    "wallet_address": {
+                        "type": "string",
+                        "description": "Wallet address of the user (required)"
+                    }
+                },
+                "required": ["wallet_address"]
+            }),
+            annotations: Some(McpToolAnnotations::write()),
+            tags: Some(vec!["hecate.session".to_string()]),
+        },
+        McpTool {
+            name: "hecate_list_sessions".to_string(),
+            description: "List all chat sessions for a wallet address. Returns session summaries sorted by most recently updated.".to_string(),
+            input_schema: serde_json::json!({
+                "type": "object",
+                "properties": {
+                    "wallet_address": {
+                        "type": "string",
+                        "description": "Wallet address of the user (required)"
+                    },
+                    "limit": {
+                        "type": "integer",
+                        "description": "Maximum number of sessions to return (default 20)"
+                    }
+                },
+                "required": ["wallet_address"]
+            }),
+            annotations: Some(McpToolAnnotations::read_only()),
+            tags: Some(vec!["hecate.session".to_string()]),
+        },
+        McpTool {
+            name: "hecate_resume_session".to_string(),
+            description: "Resume an existing chat session. Loads the session's message history into the conversation.".to_string(),
+            input_schema: serde_json::json!({
+                "type": "object",
+                "properties": {
+                    "wallet_address": {
+                        "type": "string",
+                        "description": "Wallet address of the user (required)"
+                    },
+                    "session_id": {
+                        "type": "string",
+                        "description": "ID of the session to resume (required)"
+                    }
+                },
+                "required": ["wallet_address", "session_id"]
+            }),
+            annotations: Some(McpToolAnnotations::write()),
+            tags: Some(vec!["hecate.session".to_string()]),
+        },
+        McpTool {
+            name: "hecate_delete_session".to_string(),
+            description: "Delete a chat session. Cannot delete pinned sessions.".to_string(),
+            input_schema: serde_json::json!({
+                "type": "object",
+                "properties": {
+                    "wallet_address": {
+                        "type": "string",
+                        "description": "Wallet address of the user (required)"
+                    },
+                    "session_id": {
+                        "type": "string",
+                        "description": "ID of the session to delete (required)"
+                    }
+                },
+                "required": ["wallet_address", "session_id"]
+            }),
+            annotations: Some(McpToolAnnotations::destructive()),
+            tags: Some(vec!["hecate.session".to_string()]),
+        },
+        McpTool {
             name: "hecate_remember".to_string(),
             description: "Proactively save important context about a visitor. Use when they share preferences, facts, decisions, or anything worth remembering.".to_string(),
             input_schema: serde_json::json!({
