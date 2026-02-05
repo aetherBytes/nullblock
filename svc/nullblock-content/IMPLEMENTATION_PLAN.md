@@ -1,6 +1,6 @@
 # NullBlock Content Service - Implementation Plan
 
-## Status: PHASE 1-2 COMPLETE ✓
+## Status: PHASE 1-3 COMPLETE ✓
 
 **Created:** 2026-02-02
 **Updated:** 2026-02-02
@@ -318,11 +318,11 @@ svc/nullblock-content/
 - [x] Create generator/engine.rs
 - [x] Seed default templates (templates.json)
 
-### Phase 3: API Layer (Day 2)
-- [ ] Build routes.rs
-- [ ] Implement handlers (generate, queue, post)
-- [ ] Add error handling
-- [ ] Set up main.rs with Axum
+### Phase 3: API Layer ✓ COMPLETE
+- [x] Build routes.rs
+- [x] Implement handlers (generate, queue, metrics, templates)
+- [x] Add error handling
+- [x] Set up main.rs with Axum
 
 ### Phase 4: Integration (Day 2-3)
 - [ ] Add Kafka event publishing
@@ -415,7 +415,27 @@ TWITTER_API_SECRET=
 
 **Commit:** `8db87c44` - feat(nullblock-content): Phase 1-2 complete
 
+### Phase 3 Complete (2026-02-02)
+
+**Implemented:**
+- Axum server on port 8002 with health check
+- Complete API router with 7 endpoints
+- Request handlers: generate, queue, metrics, templates
+- Shared AppState (Database + ContentGenerator)
+- CORS enabled for development
+
+**API Endpoints:**
+- POST /api/content/generate
+- GET /api/content/queue (with filters)
+- GET /api/content/queue/:id
+- PUT /api/content/queue/:id
+- DELETE /api/content/queue/:id
+- GET /api/content/metrics/:id
+- GET /api/content/templates
+
+**Commit:** `14c71188` - feat(nullblock-content): Phase 3 complete
+
 ---
 
-*Status: READY FOR PHASE 3 (API Layer)*
-*Awaiting command to proceed with routes, handlers, main.rs*
+*Status: READY FOR PHASE 4 (Integration)*
+*Next: Kafka events, MCP tools, Erebus routing, Crossroads listing*

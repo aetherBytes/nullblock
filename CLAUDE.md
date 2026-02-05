@@ -208,7 +208,7 @@ These issues are acceptable for local development but MUST be resolved before de
 ## NullBlock Content Service
 
 **Purpose**: Social media content generation + posting service for Nullblock brand
-**Status**: ✅ Phase 1-2 COMPLETE (core infrastructure + content engine)
+**Status**: ✅ Phase 1-3 COMPLETE (core infrastructure + content engine + API layer)
 **Port**: 8002 (routes through Erebus at 3000)
 **Database**: PostgreSQL (separate from Erebus/Agents)
 
@@ -248,12 +248,13 @@ These issues are acceptable for local development but MUST be resolved before de
 - Image prompt generation (retro-futuristic propaganda style)
 - templates.json with 13 variants, 40+ unique content pieces
 
-**Phase 3 - API Layer (Next):**
-- Routes and handlers
-- Axum server setup (main.rs)
-- Integration with Erebus
+**Phase 3 - API Layer ✓ Complete:**
+- Axum server on port 8002 with health check
+- 7 REST endpoints (generate, queue CRUD, metrics, templates)
+- Request handlers with proper error handling
+- CORS enabled for development
 
-**Phase 4 - Integration (Future):**
+**Phase 4 - Integration (Next):**
 - Kafka event publishing
 - MCP tool definitions
 - Crossroads listing
