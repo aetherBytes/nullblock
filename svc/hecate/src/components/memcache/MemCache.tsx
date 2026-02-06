@@ -10,6 +10,7 @@ import { ArbFarmDashboard } from './arbfarm';
 import type { ArbFarmView } from './arbfarm';
 import { ConsensusView } from './consensus';
 import { StashView } from './stash';
+import { ContentView } from './content';
 import styles from './memcache.module.scss';
 
 export type MemCacheSection =
@@ -18,7 +19,8 @@ export type MemCacheSection =
   | 'agents'
   | 'model'
   | 'arbfarm'
-  | 'consensus';
+  | 'consensus'
+  | 'content';
 
 type TaskCategory = 'todo' | 'running' | 'completed';
 
@@ -1079,6 +1081,8 @@ const MemCache: React.FC<MemCacheProps> = ({
         return <ArbFarmDashboard activeView={arbFarmView} onViewChange={setArbFarmView} />;
       case 'consensus':
         return <ConsensusView />;
+      case 'content':
+        return <ContentView />;
       default:
         return null;
     }

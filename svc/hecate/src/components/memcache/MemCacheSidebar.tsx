@@ -6,7 +6,8 @@ export type MemCacheSection =
   | 'stash'
   | 'agents'
   | 'model'
-  | 'arbfarm';
+  | 'arbfarm'
+  | 'content';
 
 interface MemCacheSidebarProps {
   activeSection: MemCacheSection;
@@ -21,6 +22,7 @@ const SIDEBAR_ITEMS: { id: MemCacheSection; icon: string; label: string }[] = [
   { id: 'agents', icon: '◉', label: 'Agents' },
   { id: 'model', icon: '◎', label: 'Model' },
   { id: 'arbfarm', icon: '⚡', label: 'ArbFarm' },
+  { id: 'content', icon: '📝', label: 'Content' },
 ];
 
 const MemCacheSidebar: React.FC<MemCacheSidebarProps> = ({
