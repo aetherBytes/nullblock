@@ -8,6 +8,7 @@ use tracing_subscriber::{fmt, layer::SubscriberExt, util::SubscriberInitExt, Env
 
 mod database;
 mod error;
+mod events;
 mod generator;
 mod handlers;
 mod models;
@@ -15,6 +16,7 @@ mod repository;
 mod routes;
 
 use database::Database;
+use events::{EventPublisher, HttpEventPublisher, NoOpPublisher};
 use generator::engine::ContentGenerator;
 use generator::templates::TemplateLoader;
 use handlers::generate::AppState;
@@ -80,9 +82,18 @@ async fn main() {
 
     let generator = ContentGenerator::new(template_config);
 
+    let event_publisher: Arc<dyn EventPublisher> = if let Ok(endpoint) = std::env::var("EVENT_ENDPOINT") {
+        info!("📡 Event publishing enabled: {}", endpoint);
+        Arc::new(HttpEventPublisher::new(endpoint))
+    } else {
+        info!("⚠️ Event publishing disabled (no EVENT_ENDPOINT)");
+        Arc::new(NoOpPublisher)
+    };
+
     let state = AppState {
         db: Arc::new(db),
         generator: Arc::new(generator),
+        event_publisher,
     };
 
     let cors = CorsLayer::new()

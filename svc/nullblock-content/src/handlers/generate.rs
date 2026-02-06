@@ -1,8 +1,10 @@
 use axum::{extract::State, http::StatusCode, response::Json};
+use chrono::Utc;
 use serde::Serialize;
 use std::sync::Arc;
 
 use crate::database::Database;
+use crate::events::{ContentEvent, EventPublisher};
 use crate::generator::engine::ContentGenerator;
 use crate::models::{CreateContentRequest, GenerateContentResponse};
 use crate::repository::ContentRepository;
@@ -11,6 +13,7 @@ use crate::repository::ContentRepository;
 pub struct AppState {
     pub db: Arc<Database>,
     pub generator: Arc<ContentGenerator>,
+    pub event_publisher: Arc<dyn EventPublisher>,
 }
 
 pub async fn generate_content(
@@ -55,6 +58,18 @@ pub async fn generate_content(
                 }),
             )
         })?;
+
+    let event = ContentEvent::Generated {
+        content_id: content.id,
+        theme: content.theme.clone(),
+        status: format!("{:?}", content.status).to_lowercase(),
+        metadata: metadata.clone(),
+        timestamp: Utc::now(),
+    };
+
+    if let Err(e) = state.event_publisher.publish(event).await {
+        tracing::warn!("Failed to publish content.generated event: {}", e);
+    }
 
     Ok(Json(GenerateContentResponse {
         id: content.id,

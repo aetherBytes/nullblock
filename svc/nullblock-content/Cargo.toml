@@ -23,6 +23,7 @@ reqwest = { version = "0.11", features = ["json", "rustls-tls"], default-feature
 # To enable: install libsasl2-dev, libcurl4-openssl-dev, or use system packages
 rand = "0.8"
 thiserror = "1.0"
+async-trait = "0.1"
 
 [dependencies.futures]
 version = "0.3"

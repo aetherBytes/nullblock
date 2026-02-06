@@ -80,8 +80,8 @@ use resources::agents::routes::{
 use resources::users::routes::{create_user_endpoint, get_user_endpoint, lookup_user_endpoint};
 use resources::wallets::routes::create_wallet_routes;
 use resources::{
-    create_arb_routes, create_crossroads_routes, create_discovery_routes, create_engram_routes,
-    create_mcp_routes, ExternalService, WalletManager,
+    create_arb_routes, create_content_routes, create_crossroads_routes, create_discovery_routes,
+    create_engram_routes, create_mcp_routes, ExternalService, WalletManager,
 };
 
 #[derive(Serialize)]
@@ -596,19 +596,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .route("/api/users/:user_id", get(get_user_endpoint))
         // Legacy agent user registration (deprecated - use /api/users/register)
         .route("/api/agents/users/register", post(register_user))
-        // Logging endpoints
-        .route(
-            "/api/logs/recent",
-            get(resources::logs::routes::get_recent_logs),
-        )
-        .route(
-            "/api/logs/stream",
-            get(resources::logs::routes::stream_logs),
-        )
         // Merge wallet routes
         .merge(create_wallet_routes())
         // Merge crossroads routes
         .merge(create_crossroads_routes(&app_state.external_service))
+        // Merge content routes
+        .merge(create_content_routes())
         // Merge engram routes
         .merge(create_engram_routes())
         // Merge MCP proxy routes
