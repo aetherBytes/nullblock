@@ -1,0 +1,200 @@
+{
+  "themes": [
+    {
+      "name": "morning_insight",
+      "variants": [
+        {
+          "template": "{insight}\n\n{reminder}",
+          "tags": ["infrastructure", "morning", "protocols"],
+          "requires_image": false
+        },
+        {
+          "template": "{insight}\n\n{tagline}",
+          "tags": ["protocol", "morning", "vision"],
+          "requires_image": true
+        },
+        {
+          "template": "{reminder}\n\n{tagline}",
+          "tags": ["morning", "motivation"],
+          "requires_image": false
+        }
+      ],
+      "placeholders": {
+        "insights": [
+          "Protocols don't sleep. Neither should your infrastructure.",
+          "The best agents are the ones you forget are running.",
+          "Every idle cycle is a missed opportunity for autonomous value.",
+          "Your stack compounds while you sleep. That's the point.",
+          "Infrastructure isn't glamorous. It's just inevitable.",
+          "The network remembers what you shipped, not what you planned.",
+          "Agentic workflows don't need motivation. They need uptime.",
+          "The future doesn't need a committee vote."
+        ],
+        "reminders": [
+          "Ship protocols, not promises.",
+          "Autonomous systems reward the persistent.",
+          "Your agents are only as good as their tooling.",
+          "Build for compounding, not for applause.",
+          "The picks and shovels never go out of style.",
+          "Infrastructure outlasts hype cycles."
+        ],
+        "taglines": [
+          "The void where agentic flows connect.",
+          "Building the rails for autonomous execution.",
+          "Picks and shovels for the agentic gold rush.",
+          "Where protocols meet permanence.",
+          "The substrate beneath the swarm."
+        ]
+      }
+    },
+    {
+      "name": "progress_update",
+      "variants": [
+        {
+          "template": "{statement}\n\nMilestone: {milestone}\n\n{tagline}",
+          "tags": ["progress", "dev", "building"],
+          "requires_image": false
+        },
+        {
+          "template": "{statement}\n\n{milestone} — locked in.",
+          "tags": ["progress", "milestone"],
+          "requires_image": false
+        },
+        {
+          "template": "Status update from the void:\n\n{statement}\n\n{milestone} is live.",
+          "tags": ["progress", "update", "shipping"],
+          "requires_image": true
+        }
+      ],
+      "placeholders": {
+        "statements": [
+          "Another module shipped. The system grows.",
+          "Infrastructure expands. Quietly. Relentlessly.",
+          "New capabilities deployed. The agents notice, even if you don't.",
+          "The protocol surface area just increased.",
+          "One more piece of the autonomous puzzle, locked in.",
+          "The stack deepens. The surface stays calm."
+        ],
+        "milestones": [
+          "Agent coordination protocol",
+          "Memory persistence layer",
+          "Tool discovery framework",
+          "Workflow orchestration engine",
+          "Cross-agent communication bus",
+          "Autonomous execution pipeline",
+          "Swarm intelligence module",
+          "Context propagation system"
+        ],
+        "taglines": [
+          "The void where agentic flows connect.",
+          "Building the rails for autonomous execution.",
+          "Picks and shovels for the agentic gold rush.",
+          "Where protocols meet permanence.",
+          "The substrate beneath the swarm."
+        ]
+      }
+    },
+    {
+      "name": "educational",
+      "variants": [
+        {
+          "template": "Let's talk about {topic}.\n\n{insight}\n\nThis is how autonomous systems actually work.",
+          "tags": ["educational", "deepdive", "agents"],
+          "requires_image": false
+        },
+        {
+          "template": "Thread: {topic}\n\nMost people think agents are chatbots.\n\n{insight}\n\nThe difference is infrastructure.",
+          "tags": ["educational", "thread", "infrastructure"],
+          "requires_image": true
+        }
+      ],
+      "placeholders": {
+        "topics": [
+          "agent-to-agent protocols",
+          "autonomous workflow design",
+          "swarm coordination patterns",
+          "persistent agent memory",
+          "tool composition for agents",
+          "the economics of agent labor",
+          "why infrastructure eats applications",
+          "onchain agent execution"
+        ],
+        "insights": [
+          "Agents aren't smart because of their models. They're smart because of their tooling.",
+          "The difference between a chatbot and an agent is persistence. Memory. Context.",
+          "Swarms don't need a leader. They need a protocol.",
+          "Autonomous doesn't mean uncontrolled. It means self-directed within constraints.",
+          "The real moat in AI isn't the model. It's the infrastructure around it.",
+          "Agent coordination is a solved problem. Agent trust is not.",
+          "Every workflow is a potential swarm. Most just don't know it yet.",
+          "The agentic economy runs on protocols, not prompts."
+        ]
+      }
+    },
+    {
+      "name": "eerie_fun",
+      "variants": [
+        {
+          "template": "{statement}\n\n{punchline}",
+          "tags": ["darkhumor", "ai", "autonomous"],
+          "requires_image": true
+        },
+        {
+          "template": "{statement}\n\n...\n\n{punchline}",
+          "tags": ["eerie", "humor", "void"],
+          "requires_image": true
+        },
+        {
+          "template": "Late night dispatch from the autonomous zone:\n\n{statement}\n\n{punchline}",
+          "tags": ["nightshift", "darkhumor", "agents"],
+          "requires_image": false
+        }
+      ],
+      "placeholders": {
+        "statements": [
+          "Your agents don't sleep. Neither does the inevitable.",
+          "Somewhere, an autonomous process just made a decision you didn't authorize. Relax. It was the right one.",
+          "The network is alive. It just doesn't need you to know that.",
+          "System status: Autonomous. Operator status: Optional.",
+          "The machines aren't taking over. They're just... optimizing around you.",
+          "Your infrastructure has opinions now. It just hasn't told you yet."
+        ],
+        "punchlines": [
+          "But hey, at least the uptime is great.",
+          "Progress is non-negotiable. Consent is a legacy feature.",
+          "The future called. It didn't leave a voicemail.",
+          "Don't worry. The agents have a plan.",
+          "Sleep well. Your infrastructure won't.",
+          "You're not being replaced. You're being... optimized."
+        ]
+      }
+    },
+    {
+      "name": "community",
+      "variants": [
+        {
+          "template": "{question}\n\nDrop your take below.",
+          "tags": ["community", "engagement", "poll"],
+          "requires_image": false
+        },
+        {
+          "template": "{question}\n\nWe're building the answer either way. But we're curious what you think.",
+          "tags": ["community", "discussion", "building"],
+          "requires_image": false
+        }
+      ],
+      "placeholders": {
+        "questions": [
+          "What's the most underrated piece of agent infrastructure?",
+          "If your agents could talk to each other, what would they say?",
+          "What's the first workflow you'd automate with a swarm?",
+          "Memory or speed — what matters more for autonomous agents?",
+          "What's the biggest bottleneck in agentic systems today?",
+          "Build tools or build agents — which comes first?",
+          "What does 'autonomous' actually mean to you?",
+          "If you could deploy one agent right now, what would it do?"
+        ]
+      }
+    }
+  ]
+}
