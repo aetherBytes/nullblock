@@ -115,40 +115,36 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     println!("Connected to database.\n");
 
-    // Agent keys to seed (OpenRouter only for now)
-    let agent_keys = vec![
-        (
-            "hecate",
-            "openrouter",
-            "REDACTED_OPENROUTER_KEY_1",
-            "HECATE Primary Key",
-        ),
-        (
-            "siren",
-            "openrouter",
-            "REDACTED_OPENROUTER_KEY_2",
-            "Siren Primary Key",
-        ),
-        (
-            "arb-farm",
-            "openrouter",
-            "REDACTED_OPENROUTER_KEY_3",
-            "ArbFarm Consensus Key",
-        ),
-        (
-            "moros",
-            "openrouter",
-            "REDACTED_OPENROUTER_KEY_4",
-            "Moros Primary Key",
-        ),
-    ];
+    // Build agent keys from environment variables
+    let mut agent_keys: Vec<(&str, &str, String, &str)> = Vec::new();
+
+    if let Ok(key) = env::var("OPENROUTER_KEY_HECATE") {
+        agent_keys.push(("hecate", "openrouter", key, "HECATE Primary Key"));
+    }
+
+    if let Ok(key) = env::var("OPENROUTER_KEY_SIREN") {
+        agent_keys.push(("siren", "openrouter", key, "Siren Primary Key"));
+    }
+
+    if let Ok(key) = env::var("OPENROUTER_KEY_ARBFARM") {
+        agent_keys.push(("arb-farm", "openrouter", key, "ArbFarm Consensus Key"));
+    }
+
+    if let Ok(key) = env::var("OPENROUTER_KEY_MOROS") {
+        agent_keys.push(("moros", "openrouter", key, "Moros Primary Key"));
+    }
+
+    if agent_keys.is_empty() {
+        println!("No API keys found in environment. Set OPENROUTER_KEY_* variables.");
+        return Ok(());
+    }
 
     for (agent_name, provider, api_key, key_name) in agent_keys {
         println!("Seeding {} / {} ...", agent_name, provider);
 
         // Encrypt the API key
-        let encrypted = encrypt(&cipher, api_key)?;
-        let (key_prefix, key_suffix) = extract_prefix_suffix(api_key);
+        let encrypted = encrypt(&cipher, &api_key)?;
+        let (key_prefix, key_suffix) = extract_prefix_suffix(&api_key);
 
         println!("  Key prefix: {}...", key_prefix);
         println!("  Key suffix: ...{}", key_suffix);

@@ -114,7 +114,8 @@ async fn proxy_request(
     }
 }
 
-async fn content_health() -> Result<ResponseJson<Value>, (StatusCode, ResponseJson<ContentErrorResponse>)> {
+async fn content_health(
+) -> Result<ResponseJson<Value>, (StatusCode, ResponseJson<ContentErrorResponse>)> {
     info!("🏥 Content service health check request received");
     proxy_request("GET", "health", None).await
 }
@@ -179,7 +180,8 @@ async fn get_metrics(
     proxy_request("GET", &format!("api/content/metrics/{}", id), None).await
 }
 
-async fn list_templates() -> Result<ResponseJson<Value>, (StatusCode, ResponseJson<ContentErrorResponse>)> {
+async fn list_templates(
+) -> Result<ResponseJson<Value>, (StatusCode, ResponseJson<ContentErrorResponse>)> {
     info!("📚 List templates request received");
     proxy_request("GET", "api/content/templates", None).await
 }
