@@ -33,6 +33,12 @@ pub async fn execute_tool(
         "moros_cleanup" => handle_hecate_cleanup(engrams_client, args).await,
         "moros_pin_engram" => handle_hecate_pin(engrams_client, args).await,
         "moros_unpin_engram" => handle_hecate_unpin(engrams_client, args).await,
+        // Crossroads discovery tools (public, no wallet required)
+        "crossroads_list_tools" => handle_crossroads_list_tools(args).await,
+        "crossroads_get_tool_info" => handle_crossroads_get_tool_info(args).await,
+        "crossroads_list_agents" => handle_crossroads_list_agents(args).await,
+        "crossroads_list_hot" => handle_crossroads_list_hot(args).await,
+        "crossroads_get_stats" => handle_crossroads_get_stats(args).await,
         _ => McpToolResult::error(format!("Unknown tool: {}", name)),
     }
 }
@@ -637,5 +643,236 @@ async fn handle_hecate_delete_session(client: &Arc<EngramsClient>, args: Value) 
         }
         Ok(None) => McpToolResult::error(format!("Session {} not found", session_id)),
         Err(e) => McpToolResult::error(format!("Failed to fetch session: {}", e)),
+    }
+}
+
+// Crossroads Discovery Handlers (public, no wallet required)
+
+fn get_erebus_base_url() -> String {
+    std::env::var("EREBUS_BASE_URL").unwrap_or_else(|_| "http://localhost:3000".to_string())
+}
+
+async fn handle_crossroads_list_tools(args: Value) -> McpToolResult {
+    let erebus_url = get_erebus_base_url();
+    let url = format!("{}/api/discovery/tools", erebus_url);
+
+    let client = reqwest::Client::new();
+    match client.get(&url).send().await {
+        Ok(response) => {
+            if response.status().is_success() {
+                match response.json::<serde_json::Value>().await {
+                    Ok(data) => {
+                        let category_filter = args.get("category").and_then(|v| v.as_str());
+                        let provider_filter = args.get("provider").and_then(|v| v.as_str());
+                        let limit =
+                            args.get("limit").and_then(|v| v.as_u64()).unwrap_or(20) as usize;
+
+                        let tools = data.get("tools").and_then(|t| t.as_array());
+                        let filtered: Vec<serde_json::Value> = match tools {
+                            Some(t) => t
+                                .iter()
+                                .filter(|tool| {
+                                    let cat_ok = category_filter.map_or(true, |cat| {
+                                        tool.get("category")
+                                            .and_then(|c| c.as_str())
+                                            .map_or(false, |c| {
+                                                c.to_lowercase().contains(&cat.to_lowercase())
+                                            })
+                                    });
+                                    let prov_ok = provider_filter.map_or(true, |prov| {
+                                        tool.get("provider")
+                                            .and_then(|p| p.as_str())
+                                            .map_or(false, |p| {
+                                                p.to_lowercase().contains(&prov.to_lowercase())
+                                            })
+                                    });
+                                    cat_ok && prov_ok
+                                })
+                                .take(limit)
+                                .cloned()
+                                .collect(),
+                            None => vec![],
+                        };
+
+                        let result = serde_json::json!({
+                            "total_count": filtered.len(),
+                            "tools": filtered.iter().map(|t| {
+                                serde_json::json!({
+                                    "name": t.get("name"),
+                                    "description": t.get("description"),
+                                    "category": t.get("category"),
+                                    "provider": t.get("provider"),
+                                    "is_hot": t.get("is_hot")
+                                })
+                            }).collect::<Vec<_>>()
+                        });
+                        McpToolResult::success(
+                            serde_json::to_string_pretty(&result).unwrap_or_default(),
+                        )
+                    }
+                    Err(e) => {
+                        McpToolResult::error(format!("Failed to parse discovery response: {}", e))
+                    }
+                }
+            } else {
+                McpToolResult::error(format!(
+                    "Discovery service returned error: {}",
+                    response.status()
+                ))
+            }
+        }
+        Err(e) => McpToolResult::error(format!("Failed to connect to discovery service: {}", e)),
+    }
+}
+
+async fn handle_crossroads_get_tool_info(args: Value) -> McpToolResult {
+    let tool_name = match args.get("tool_name").and_then(|v| v.as_str()) {
+        Some(n) => n,
+        None => return McpToolResult::error("Missing required field: tool_name"),
+    };
+
+    let erebus_url = get_erebus_base_url();
+    let url = format!("{}/api/discovery/tools", erebus_url);
+
+    let client = reqwest::Client::new();
+    match client.get(&url).send().await {
+        Ok(response) => {
+            if response.status().is_success() {
+                match response.json::<serde_json::Value>().await {
+                    Ok(data) => {
+                        let tools = data.get("tools").and_then(|t| t.as_array());
+                        let tool = tools.and_then(|t| {
+                            t.iter().find(|tool| {
+                                tool.get("name")
+                                    .and_then(|n| n.as_str())
+                                    .map_or(false, |n| n == tool_name)
+                            })
+                        });
+
+                        match tool {
+                            Some(t) => McpToolResult::success(
+                                serde_json::to_string_pretty(t).unwrap_or_default(),
+                            ),
+                            None => McpToolResult::error(format!(
+                                "Tool '{}' not found in Crossroads",
+                                tool_name
+                            )),
+                        }
+                    }
+                    Err(e) => {
+                        McpToolResult::error(format!("Failed to parse discovery response: {}", e))
+                    }
+                }
+            } else {
+                McpToolResult::error(format!(
+                    "Discovery service returned error: {}",
+                    response.status()
+                ))
+            }
+        }
+        Err(e) => McpToolResult::error(format!("Failed to connect to discovery service: {}", e)),
+    }
+}
+
+async fn handle_crossroads_list_agents(args: Value) -> McpToolResult {
+    let erebus_url = get_erebus_base_url();
+    let url = format!("{}/api/discovery/agents", erebus_url);
+
+    let limit = args.get("limit").and_then(|v| v.as_u64()).unwrap_or(20) as usize;
+
+    let client = reqwest::Client::new();
+    match client.get(&url).send().await {
+        Ok(response) => {
+            if response.status().is_success() {
+                match response.json::<serde_json::Value>().await {
+                    Ok(data) => {
+                        let agents = data.get("agents").and_then(|a| a.as_array());
+                        let limited: Vec<serde_json::Value> = match agents {
+                            Some(a) => a.iter().take(limit).cloned().collect(),
+                            None => vec![],
+                        };
+
+                        let result = serde_json::json!({
+                            "total_count": limited.len(),
+                            "agents": limited.iter().map(|a| {
+                                serde_json::json!({
+                                    "name": a.get("name"),
+                                    "description": a.get("description"),
+                                    "status": a.get("status"),
+                                    "capabilities": a.get("capabilities"),
+                                    "tool_count": a.get("tool_count")
+                                })
+                            }).collect::<Vec<_>>()
+                        });
+                        McpToolResult::success(
+                            serde_json::to_string_pretty(&result).unwrap_or_default(),
+                        )
+                    }
+                    Err(e) => {
+                        McpToolResult::error(format!("Failed to parse discovery response: {}", e))
+                    }
+                }
+            } else {
+                McpToolResult::error(format!(
+                    "Discovery service returned error: {}",
+                    response.status()
+                ))
+            }
+        }
+        Err(e) => McpToolResult::error(format!("Failed to connect to discovery service: {}", e)),
+    }
+}
+
+async fn handle_crossroads_list_hot(_args: Value) -> McpToolResult {
+    let erebus_url = get_erebus_base_url();
+    let url = format!("{}/api/discovery/hot", erebus_url);
+
+    let client = reqwest::Client::new();
+    match client.get(&url).send().await {
+        Ok(response) => {
+            if response.status().is_success() {
+                match response.json::<serde_json::Value>().await {
+                    Ok(data) => McpToolResult::success(
+                        serde_json::to_string_pretty(&data).unwrap_or_default(),
+                    ),
+                    Err(e) => {
+                        McpToolResult::error(format!("Failed to parse discovery response: {}", e))
+                    }
+                }
+            } else {
+                McpToolResult::error(format!(
+                    "Discovery service returned error: {}",
+                    response.status()
+                ))
+            }
+        }
+        Err(e) => McpToolResult::error(format!("Failed to connect to discovery service: {}", e)),
+    }
+}
+
+async fn handle_crossroads_get_stats(_args: Value) -> McpToolResult {
+    let erebus_url = get_erebus_base_url();
+    let url = format!("{}/api/discovery/health", erebus_url);
+
+    let client = reqwest::Client::new();
+    match client.get(&url).send().await {
+        Ok(response) => {
+            if response.status().is_success() {
+                match response.json::<serde_json::Value>().await {
+                    Ok(data) => McpToolResult::success(
+                        serde_json::to_string_pretty(&data).unwrap_or_default(),
+                    ),
+                    Err(e) => {
+                        McpToolResult::error(format!("Failed to parse discovery response: {}", e))
+                    }
+                }
+            } else {
+                McpToolResult::error(format!(
+                    "Discovery service returned error: {}",
+                    response.status()
+                ))
+            }
+        }
+        Err(e) => McpToolResult::error(format!("Failed to connect to discovery service: {}", e)),
     }
 }

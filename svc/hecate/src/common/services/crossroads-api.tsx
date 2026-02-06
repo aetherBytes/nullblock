@@ -8,7 +8,11 @@ import type {
   DiscoveryResponse,
   MCPTool,
   DiscoveredAgent,
+  ToolCategory,
+  CategorySummary,
 } from '../../types/crossroads';
+import { TOOL_CATEGORY_ICONS } from '../../types/crossroads';
+import { isToolAllowedInCrossroads } from '../../config/crossroads-allowlist';
 
 const EREBUS_API_BASE_URL = import.meta.env.VITE_EREBUS_API_URL || 'http://localhost:3000';
 
@@ -29,12 +33,44 @@ const transformKeys = <T,>(obj: unknown): T => {
   return obj as T;
 };
 
+const recalculateCategories = (tools: MCPTool[]): CategorySummary[] => {
+  const categoryMap = new Map<string, number>();
+  for (const tool of tools) {
+    categoryMap.set(tool.category, (categoryMap.get(tool.category) || 0) + 1);
+  }
+  return Array.from(categoryMap.entries()).map(([category, count]) => ({
+    category: category as ToolCategory,
+    count,
+    icon: TOOL_CATEGORY_ICONS[category as ToolCategory] || '❓',
+  }));
+};
+
 export const discoverAllMcpTools = async (): Promise<ToolsResponse> => {
   try {
     const response = await axios.get(`${EREBUS_API_BASE_URL}/api/discovery/tools`);
     const data = transformKeys<ToolsResponse>(response.data);
-    console.log('Discovered MCP tools:', data.totalCount);
-    return data;
+
+    const filteredTools = data.tools.filter((tool) =>
+      isToolAllowedInCrossroads(tool.name)
+    );
+    const filteredHotCount = filteredTools.filter((t) => t.isHot).length;
+    const filteredCategories = recalculateCategories(filteredTools);
+
+    console.log(
+      'Discovered MCP tools:',
+      filteredTools.length,
+      '(filtered from',
+      data.totalCount,
+      ')'
+    );
+
+    return {
+      ...data,
+      tools: filteredTools,
+      totalCount: filteredTools.length,
+      hotCount: filteredHotCount,
+      categories: filteredCategories,
+    };
   } catch (error) {
     console.error('Failed to discover MCP tools:', error);
     throw error;
@@ -69,8 +105,24 @@ export const discoverHotItems = async (): Promise<HotItemsResponse> => {
   try {
     const response = await axios.get(`${EREBUS_API_BASE_URL}/api/discovery/hot`);
     const data = transformKeys<HotItemsResponse>(response.data);
-    console.log('Discovered hot items:', data.totalCount);
-    return data;
+
+    const filteredTools = data.tools.filter((tool) =>
+      isToolAllowedInCrossroads(tool.name)
+    );
+
+    console.log(
+      'Discovered hot items:',
+      filteredTools.length,
+      '(filtered from',
+      data.totalCount,
+      ')'
+    );
+
+    return {
+      ...data,
+      tools: filteredTools,
+      totalCount: filteredTools.length,
+    };
   } catch (error) {
     console.error('Failed to discover hot items:', error);
     throw error;
@@ -81,13 +133,26 @@ export const discoverAll = async (): Promise<DiscoveryResponse> => {
   try {
     const response = await axios.get(`${EREBUS_API_BASE_URL}/api/discovery/all`);
     const data = transformKeys<DiscoveryResponse>(response.data);
+
+    const filteredTools = data.tools.filter((tool) =>
+      isToolAllowedInCrossroads(tool.name)
+    );
+    const filteredHot = data.hot.filter((tool) =>
+      isToolAllowedInCrossroads(tool.name)
+    );
+
     console.log('Discovery all response:', {
-      tools: data.tools.length,
+      tools: filteredTools.length,
       agents: data.agents.length,
       protocols: data.protocols.length,
-      hot: data.hot.length,
+      hot: filteredHot.length,
     });
-    return data;
+
+    return {
+      ...data,
+      tools: filteredTools,
+      hot: filteredHot,
+    };
   } catch (error) {
     console.error('Failed to fetch all discovery data:', error);
     throw error;

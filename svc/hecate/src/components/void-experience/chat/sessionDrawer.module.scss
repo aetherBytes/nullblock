@@ -152,6 +152,38 @@
   color: rgba(255, 255, 255, 0.4);
 }
 
+.sessionActions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.pinButton {
+  background: transparent;
+  border: none;
+  color: rgba(255, 255, 255, 0.3);
+  cursor: pointer;
+  padding: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: all 0.2s;
+
+  .sessionItem:hover & {
+    opacity: 1;
+  }
+
+  &:hover {
+    color: rgba(46, 213, 115, 0.9);
+  }
+
+  &.isPinned {
+    opacity: 1;
+    color: rgba(46, 213, 115, 0.8);
+  }
+}
+
 .deleteButton {
   background: transparent;
   border: none;
@@ -170,5 +202,112 @@
 
   &:hover {
     color: rgba(255, 100, 100, 0.8);
+  }
+}
+
+.sessionSummary {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.4);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-top: 2px;
+  font-style: italic;
+}
+
+.headerActions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.cleanupAllButton {
+  background: transparent;
+  border: none;
+  color: rgba(255, 255, 255, 0.4);
+  cursor: pointer;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+
+  &:hover {
+    color: rgba(255, 100, 100, 0.8);
+  }
+
+  &:disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+  }
+}
+
+.confirmDialog {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1200;
+}
+
+.confirmContent {
+  background: rgba(10, 10, 15, 0.98);
+  border: 1px solid rgba(255, 100, 100, 0.3);
+  border-radius: 8px;
+  padding: 20px;
+  width: 320px;
+  max-width: 90vw;
+
+  h4 {
+    margin: 0 0 12px 0;
+    font-size: 14px;
+    font-weight: 600;
+    color: rgba(255, 100, 100, 0.9);
+  }
+
+  p {
+    margin: 0 0 16px 0;
+    font-size: 13px;
+    color: rgba(255, 255, 255, 0.7);
+    line-height: 1.5;
+  }
+}
+
+.confirmActions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+
+  button {
+    padding: 8px 16px;
+    border-radius: 4px;
+    border: none;
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 500;
+    transition: all 0.2s;
+  }
+}
+
+.confirmCancel {
+  background: rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.7);
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.15);
+  }
+}
+
+.confirmDelete {
+  background: rgba(255, 100, 100, 0.2);
+  color: rgba(255, 100, 100, 0.9);
+
+  &:hover {
+    background: rgba(255, 100, 100, 0.3);
   }
 }

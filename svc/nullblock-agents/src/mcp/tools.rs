@@ -100,7 +100,12 @@ pub fn get_all_tools() -> Vec<McpTool> {
     tools.extend(get_profile_tools());
     tools.extend(get_hecate_tools());
     tools.extend(get_moros_tools());
+    tools.extend(get_crossroads_tools());
     tools
+}
+
+pub fn get_crossroads_public_tools() -> Vec<McpTool> {
+    get_crossroads_tools()
 }
 
 pub fn get_agent_tools() -> Vec<McpTool> {
@@ -590,6 +595,89 @@ fn get_profile_tools() -> Vec<McpTool> {
             }),
             annotations: Some(McpToolAnnotations::idempotent_write()),
             tags: Some(vec!["hecate.engrams".to_string(), "hecate.profile".to_string()]),
+        },
+    ]
+}
+
+fn get_crossroads_tools() -> Vec<McpTool> {
+    vec![
+        McpTool {
+            name: "crossroads_list_tools".to_string(),
+            description: "List all available tools in the Crossroads marketplace. Returns tools from all providers including ArbFarm, Agents, Protocols, and external MCP servers. No wallet required.".to_string(),
+            input_schema: serde_json::json!({
+                "type": "object",
+                "properties": {
+                    "category": {
+                        "type": "string",
+                        "description": "Optional filter by category (e.g., 'trading', 'memory', 'analysis')"
+                    },
+                    "provider": {
+                        "type": "string",
+                        "description": "Optional filter by provider (e.g., 'arbfarm', 'agents', 'protocols')"
+                    },
+                    "limit": {
+                        "type": "integer",
+                        "description": "Maximum number of tools to return (default 20)"
+                    }
+                },
+                "required": []
+            }),
+            annotations: Some(McpToolAnnotations::read_only()),
+            tags: Some(vec!["crossroads.discovery".to_string(), "public".to_string()]),
+        },
+        McpTool {
+            name: "crossroads_get_tool_info".to_string(),
+            description: "Get detailed information about a specific tool by name. Returns description, input schema, provider, and usage hints. No wallet required.".to_string(),
+            input_schema: serde_json::json!({
+                "type": "object",
+                "properties": {
+                    "tool_name": {
+                        "type": "string",
+                        "description": "Name of the tool to get info about"
+                    }
+                },
+                "required": ["tool_name"]
+            }),
+            annotations: Some(McpToolAnnotations::read_only()),
+            tags: Some(vec!["crossroads.discovery".to_string(), "public".to_string()]),
+        },
+        McpTool {
+            name: "crossroads_list_agents".to_string(),
+            description: "List all available agents in the Crossroads marketplace. Returns agent names, descriptions, capabilities, and health status. No wallet required.".to_string(),
+            input_schema: serde_json::json!({
+                "type": "object",
+                "properties": {
+                    "limit": {
+                        "type": "integer",
+                        "description": "Maximum number of agents to return (default 20)"
+                    }
+                },
+                "required": []
+            }),
+            annotations: Some(McpToolAnnotations::read_only()),
+            tags: Some(vec!["crossroads.discovery".to_string(), "public".to_string()]),
+        },
+        McpTool {
+            name: "crossroads_list_hot".to_string(),
+            description: "List hot/trending items in the Crossroads marketplace. Returns featured tools and high-activity items. No wallet required.".to_string(),
+            input_schema: serde_json::json!({
+                "type": "object",
+                "properties": {},
+                "required": []
+            }),
+            annotations: Some(McpToolAnnotations::read_only()),
+            tags: Some(vec!["crossroads.discovery".to_string(), "public".to_string()]),
+        },
+        McpTool {
+            name: "crossroads_get_stats".to_string(),
+            description: "Get overall statistics about the Crossroads marketplace. Returns counts of tools, agents, protocols, and health status. No wallet required.".to_string(),
+            input_schema: serde_json::json!({
+                "type": "object",
+                "properties": {},
+                "required": []
+            }),
+            annotations: Some(McpToolAnnotations::read_only()),
+            tags: Some(vec!["crossroads.discovery".to_string(), "public".to_string()]),
         },
     ]
 }

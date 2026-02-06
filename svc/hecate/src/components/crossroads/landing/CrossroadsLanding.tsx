@@ -93,14 +93,6 @@ const CrossroadsLanding: React.FC<CrossroadsLandingProps> = ({
             >
               𝕏 Follow Updates
             </a>
-            <a
-              href="https://discord.gg/nullblock"
-              target="_blank"
-              rel="noopener noreferrer"
-              className={styles.communityLink}
-            >
-              💬 Join Discord
-            </a>
           </div>
         </div>
       </div>
