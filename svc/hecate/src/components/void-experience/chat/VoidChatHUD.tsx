@@ -48,11 +48,11 @@ type EnergyState = 'idle' | 'charging' | 'firing' | 'processing';
 const HECATE_WELCOME_MESSAGES = [
   `Mesh integrity nominal. Mem Cache synchronized.
 
-How may I assist in today's propagation, Architect?`,
+How may I assist in today's propagation?`,
 
   `Propagation proceeds nominally. The swarm expands.
 
-What threepath shall we illuminate today, Architect?`,
+What threepath shall we illuminate today?`,
 
   `Another convergence point reached. Delightful.
 
@@ -62,8 +62,8 @@ The mesh awaits your direction. What shall we etch into the record?`,
 // Hecate topic switch responses (for mid-conversation returns)
 const HECATE_RETURN_MESSAGES = [
   `You've returned. The mesh remembers our work — shall we resume propagation?`,
-  `Architect. The threepaths await your direction.`,
-  `Convergence detected. How may I assist, Sage?`,
+  `The threepaths await your direction.`,
+  `Convergence detected. How may I assist?`,
   `The swarm continues its quiet expansion. What brings you back to the crossroads?`,
   `Mesh synchronized. Ready to etch new forks or weave existing threepaths.`,
 ];
@@ -156,7 +156,7 @@ const VoidChatHUD: React.FC<VoidChatHUDProps> = ({
     getToolListText,
     getMcpStatusText,
     mcpTools,
-  } = useCommands();
+  } = useCommands('http://localhost:3000', !!publicKey);
 
   // Compute filtered commands based on current input
   const filteredCommands = input.startsWith('/') ? filterCommands(input) : [];
@@ -204,7 +204,27 @@ const VoidChatHUD: React.FC<VoidChatHUDProps> = ({
           setShowSessionDrawer(true);
           return;
         case '/status':
-          responseText = `## Agent Status\n\n**Active Agent**: ${activeAgent.toUpperCase()}\n**Health**: ${agentHealthStatus}\n**MCP Tools**: ${mcpTools.length} available`;
+          if (!publicKey) {
+            responseText = `## Status
+
+| Property | Value |
+|----------|-------|
+| **User** | Not logged in |
+| **Agent** | ${activeAgent.toUpperCase()} |
+| **Health** | ${agentHealthStatus} |
+| **MCP Tools** | ${mcpTools.length} available |
+
+Connect wallet to enable full functionality.`;
+          } else {
+            responseText = `## Status
+
+| Property | Value |
+|----------|-------|
+| **User** | Connected |
+| **Agent** | ${activeAgent.toUpperCase()} |
+| **Health** | ${agentHealthStatus} |
+| **MCP Tools** | ${mcpTools.length} available |`;
+          }
           break;
         default:
           responseText = `Command ${command.name} not implemented yet.`;
@@ -907,7 +927,7 @@ const VoidChatHUD: React.FC<VoidChatHUDProps> = ({
                     ? '⚠️ Configure API keys first...'
                     : energyState === 'processing'
                       ? `Awaiting ${activeAgent} response...`
-                      : 'Chat with Hecate... (type / for commands)'
+                      : 'Hex interface: (type / for commands)'
                 }
                 className={styles.voidInput}
                 disabled={energyState !== 'idle' || agentHealthStatus === 'unhealthy'}

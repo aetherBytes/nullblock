@@ -14,22 +14,49 @@ export interface McpTool {
   inputSchema?: Record<string, unknown>;
 }
 
-const BUILTIN_COMMANDS: SlashCommand[] = [
+const PRE_LOGIN_COMMANDS: SlashCommand[] = [
   {
     name: '/help',
-    description: 'Show available commands and how to use them',
+    description: 'Show available commands',
     category: 'builtin',
     action: 'execute',
   },
   {
     name: '/list-tools',
-    description: 'List all available MCP tools from connected services',
+    description: 'List available MCP tools',
     category: 'builtin',
     action: 'tools',
   },
   {
+    name: '/status',
+    description: 'Show service status',
+    category: 'builtin',
+    action: 'execute',
+  },
+];
+
+const POST_LOGIN_COMMANDS: SlashCommand[] = [
+  {
+    name: '/help',
+    description: 'Show available commands',
+    category: 'builtin',
+    action: 'execute',
+  },
+  {
+    name: '/list-tools',
+    description: 'List available MCP tools',
+    category: 'builtin',
+    action: 'tools',
+  },
+  {
+    name: '/status',
+    description: 'Show agent and service status',
+    category: 'builtin',
+    action: 'execute',
+  },
+  {
     name: '/mcp',
-    description: 'Show MCP service status and available tool categories',
+    description: 'Show MCP service status and tool categories',
     category: 'builtin',
     action: 'execute',
   },
@@ -52,20 +79,14 @@ const BUILTIN_COMMANDS: SlashCommand[] = [
     action: 'execute',
   },
   {
-    name: '/status',
-    description: 'Show agent and service status',
-    category: 'builtin',
-    action: 'execute',
-  },
-  {
     name: '/consensus',
-    description: 'Query the LLM consensus service for multi-model decisions',
+    description: 'Query the LLM consensus service',
     category: 'mcp',
     action: 'insert',
   },
   {
     name: '/engrams',
-    description: 'Browse and search stored engrams (learning data)',
+    description: 'Browse stored engrams',
     category: 'mcp',
     action: 'insert',
   },
@@ -89,6 +110,7 @@ const BUILTIN_COMMANDS: SlashCommand[] = [
   },
 ];
 
+
 // Natural language patterns that should trigger help/tool listing
 const TOOL_QUERY_PATTERNS = [
   /what (tools|commands|capabilities) (do you have|are available|can you use|are live|are online|are working)/i,
@@ -109,10 +131,12 @@ const TOOL_QUERY_PATTERNS = [
   /show commands/i,
 ];
 
-export function useCommands(erebusUrl: string = 'http://localhost:3000') {
+export function useCommands(erebusUrl: string = 'http://localhost:3000', isAuthenticated: boolean = false) {
   const [mcpTools, setMcpTools] = useState<McpTool[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const activeBuiltinCommands = isAuthenticated ? POST_LOGIN_COMMANDS : PRE_LOGIN_COMMANDS;
 
   // Fetch MCP tools from backend (multiple sources)
   const fetchMcpTools = useCallback(async () => {
@@ -195,6 +219,11 @@ export function useCommands(erebusUrl: string = 'http://localhost:3000') {
 
   // All available commands (builtin + MCP tool commands)
   const allCommands = useMemo((): SlashCommand[] => {
+    // Only include MCP tool commands if authenticated
+    if (!isAuthenticated) {
+      return [...activeBuiltinCommands];
+    }
+
     const mcpCommands: SlashCommand[] = mcpTools.slice(0, 50).map((tool) => ({
       name: `/${tool.name}`,
       description: tool.description || `MCP tool: ${tool.name}`,
@@ -202,15 +231,15 @@ export function useCommands(erebusUrl: string = 'http://localhost:3000') {
       action: 'insert' as const,
     }));
 
-    return [...BUILTIN_COMMANDS, ...mcpCommands];
-  }, [mcpTools]);
+    return [...activeBuiltinCommands, ...mcpCommands];
+  }, [mcpTools, isAuthenticated, activeBuiltinCommands]);
 
   // Fuzzy filter commands based on input
   const filterCommands = useCallback(
     (query: string): SlashCommand[] => {
       if (!query || query === '/') {
         // Show builtin commands first when just "/" is typed
-        return BUILTIN_COMMANDS;
+        return activeBuiltinCommands;
       }
 
       const searchTerm = query.toLowerCase().replace(/^\//, '');
@@ -260,25 +289,38 @@ export function useCommands(erebusUrl: string = 'http://localhost:3000') {
 
   // Generate help text for a command
   const getHelpText = useCallback((): string => {
-    const builtinHelp = BUILTIN_COMMANDS.map(
-      (cmd) => `**${cmd.name}** - ${cmd.description}`,
+    if (!isAuthenticated) {
+      return `## Commands
+
+| Command | Description |
+|---------|-------------|
+| \`/help\` | Show this help |
+| \`/list-tools\` | List available MCP tools |
+| \`/status\` | Show service status |
+
+---
+
+**Features are limited while not logged in.**
+
+Connect wallet to unlock:
+- Persistent memories (engrams)
+- Chat session history
+- Advanced MCP tools
+- Trading strategies`;
+    }
+
+    const builtinHelp = activeBuiltinCommands.map(
+      (cmd) => `| \`${cmd.name}\` | ${cmd.description} |`,
     ).join('\n');
 
-    return `## Available Commands
+    return `## Commands
 
-### Built-in Commands
+| Command | Description |
+|---------|-------------|
 ${builtinHelp}
 
-### MCP Tools
-Type \`/\` followed by a tool name to see available MCP tools.
-Currently **${mcpTools.length}** MCP tools available.
-
-### Natural Language
-You can also ask me about tools in plain English:
-- "What tools do you have?"
-- "Show me available commands"
-- "List MCP capabilities"`;
-  }, [mcpTools.length]);
+**${mcpTools.length}** MCP tools available. Type \`/\` to browse.`;
+  }, [mcpTools.length, isAuthenticated, activeBuiltinCommands]);
 
   // Generate tool list text
   const getToolListText = useCallback((): string => {
@@ -343,7 +385,7 @@ Use \`/list-tools\` to see all available tools.`;
     getHelpText,
     getToolListText,
     getMcpStatusText,
-    builtinCommands: BUILTIN_COMMANDS,
+    builtinCommands: activeBuiltinCommands,
   };
 }
 
