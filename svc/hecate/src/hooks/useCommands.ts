@@ -326,9 +326,11 @@ export function useCommands(erebusUrl: string = 'http://localhost:3000', isAuthe
     if (!isAuthenticated) {
       return `## Commands
 
-**/help** — Show this help
-**/list-tools** — List available tools
-**/status** — Show service status
+\`/help\` — Show this help
+
+\`/list-tools\` — List available tools
+
+\`/status\` — Show service status
 
 ---
 
@@ -336,8 +338,8 @@ export function useCommands(erebusUrl: string = 'http://localhost:3000', isAuthe
     }
 
     const builtinHelp = activeBuiltinCommands.map(
-      (cmd) => `**${cmd.name}** — ${cmd.description}`,
-    ).join('\n');
+      (cmd) => `\`${cmd.name}\` — ${cmd.description}`,
+    ).join('\n\n');
 
     return `## Commands
 
