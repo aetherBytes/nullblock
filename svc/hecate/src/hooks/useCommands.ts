@@ -326,32 +326,24 @@ export function useCommands(erebusUrl: string = 'http://localhost:3000', isAuthe
     if (!isAuthenticated) {
       return `## Commands
 
-| Command | Description |
-|---------|-------------|
-| \`/help\` | Show this help |
-| \`/list-tools\` | List available MCP tools |
-| \`/status\` | Show service status |
+**/help** — Show this help
+**/list-tools** — List available tools
+**/status** — Show service status
 
 ---
 
-**Features are limited while not logged in.**
-
-Connect wallet to unlock:
-- Persistent memories (engrams)
-- Chat session history
-- Advanced MCP tools
-- Trading strategies`;
+**Limited mode.** Connect wallet to unlock memories, sessions, and tools.`;
     }
 
     const builtinHelp = activeBuiltinCommands.map(
-      (cmd) => `| \`${cmd.name}\` | ${cmd.description} |`,
+      (cmd) => `**${cmd.name}** — ${cmd.description}`,
     ).join('\n');
 
     return `## Commands
 
-| Command | Description |
-|---------|-------------|
 ${builtinHelp}
+
+---
 
 **${agentTools.length}** tools enabled. Type \`/\` to browse.`;
   }, [agentTools.length, isAuthenticated, activeBuiltinCommands]);
