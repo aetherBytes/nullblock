@@ -113,7 +113,6 @@ CREATE TABLE wallets (
 | Chain | Status |
 |-------|--------|
 | Ethereum | ✅ Supported |
-| Monad | ✅ Primary (pricing, NFTs) |
 | Polygon | 🔄 Planned |
 | Base | 🔄 Planned |
 

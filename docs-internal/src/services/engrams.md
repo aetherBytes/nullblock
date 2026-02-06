@@ -20,7 +20,7 @@ Engrams are the **"long-term scars" of the mesh** — shared, forkable, evolvabl
 | `persona` | Character/voice definitions | Twitter persona for Echo Factory |
 | `preference` | User settings | UI theme, notification settings |
 | `strategy` | Decision frameworks | Trading entry/exit rules |
-| `knowledge` | Domain information | Monad blockchain facts |
+| `knowledge` | Domain information | Blockchain mechanics, market data |
 | `compliance` | Regulatory constraints | Jurisdiction restrictions |
 
 ## Key Field Design

@@ -27,8 +27,8 @@ When creating a persona, Echo Factory stores:
       "professional": 0.7,
       "humor": 0.3
     },
-    "topics": ["DeFi", "Monad", "AI Agents"],
-    "hashtags": ["#DeFi", "#Monad"],
+    "topics": ["DeFi", "AI Agents", "Onchain Automation"],
+    "hashtags": ["#DeFi", "#AIAgents"],
     "x_account_id": "123456789",
     "x_username": "crypto_sage"
   },

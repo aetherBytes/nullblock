@@ -10,8 +10,6 @@
 
 **Mission**: Building the picks and axes for the onchain agent gold rush. NullBlock empowers builders with tools to create, deploy, and profit from intelligent agent workflows.
 
-**Chain**: [Monad](https://monad.xyz) (exclusive) - High-performance EVM for agent transactions, NFT minting, and payments.
-
 ## Connect
 
 - **Official**: [@Nullblock_io](https://x.com/Nullblock_io)

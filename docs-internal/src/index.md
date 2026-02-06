@@ -16,8 +16,6 @@
 
 In a rapidly expanding onchain automated world, we are building the picks and axes for this digital gold rush. NullBlock empowers builders with the essential tools to create, deploy, and profit from intelligent agent workflows.
 
-**Chain**: [Monad](https://monad.xyz) (exclusive) - High-performance EVM for agent transactions, NFT minting, and payments.
-
 ---
 
 ## Quick Links

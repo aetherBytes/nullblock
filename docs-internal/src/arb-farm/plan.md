@@ -2247,9 +2247,9 @@ The final phase integrates ArbFarm with the Crossroads marketplace to enable for
 
 #### Tasks
 
-- [ ] **COW NFT Minting on Monad**
+- [ ] **COW NFT Minting**
   - Define ArbFarm COW metadata schema
-  - Implement COW minting contract on Monad
+  - Implement COW minting contract
   - Create minting UI in MemCache
   - Connect to existing Crossroads listing flow
 

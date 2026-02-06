@@ -15,7 +15,7 @@ A no-failure, high-reliability agent swarm that dominates Polymarket with AI-pow
 | **Phase 3: Probability Refiner** | ⏳ Pending |
 | **Phase 4: Arb Detector + Execution** | ⏳ Pending |
 | **Phase 5: Engram Generator + Overseer** | ⏳ Pending |
-| **Phase 6: Monad Deploy + Crossroads** | ⏳ Pending |
+| **Phase 6: Deploy + Crossroads** | ⏳ Pending |
 
 > **Current Focus**: Market Scanner - a forkable COW tool for real-time Polymarket intelligence. See [scanner.md](./scanner.md) for detailed implementation plan.
 
@@ -124,7 +124,7 @@ svc/poly-mev/
 │   │   └── edge.rs
 │   └── services/
 │       ├── engram_client.rs
-│       └── monad_client.rs
+│       └── chain_client.rs
 └── migrations/
 ```
 
@@ -154,14 +154,6 @@ POST /api/poly/edges/:id/execute    # Execute trade
 GET  /api/poly/edges/:id/engram     # Get edge as engram
 ```
 
-## Monad Integration
-
-| Purpose | Contract |
-|---------|----------|
-| **NFT Minting** | ERC-721 for COW components |
-| **Execution Proxy** | Simple proxy for swarm trades |
-| **Fast Polling** | 10k TPS for real-time arb detection |
-
 ## Revenue Model
 
 | Stream | Rate |
@@ -182,7 +174,7 @@ GET  /api/poly/edges/:id/engram     # Get edge as engram
 |-------|------------|
 | **Backend** | Rust (extend existing services) |
 | **Frontend** | React + Three.js (void swarm viz) |
-| **Onchain** | Monad (Foundry contracts, ethers.js) |
+| **Onchain** | EVM-compatible (Foundry contracts, ethers.js) |
 | **APIs** | Polymarket Gamma/CLOB + WebSockets |
 
 ## Related

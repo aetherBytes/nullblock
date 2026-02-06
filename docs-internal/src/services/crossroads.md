@@ -31,7 +31,7 @@
 
 - OnchainKit Identity (ENS/Basename)
 - Wallet-gated features
-- On-chain payments (Monad)
+- On-chain payments
 - Service ownership verification
 
 ## Listing Categories
