@@ -207,23 +207,16 @@ const VoidChatHUD: React.FC<VoidChatHUDProps> = ({
           if (!publicKey) {
             responseText = `## Status
 
-| Property | Value |
-|----------|-------|
-| **User** | Not logged in |
-| **Agent** | ${activeAgent.toUpperCase()} |
-| **Health** | ${agentHealthStatus} |
-| **MCP Tools** | ${mcpTools.length} available |
+**User**: Not logged in
+**Agent**: ${activeAgent.toUpperCase()} (${agentHealthStatus})
 
-Connect wallet to enable full functionality.`;
+Connect wallet to unlock memories and tools.`;
           } else {
             responseText = `## Status
 
-| Property | Value |
-|----------|-------|
-| **User** | Connected |
-| **Agent** | ${activeAgent.toUpperCase()} |
-| **Health** | ${agentHealthStatus} |
-| **MCP Tools** | ${mcpTools.length} available |`;
+**User**: Connected
+**Agent**: ${activeAgent.toUpperCase()} (${agentHealthStatus})
+**Tools**: 6 engram tools enabled`;
           }
           break;
         default:
