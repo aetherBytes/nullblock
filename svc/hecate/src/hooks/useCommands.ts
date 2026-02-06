@@ -251,22 +251,22 @@ export function useCommands(erebusUrl: string = 'http://localhost:3000', isAuthe
     fetchMcpTools();
   }, [fetchMcpTools]);
 
-  // All available commands (builtin + MCP tool commands)
+  // All available commands (builtin + agent tool commands)
   const allCommands = useMemo((): SlashCommand[] => {
-    // Only include MCP tool commands if authenticated
+    // Only include tool commands if authenticated
     if (!isAuthenticated) {
       return [...activeBuiltinCommands];
     }
 
-    const mcpCommands: SlashCommand[] = mcpTools.slice(0, 50).map((tool) => ({
+    const toolCommands: SlashCommand[] = agentTools.map((tool) => ({
       name: `/${tool.name}`,
-      description: tool.description || `MCP tool: ${tool.name}`,
+      description: tool.description || `Tool: ${tool.name}`,
       category: 'mcp' as const,
       action: 'insert' as const,
     }));
 
-    return [...activeBuiltinCommands, ...mcpCommands];
-  }, [mcpTools, isAuthenticated, activeBuiltinCommands]);
+    return [...activeBuiltinCommands, ...toolCommands];
+  }, [agentTools, isAuthenticated, activeBuiltinCommands]);
 
   // Fuzzy filter commands based on input
   const filterCommands = useCallback(
@@ -353,60 +353,43 @@ Connect wallet to unlock:
 |---------|-------------|
 ${builtinHelp}
 
-**${mcpTools.length}** MCP tools available. Type \`/\` to browse.`;
-  }, [mcpTools.length, isAuthenticated, activeBuiltinCommands]);
+**${agentTools.length}** tools enabled. Type \`/\` to browse.`;
+  }, [agentTools.length, isAuthenticated, activeBuiltinCommands]);
 
-  // Generate tool list text
+  // Generate tool list text (shows only agent's allowed tools)
   const getToolListText = useCallback((): string => {
-    if (mcpTools.length === 0) {
-      return 'No MCP tools available. Services may be offline.';
+    if (agentTools.length === 0) {
+      return 'No tools available. Agent service may be offline.';
     }
 
-    // Group tools by prefix
-    const grouped: Record<string, McpTool[]> = {};
-    mcpTools.forEach((tool) => {
-      const prefix = tool.name.split('_')[0];
-      if (!grouped[prefix]) grouped[prefix] = [];
-      grouped[prefix].push(tool);
+    let text = `## Agent Tools (${agentTools.length})\n\n`;
+
+    agentTools.forEach((tool) => {
+      text += `**${tool.name}**\n${tool.description || 'No description'}\n\n`;
     });
 
-    let text = `## Available MCP Tools (${mcpTools.length} total)\n\n`;
-
-    Object.entries(grouped)
-      .sort(([a], [b]) => a.localeCompare(b))
-      .forEach(([prefix, tools]) => {
-        text += `### ${prefix} (${tools.length})\n`;
-        tools.slice(0, 5).forEach((tool) => {
-          text += `- **${tool.name}**: ${tool.description?.slice(0, 80) || 'No description'}${tool.description && tool.description.length > 80 ? '...' : ''}\n`;
-        });
-        if (tools.length > 5) {
-          text += `- _...and ${tools.length - 5} more_\n`;
-        }
-        text += '\n';
-      });
-
     return text;
-  }, [mcpTools]);
+  }, [agentTools]);
 
   // Get MCP status text
   const getMcpStatusText = useCallback((): string => {
-    const toolCount = mcpTools.length;
-    const categories = new Set(mcpTools.map((t) => t.name.split('_')[0]));
+    const toolCount = agentTools.length;
+    const categories = new Set(agentTools.map((t) => t.name.split('_')[0]));
 
-    return `## MCP Service Status
+    return `## Agent Tools
 
 **Connected**: ${toolCount > 0 ? 'Yes' : 'No'}
-**Total Tools**: ${toolCount}
+**Tools**: ${toolCount}
 **Categories**: ${categories.size}
 
-### Tool Categories
+### Categories
 ${Array.from(categories)
   .sort()
   .map((cat) => `- ${cat}`)
   .join('\n')}
 
-Use \`/list-tools\` to see all available tools.`;
-  }, [mcpTools]);
+Use \`/list-tools\` to see details.`;
+  }, [agentTools]);
 
   return {
     commands: allCommands,
