@@ -358,6 +358,17 @@ ${builtinHelp}
 
   // Generate tool list text (shows only agent's allowed tools)
   const getToolListText = useCallback((): string => {
+    if (!isAuthenticated) {
+      return `## Tools
+
+Connect wallet to view and use agent tools.
+
+Available after login:
+- Engram management (create, read, update, delete)
+- Memory search and filtering
+- More tools as they are enabled`;
+    }
+
     if (agentTools.length === 0) {
       return 'No tools available. Agent service may be offline.';
     }
@@ -369,10 +380,18 @@ ${builtinHelp}
     });
 
     return text;
-  }, [agentTools]);
+  }, [agentTools, isAuthenticated]);
 
   // Get MCP status text
   const getMcpStatusText = useCallback((): string => {
+    if (!isAuthenticated) {
+      return `## Agent Tools
+
+**Status**: Not logged in
+
+Connect wallet to access tools.`;
+    }
+
     const toolCount = agentTools.length;
     const categories = new Set(agentTools.map((t) => t.name.split('_')[0]));
 
@@ -389,7 +408,7 @@ ${Array.from(categories)
   .join('\n')}
 
 Use \`/list-tools\` to see details.`;
-  }, [agentTools]);
+  }, [agentTools, isAuthenticated]);
 
   return {
     commands: allCommands,
