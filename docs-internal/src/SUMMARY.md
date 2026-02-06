@@ -78,6 +78,7 @@
 # Reference
 
 - [API Endpoints](./reference/api.md)
+- [MCP Tools](./reference/tools.md)
 - [MCP Servers](./reference/mcp-servers.md)
 - [Environment Variables](./reference/env-vars.md)
 - [Wallet Integration](./reference/wallet.md)

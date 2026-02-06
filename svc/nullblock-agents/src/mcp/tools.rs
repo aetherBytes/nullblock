@@ -1,3 +1,4 @@
+use crate::config::tool_allowlist::is_tool_allowed_for_agent;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
@@ -100,6 +101,13 @@ pub fn get_all_tools() -> Vec<McpTool> {
     tools.extend(get_hecate_tools());
     tools.extend(get_moros_tools());
     tools
+}
+
+pub fn get_agent_tools() -> Vec<McpTool> {
+    get_all_tools()
+        .into_iter()
+        .filter(|t| is_tool_allowed_for_agent(&t.name))
+        .collect()
 }
 
 fn get_engram_tools() -> Vec<McpTool> {

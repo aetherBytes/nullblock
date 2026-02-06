@@ -1,6 +1,7 @@
 #![allow(dead_code)]
 
 pub mod dev_wallet;
+pub mod tool_allowlist;
 
 use serde::{Deserialize, Serialize};
 use std::env;

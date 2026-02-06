@@ -3,7 +3,7 @@ use serde_json::json;
 use tracing::{error, info, warn};
 
 use super::handlers::execute_tool;
-use super::tools::get_all_tools;
+use super::tools::get_agent_tools;
 use crate::mcp::mcp_types::*;
 use crate::server::AppState;
 
@@ -120,7 +120,7 @@ async fn handle_initialize(
 }
 
 async fn handle_list_tools() -> Result<serde_json::Value, (i32, String)> {
-    let mcp_tools = get_all_tools();
+    let mcp_tools = get_agent_tools();
     let tools: Vec<Tool> = mcp_tools.iter().map(Tool::from).collect();
 
     let result = ListToolsResult { tools };
