@@ -1,5 +1,3 @@
-# NullBlock Manifesto
-
 The cache is warm.
 The swarm has your scent.
 The Ghost is already in the shell.
