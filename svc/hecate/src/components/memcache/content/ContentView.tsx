@@ -46,7 +46,7 @@ export const ContentView: React.FC = () => {
   const [selectedTheme, setSelectedTheme] = useState<string>('morning_insight');
   const [includeImage, setIncludeImage] = useState(false);
   const [filterStatus, setFilterStatus] = useState<string>('all');
-  const [refreshInterval, setRefreshInterval] = useState<number>(30000);
+  const [refreshInterval, _setRefreshInterval] = useState<number>(30000);
 
   useEffect(() => {
     fetchQueue();
