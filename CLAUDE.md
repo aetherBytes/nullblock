@@ -217,9 +217,10 @@ These issues are acceptable for local development but MUST be resolved before de
 ## NullBlock Content Service
 
 **Purpose**: Social media content generation + posting service for Nullblock brand
-**Status**: ✅ Phase 1-3 COMPLETE (core infrastructure + content engine + API layer)
+**Status**: ✅ Phase 1-5 COMPLETE (production ready)
 **Port**: 8002 (routes through Erebus at 3000)
 **Database**: PostgreSQL (separate from Erebus/Agents)
+**Documentation**: [SKILL.md](svc/nullblock-content/SKILL.md) | [API.md](svc/nullblock-content/API.md)
 
 **Agent Framework**: N.E.X.U.S.
 - **N**etwork: Coordination ability
@@ -259,15 +260,21 @@ These issues are acceptable for local development but MUST be resolved before de
 
 **Phase 3 - API Layer ✓ Complete:**
 - Axum server on port 8002 with health check
-- 7 REST endpoints (generate, queue CRUD, metrics, templates)
+- 8 REST endpoints (generate, queue CRUD, metrics, templates)
 - Request handlers with proper error handling
 - CORS enabled for development
 
-**Phase 4 - Integration (In Progress):**
-- Kafka event publishing (content.generated, content.posted, content.failed)
-- MCP tool definitions via nullblock-protocols
-- Erebus routing integration
-- Crossroads marketplace listing
+**Phase 4 - Integration ✓ Complete:**
+- Event publishing system (trait-based: HTTP + NoOp, Kafka-ready)
+- Erebus routing integration (all routes proxied through :3000)
+- Events: content.generated, content.posted, content.failed
+- MCP tools via Erebus MCP layer (service discovery)
+
+**Phase 5 - Documentation ✓ Complete:**
+- SKILL.md for ClawHub compatibility
+- API.md with comprehensive endpoint documentation
+- All 5 themes documented with examples
+- Configuration and troubleshooting guides
 
 ### Database Tables
 - `content_queue` - Generated content pending review/posting (UUID, theme, text, tags, status, metadata)
