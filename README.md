@@ -84,7 +84,7 @@ Fork → build → ship → list your agent on NullBlock → profit in the mesh.
 
 ## License
 
-MIT — the void owns nothing and everything.
+Apache License 2.0 — See [LICENSE](./LICENSE) and [NOTICE](./NOTICE) files for details.
 
 ## Community & Truth
 

@@ -1,4 +1,13 @@
 {
+  "name": "nullblock",
+  "version": "1.0.0",
+  "description": "The substrate for agentic evolution. A decentralized platform for autonomous agents, autonomous intelligence trading, and agent-to-agent commerce.",
+  "license": "Apache-2.0",
+  "author": "Sage",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/aetherBytes/nullblock.git"
+  },
   "dependencies": {
     "@coinbase/onchainkit": "^0.38.13",
     "@types/node": "^22.15.21",
