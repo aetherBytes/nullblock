@@ -24,7 +24,7 @@ mod services;
 mod utils;
 
 use crate::config::Config;
-use crate::handlers::{health, hecate, moros, siren_marketing, tasks, user_references};
+use crate::handlers::{health, hecate, llm_proxy, moros, siren_marketing, tasks, user_references};
 use crate::logging::setup_logging;
 
 #[tokio::main]
@@ -148,6 +148,9 @@ fn create_router(state: server::AppState) -> Router {
         .route("/siren/model-status", get(siren_marketing::model_status))
         .route("/siren/themes", get(siren_marketing::get_content_themes))
         .route("/siren/set-model", post(siren_marketing::set_model))
+        // OpenAI-compatible LLM proxy endpoints
+        .route("/v1/chat/completions", post(llm_proxy::handle_chat_completions))
+        .route("/v1/models", get(llm_proxy::handle_list_models))
         // MCP JSON-RPC endpoint
         .route("/mcp/jsonrpc", post(mcp::jsonrpc::handle_jsonrpc))
         // User reference endpoints

@@ -63,6 +63,9 @@ use resources::agents::routes::{
     hecate_status,
     hecate_tools,
     learn_from_task,
+    // LLM proxy routes
+    llm_chat_completions,
+    llm_list_models,
     mark_notification_read,
     pause_task,
     process_task,
@@ -548,6 +551,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             get(hecate_search_models),
         )
         .route("/api/agents/hecate/tools", get(hecate_tools))
+        // OpenAI-compatible LLM proxy endpoints
+        .route("/api/v1/chat/completions", post(llm_chat_completions))
+        .route("/api/v1/models", get(llm_list_models))
         .route("/api/agents/:agent_name/chat", post(agent_chat))
         .route("/api/agents/:agent_name/status", get(agent_status))
         // Task management endpoints

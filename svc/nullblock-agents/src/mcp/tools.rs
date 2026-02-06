@@ -101,6 +101,7 @@ pub fn get_all_tools() -> Vec<McpTool> {
     tools.extend(get_hecate_tools());
     tools.extend(get_moros_tools());
     tools.extend(get_crossroads_tools());
+    tools.extend(get_llm_tools());
     tools
 }
 
@@ -550,6 +551,78 @@ fn get_moros_tools() -> Vec<McpTool> {
             }),
             annotations: Some(McpToolAnnotations::write()),
             tags: Some(vec!["moros.management".to_string()]),
+        },
+    ]
+}
+
+fn get_llm_tools() -> Vec<McpTool> {
+    vec![
+        McpTool {
+            name: "llm_chat".to_string(),
+            description: "Generate a chat completion using the NullBlock LLM service. Routes to the best available model automatically.".to_string(),
+            input_schema: serde_json::json!({
+                "type": "object",
+                "properties": {
+                    "messages": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "role": { "type": "string", "enum": ["system", "user", "assistant"] },
+                                "content": { "type": "string" }
+                            },
+                            "required": ["role", "content"]
+                        },
+                        "description": "Array of chat messages"
+                    },
+                    "model": {
+                        "type": "string",
+                        "description": "Model to use (optional, defaults to auto-routing)"
+                    },
+                    "max_tokens": {
+                        "type": "integer",
+                        "description": "Maximum tokens in response"
+                    },
+                    "temperature": {
+                        "type": "number",
+                        "description": "Sampling temperature (0.0-2.0)"
+                    },
+                    "system_prompt": {
+                        "type": "string",
+                        "description": "System prompt (alternative to including system message in messages array)"
+                    }
+                },
+                "required": ["messages"]
+            }),
+            annotations: Some(McpToolAnnotations::write()),
+            tags: Some(vec!["llm.service".to_string()]),
+        },
+        McpTool {
+            name: "llm_list_models".to_string(),
+            description: "List available LLM models. Optionally filter to free models only.".to_string(),
+            input_schema: serde_json::json!({
+                "type": "object",
+                "properties": {
+                    "free_only": {
+                        "type": "boolean",
+                        "description": "If true, only return free models (default: false)"
+                    }
+                },
+                "required": []
+            }),
+            annotations: Some(McpToolAnnotations::read_only()),
+            tags: Some(vec!["llm.service".to_string()]),
+        },
+        McpTool {
+            name: "llm_model_status".to_string(),
+            description: "Get current LLM model routing info, provider health, and statistics.".to_string(),
+            input_schema: serde_json::json!({
+                "type": "object",
+                "properties": {},
+                "required": []
+            }),
+            annotations: Some(McpToolAnnotations::read_only()),
+            tags: Some(vec!["llm.service".to_string()]),
         },
     ]
 }

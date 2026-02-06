@@ -52,6 +52,10 @@ pub const AGENT_ALLOWED_TOOLS: &[&str] = &[
     "engram_update",
     "engram_delete",
     "engram_list_by_type",
+    // LLM service tools
+    "llm_chat",
+    "llm_list_models",
+    "llm_model_status",
 ];
 
 pub fn get_hecate_allowed_tools() -> Vec<&'static str> {

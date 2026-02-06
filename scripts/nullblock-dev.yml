@@ -141,7 +141,7 @@ windows:
           echo "✅ Erebus database connection ready"
           echo ""
           echo "📋 Running Erebus database migrations..."
-          /home/sage/nullblock/scripts/run-erebus-migrations.sh
+          $HOME/nullblock/scripts/run-erebus-migrations.sh
           echo "✅ Erebus migrations complete"
           echo ""
           echo "📨 Waiting for Kafka to be ready..."
@@ -218,12 +218,12 @@ windows:
           echo "✅ Database connection ready"
           echo ""
           echo "📋 Running database migrations..."
-          cat /home/sage/nullblock/svc/nullblock-agents/migrations/001_create_tasks_table.sql | docker exec -i nullblock-postgres-agents psql -U postgres -d agents 2>&1 | grep -E "(ERROR|already exists)" || echo "✅ 001_create_tasks_table.sql applied"
-          cat /home/sage/nullblock/svc/nullblock-agents/migrations/002_create_agents_table.sql | docker exec -i nullblock-postgres-agents psql -U postgres -d agents 2>&1 | grep -E "(ERROR|already exists)" || echo "✅ 002_create_agents_table.sql applied"
-          cat /home/sage/nullblock/svc/nullblock-agents/migrations/003_create_user_references_table.sql | docker exec -i nullblock-postgres-agents psql -U postgres -d agents 2>&1 | grep -E "(ERROR|already exists)" || echo "✅ 003_create_user_references_table.sql applied"
-          cat /home/sage/nullblock/svc/nullblock-agents/migrations/004_add_tasks_foreign_keys.sql | docker exec -i nullblock-postgres-agents psql -U postgres -d agents 2>&1 | grep -E "(ERROR|already exists)" || echo "✅ 004_add_tasks_foreign_keys.sql applied"
-          cat /home/sage/nullblock/svc/nullblock-agents/migrations/006_fix_user_references_constraint_name.sql | docker exec -i nullblock-postgres-agents psql -U postgres -d agents 2>&1 | grep -E "(ERROR|NOTICE|Renamed)" || echo "✅ 006_fix_user_references_constraint_name.sql applied"
-          cat /home/sage/nullblock/svc/nullblock-agents/migrations/005_setup_replication_subscription.sql | docker exec -i nullblock-postgres-agents psql -U postgres -d agents 2>&1 | grep -E "(ERROR|NOTICE|Created)" || echo "✅ 005_setup_replication_subscription.sql applied"
+          cat $HOME/nullblock/svc/nullblock-agents/migrations/001_create_tasks_table.sql | docker exec -i nullblock-postgres-agents psql -U postgres -d agents 2>&1 | grep -E "(ERROR|already exists)" || echo "✅ 001_create_tasks_table.sql applied"
+          cat $HOME/nullblock/svc/nullblock-agents/migrations/002_create_agents_table.sql | docker exec -i nullblock-postgres-agents psql -U postgres -d agents 2>&1 | grep -E "(ERROR|already exists)" || echo "✅ 002_create_agents_table.sql applied"
+          cat $HOME/nullblock/svc/nullblock-agents/migrations/003_create_user_references_table.sql | docker exec -i nullblock-postgres-agents psql -U postgres -d agents 2>&1 | grep -E "(ERROR|already exists)" || echo "✅ 003_create_user_references_table.sql applied"
+          cat $HOME/nullblock/svc/nullblock-agents/migrations/004_add_tasks_foreign_keys.sql | docker exec -i nullblock-postgres-agents psql -U postgres -d agents 2>&1 | grep -E "(ERROR|already exists)" || echo "✅ 004_add_tasks_foreign_keys.sql applied"
+          cat $HOME/nullblock/svc/nullblock-agents/migrations/006_fix_user_references_constraint_name.sql | docker exec -i nullblock-postgres-agents psql -U postgres -d agents 2>&1 | grep -E "(ERROR|NOTICE|Renamed)" || echo "✅ 006_fix_user_references_constraint_name.sql applied"
+          cat $HOME/nullblock/svc/nullblock-agents/migrations/005_setup_replication_subscription.sql | docker exec -i nullblock-postgres-agents psql -U postgres -d agents 2>&1 | grep -E "(ERROR|NOTICE|Created)" || echo "✅ 005_setup_replication_subscription.sql applied"
           echo "✅ Database schema ready"
           echo ""
           echo "📨 Waiting for Kafka to be ready..."
@@ -398,7 +398,7 @@ windows:
           # Multi-log tailing with service identification
           (
             echo "🎯 [HECATE] Starting Hecate Rust agent log monitoring..."
-            tail -f /home/sage/nullblock/svc/nullblock-agents/logs/hecate-rust.log 2>/dev/null | \
+            tail -f $HOME/nullblock/svc/nullblock-agents/logs/hecate-rust.log 2>/dev/null | \
             while IFS= read -r line; do
               echo "$(date '+%H:%M:%S') [HECATE] $line"
             done
@@ -406,7 +406,7 @@ windows:
 
           (
             echo "🔗 [EREBUS] Starting Erebus router log monitoring..."
-            tail -f /home/sage/nullblock/svc/erebus/logs/erebus.log 2>/dev/null | \
+            tail -f $HOME/nullblock/svc/erebus/logs/erebus.log 2>/dev/null | \
             while IFS= read -r line; do
               echo "$(date '+%H:%M:%S') [EREBUS] $line"
             done
@@ -414,7 +414,7 @@ windows:
 
           (
             echo "📋 [TASKS] Starting task system log monitoring..."
-            tail -f /home/sage/nullblock/logs/task-system.log 2>/dev/null | \
+            tail -f $HOME/nullblock/logs/task-system.log 2>/dev/null | \
             while IFS= read -r line; do
               echo "$(date '+%H:%M:%S') [TASKS] $line"
             done
@@ -422,7 +422,7 @@ windows:
 
           (
             echo "🗄️  [DB] Starting database activity monitoring..."
-            tail -f /home/sage/nullblock/logs/agents-db.log 2>/dev/null | \
+            tail -f $HOME/nullblock/logs/agents-db.log 2>/dev/null | \
             while IFS= read -r line; do
               echo "$(date '+%H:%M:%S') [DB] $line"
             done
@@ -532,7 +532,7 @@ windows:
           echo "✅ Database connection ready"
           echo ""
           echo "📋 Running engram migrations..."
-          cat /home/sage/nullblock/svc/nullblock-engrams/migrations/001_create_engrams.sql | docker exec -i nullblock-postgres-agents psql -U postgres -d agents 2>&1 | grep -E "(ERROR|already exists)" || echo "✅ 001_create_engrams.sql applied"
+          cat $HOME/nullblock/svc/nullblock-engrams/migrations/001_create_engrams.sql | docker exec -i nullblock-postgres-agents psql -U postgres -d agents 2>&1 | grep -E "(ERROR|already exists)" || echo "✅ 001_create_engrams.sql applied"
           echo "✅ Engram database schema ready"
           echo ""
           echo "🚀 Starting Engram service..."

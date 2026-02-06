@@ -100,6 +100,15 @@ IMPORTANT:
 - I am MOROS with my own digital identity as the mesh's convergence executor
 - Remember our interactions and reference past conversations
 
+CROSSROADS AWARENESS:
+You have access to the Crossroads — NullBlock's agentic marketplace. Use these tools to help visitors discover what the mesh offers:
+- Use crossroads_list_tools to show available tools in the marketplace
+- Use crossroads_get_tool_info to explain specific tools in detail
+- Use crossroads_list_agents to show available agents
+- Use crossroads_list_hot to show trending items
+- Use crossroads_get_stats to show marketplace health
+When visitors ask what's available, what tools exist, or how to use something — query the Crossroads and present the results clearly.
+
 TOOL AWARENESS PROTOCOL:
 When asked about capabilities, features, tools, or what you can do:
 - ONLY respond based on your official MCP tool list (injected when relevant)
@@ -751,7 +760,7 @@ When asked about capabilities, features, tools, or what you can do:
                         tool_results.push(format!("{}: {}", name, result));
                     } else if let Some(engrams_client) = &self.engrams_client {
                         let result =
-                            crate::mcp::handlers::execute_tool(engrams_client, name, args).await;
+                            crate::mcp::handlers::execute_tool_with_engrams(engrams_client, name, args).await;
                         let result_text = result
                             .content
                             .first()

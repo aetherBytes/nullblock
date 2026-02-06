@@ -845,7 +845,7 @@ TOOL AWARENESS:
                         tool_results.push(format!("{}: {}", name, result));
                     } else if let Some(engrams_client) = &self.engrams_client {
                         let result =
-                            crate::mcp::handlers::execute_tool(engrams_client, name, args).await;
+                            crate::mcp::handlers::execute_tool_with_engrams(engrams_client, name, args).await;
                         let result_text = result
                             .content
                             .first()

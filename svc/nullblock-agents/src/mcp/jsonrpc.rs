@@ -159,7 +159,7 @@ async fn handle_call_tool(
         None => json!({}),
     };
 
-    let tool_result = execute_tool(&state.engrams_client, &call_request.name, args).await;
+    let tool_result = execute_tool(state, &call_request.name, args).await;
 
     let result = CallToolResult {
         content: vec![ContentBlock::Text {

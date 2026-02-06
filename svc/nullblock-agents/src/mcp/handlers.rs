@@ -1,16 +1,29 @@
 use serde_json::Value;
-use tracing::info;
+use tracing::{error, info};
 
 use super::tools::McpToolResult;
 use crate::engrams::{CreateEngramRequest, EngramsClient, SearchRequest};
+use crate::models::LLMRequest;
+use crate::server::AppState;
+use std::collections::HashMap;
 use std::sync::Arc;
 
-pub async fn execute_tool(
+pub async fn execute_tool_with_engrams(
     engrams_client: &Arc<EngramsClient>,
     name: &str,
     args: Value,
 ) -> McpToolResult {
+    execute_tool_agent(engrams_client, name, args).await
+}
+
+pub async fn execute_tool(
+    state: &AppState,
+    name: &str,
+    args: Value,
+) -> McpToolResult {
     info!("Executing MCP tool: {}", name);
+
+    let engrams_client = &state.engrams_client;
 
     match name {
         "engram_create" => handle_engram_create(engrams_client, args).await,
@@ -39,6 +52,9 @@ pub async fn execute_tool(
         "crossroads_list_agents" => handle_crossroads_list_agents(args).await,
         "crossroads_list_hot" => handle_crossroads_list_hot(args).await,
         "crossroads_get_stats" => handle_crossroads_get_stats(args).await,
+        "llm_chat" => handle_llm_chat(state, args).await,
+        "llm_list_models" => handle_llm_list_models(state, args).await,
+        "llm_model_status" => handle_llm_model_status(state).await,
         _ => McpToolResult::error(format!("Unknown tool: {}", name)),
     }
 }
@@ -875,4 +891,202 @@ async fn handle_crossroads_get_stats(_args: Value) -> McpToolResult {
         }
         Err(e) => McpToolResult::error(format!("Failed to connect to discovery service: {}", e)),
     }
+}
+
+async fn execute_tool_agent(
+    engrams_client: &Arc<EngramsClient>,
+    name: &str,
+    args: Value,
+) -> McpToolResult {
+    info!("Executing MCP tool (agent): {}", name);
+
+    match name {
+        "engram_create" => handle_engram_create(engrams_client, args).await,
+        "engram_get" => handle_engram_get(engrams_client, args).await,
+        "engram_search" => handle_engram_search(engrams_client, args).await,
+        "engram_update" => handle_engram_update(engrams_client, args).await,
+        "engram_delete" => handle_engram_delete(engrams_client, args).await,
+        "engram_list_by_type" => handle_engram_list_by_type(engrams_client, args).await,
+        "user_profile_get" => handle_user_profile_get(engrams_client, args).await,
+        "user_profile_update" => handle_user_profile_update(engrams_client, args).await,
+        "hecate_remember" => handle_hecate_remember(engrams_client, args).await,
+        "hecate_cleanup" => handle_hecate_cleanup(engrams_client, args).await,
+        "hecate_pin_engram" => handle_hecate_pin(engrams_client, args).await,
+        "hecate_unpin_engram" => handle_hecate_unpin(engrams_client, args).await,
+        "hecate_new_session" => handle_hecate_new_session(engrams_client, args).await,
+        "hecate_list_sessions" => handle_hecate_list_sessions(engrams_client, args).await,
+        "hecate_resume_session" => handle_hecate_resume_session(engrams_client, args).await,
+        "hecate_delete_session" => handle_hecate_delete_session(engrams_client, args).await,
+        "moros_remember" => handle_moros_remember(engrams_client, args).await,
+        "moros_cleanup" => handle_hecate_cleanup(engrams_client, args).await,
+        "moros_pin_engram" => handle_hecate_pin(engrams_client, args).await,
+        "moros_unpin_engram" => handle_hecate_unpin(engrams_client, args).await,
+        // Crossroads discovery tools (public, no wallet required)
+        "crossroads_list_tools" => handle_crossroads_list_tools(args).await,
+        "crossroads_get_tool_info" => handle_crossroads_get_tool_info(args).await,
+        "crossroads_list_agents" => handle_crossroads_list_agents(args).await,
+        "crossroads_list_hot" => handle_crossroads_list_hot(args).await,
+        "crossroads_get_stats" => handle_crossroads_get_stats(args).await,
+        _ => McpToolResult::error(format!("Unknown tool: {}", name)),
+    }
+}
+
+// ==================== LLM Service Handlers ====================
+
+async fn handle_llm_chat(state: &AppState, args: Value) -> McpToolResult {
+    let messages = match args.get("messages").and_then(|v| v.as_array()) {
+        Some(msgs) => msgs,
+        None => return McpToolResult::error("Missing required field: messages"),
+    };
+
+    let messages_for_llm: Vec<HashMap<String, String>> = messages
+        .iter()
+        .filter_map(|m| {
+            let role = m.get("role")?.as_str()?.to_string();
+            let content = m.get("content")?.as_str()?.to_string();
+            let mut map = HashMap::new();
+            map.insert("role".to_string(), role);
+            map.insert("content".to_string(), content);
+            Some(map)
+        })
+        .collect();
+
+    let prompt = messages
+        .last()
+        .and_then(|m| m.get("content"))
+        .and_then(|v| v.as_str())
+        .unwrap_or("")
+        .to_string();
+
+    let system_prompt = args
+        .get("system_prompt")
+        .and_then(|v| v.as_str())
+        .map(String::from)
+        .or_else(|| {
+            messages
+                .iter()
+                .find(|m| m.get("role").and_then(|r| r.as_str()) == Some("system"))
+                .and_then(|m| m.get("content"))
+                .and_then(|v| v.as_str())
+                .map(String::from)
+        });
+
+    let model_override = args
+        .get("model")
+        .and_then(|v| v.as_str())
+        .and_then(|m| if m == "auto" { None } else { Some(m.to_string()) });
+
+    let max_tokens = args
+        .get("max_tokens")
+        .and_then(|v| v.as_u64())
+        .map(|v| v as u32);
+
+    let temperature = args.get("temperature").and_then(|v| v.as_f64());
+
+    let llm_request = LLMRequest {
+        prompt,
+        system_prompt,
+        messages: Some(messages_for_llm),
+        max_tokens,
+        temperature,
+        top_p: None,
+        stop_sequences: None,
+        tools: None,
+        model_override,
+        concise: false,
+        max_chars: None,
+        reasoning: None,
+    };
+
+    let agent = state.hecate_agent.read().await;
+    let llm_factory = match agent.llm_factory.as_ref() {
+        Some(f) => f.clone(),
+        None => return McpToolResult::error("LLM service not initialized"),
+    };
+    drop(agent);
+
+    let factory = llm_factory.read().await;
+    match factory.generate(&llm_request, None).await {
+        Ok(response) => {
+            let result = serde_json::json!({
+                "content": response.content,
+                "model_used": response.model_used,
+                "usage": response.usage,
+                "finish_reason": response.finish_reason,
+                "latency_ms": response.latency_ms,
+                "tool_calls": response.tool_calls,
+            });
+            McpToolResult::success(result.to_string())
+        }
+        Err(e) => {
+            error!("LLM chat failed: {}", e);
+            McpToolResult::error(format!("LLM request failed: {}", e))
+        }
+    }
+}
+
+async fn handle_llm_list_models(state: &AppState, args: Value) -> McpToolResult {
+    let free_only = args
+        .get("free_only")
+        .and_then(|v| v.as_bool())
+        .unwrap_or(false);
+
+    let agent = state.hecate_agent.read().await;
+    let llm_factory = match agent.llm_factory.as_ref() {
+        Some(f) => f.clone(),
+        None => return McpToolResult::error("LLM service not initialized"),
+    };
+    drop(agent);
+
+    let factory = llm_factory.read().await;
+
+    let models = if free_only {
+        factory.get_free_models().await.unwrap_or_default()
+    } else {
+        factory.fetch_available_models().await.unwrap_or_default()
+    };
+
+    let model_list: Vec<serde_json::Value> = models
+        .iter()
+        .filter_map(|m| {
+            let id = m.get("id")?.as_str()?;
+            let name = m.get("name").and_then(|v| v.as_str()).unwrap_or(id);
+            let context = m.get("context_length").and_then(|v| v.as_i64()).unwrap_or(0);
+            Some(serde_json::json!({
+                "id": id,
+                "name": name,
+                "context_length": context,
+            }))
+        })
+        .collect();
+
+    let result = serde_json::json!({
+        "count": model_list.len(),
+        "free_only": free_only,
+        "models": model_list,
+    });
+    McpToolResult::success(result.to_string())
+}
+
+async fn handle_llm_model_status(state: &AppState) -> McpToolResult {
+    let agent = state.hecate_agent.read().await;
+    let llm_factory = match agent.llm_factory.as_ref() {
+        Some(f) => f.clone(),
+        None => return McpToolResult::error("LLM service not initialized"),
+    };
+    let current_model = agent.preferred_model.clone();
+    drop(agent);
+
+    let factory = llm_factory.read().await;
+    let health = factory.health_check().await.unwrap_or(serde_json::json!({"error": "health check failed"}));
+    let stats = factory.get_stats().await;
+    let default_free = factory.get_default_free_model();
+
+    let result = serde_json::json!({
+        "current_model": current_model,
+        "default_free_model": default_free,
+        "health": health,
+        "stats": stats,
+    });
+    McpToolResult::success(result.to_string())
 }

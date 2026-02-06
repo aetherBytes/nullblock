@@ -1732,6 +1732,137 @@ pub async fn learn_from_task(
     }
 }
 
+// ================================
+// LLM PROXY ENDPOINTS (OpenAI-Compatible)
+// ================================
+
+pub async fn llm_chat_completions(
+    Json(request): Json<Value>,
+) -> Result<ResponseJson<Value>, (StatusCode, ResponseJson<AgentErrorResponse>)> {
+    info!("LLM Proxy: chat completions request via Erebus");
+
+    let client = reqwest::Client::new();
+    let agents_url =
+        std::env::var("AGENTS_SERVICE_URL").unwrap_or_else(|_| "http://localhost:9003".to_string());
+    let url = format!("{}/v1/chat/completions", agents_url);
+
+    match client
+        .post(&url)
+        .json(&request)
+        .timeout(std::time::Duration::from_secs(300))
+        .send()
+        .await
+    {
+        Ok(response) => {
+            if response.status().is_success() {
+                match response.json::<serde_json::Value>().await {
+                    Ok(json_response) => Ok(ResponseJson(json_response)),
+                    Err(e) => {
+                        error!("Failed to parse LLM proxy response: {}", e);
+                        Err((
+                            StatusCode::BAD_GATEWAY,
+                            ResponseJson(AgentErrorResponse {
+                                error: "parse_error".to_string(),
+                                code: "LLM_PARSE_ERROR".to_string(),
+                                message: format!("Failed to parse response: {}", e),
+                                agent_available: true,
+                            }),
+                        ))
+                    }
+                }
+            } else {
+                let status = response.status();
+                let error_text = response
+                    .text()
+                    .await
+                    .unwrap_or_else(|_| "Unknown error".to_string());
+                error!("LLM proxy error {}: {}", status, error_text);
+                Err((
+                    StatusCode::BAD_GATEWAY,
+                    ResponseJson(AgentErrorResponse {
+                        error: "llm_error".to_string(),
+                        code: "LLM_HTTP_ERROR".to_string(),
+                        message: error_text,
+                        agent_available: true,
+                    }),
+                ))
+            }
+        }
+        Err(e) => {
+            error!("Failed to connect to agents service for LLM: {}", e);
+            Err((
+                StatusCode::SERVICE_UNAVAILABLE,
+                ResponseJson(AgentErrorResponse {
+                    error: "connection_error".to_string(),
+                    code: "LLM_UNAVAILABLE".to_string(),
+                    message: format!("LLM service unavailable: {}", e),
+                    agent_available: false,
+                }),
+            ))
+        }
+    }
+}
+
+pub async fn llm_list_models(
+) -> Result<ResponseJson<Value>, (StatusCode, ResponseJson<AgentErrorResponse>)> {
+    info!("LLM Proxy: list models request via Erebus");
+
+    let client = reqwest::Client::new();
+    let agents_url =
+        std::env::var("AGENTS_SERVICE_URL").unwrap_or_else(|_| "http://localhost:9003".to_string());
+    let url = format!("{}/v1/models", agents_url);
+
+    match client
+        .get(&url)
+        .timeout(std::time::Duration::from_secs(30))
+        .send()
+        .await
+    {
+        Ok(response) => {
+            if response.status().is_success() {
+                match response.json::<serde_json::Value>().await {
+                    Ok(json_response) => Ok(ResponseJson(json_response)),
+                    Err(e) => {
+                        error!("Failed to parse models list response: {}", e);
+                        Err((
+                            StatusCode::BAD_GATEWAY,
+                            ResponseJson(AgentErrorResponse {
+                                error: "parse_error".to_string(),
+                                code: "LLM_PARSE_ERROR".to_string(),
+                                message: format!("Failed to parse response: {}", e),
+                                agent_available: true,
+                            }),
+                        ))
+                    }
+                }
+            } else {
+                let status = response.status();
+                Err((
+                    StatusCode::BAD_GATEWAY,
+                    ResponseJson(AgentErrorResponse {
+                        error: "llm_error".to_string(),
+                        code: "LLM_HTTP_ERROR".to_string(),
+                        message: format!("Models endpoint returned status: {}", status),
+                        agent_available: true,
+                    }),
+                ))
+            }
+        }
+        Err(e) => {
+            error!("Failed to connect to agents service for models: {}", e);
+            Err((
+                StatusCode::SERVICE_UNAVAILABLE,
+                ResponseJson(AgentErrorResponse {
+                    error: "connection_error".to_string(),
+                    code: "LLM_UNAVAILABLE".to_string(),
+                    message: format!("LLM service unavailable: {}", e),
+                    agent_available: false,
+                }),
+            ))
+        }
+    }
+}
+
 /// Process task with Hecate agent
 pub async fn process_task(
     Path(task_id): Path<String>,
