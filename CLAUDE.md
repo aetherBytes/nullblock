@@ -263,10 +263,11 @@ These issues are acceptable for local development but MUST be resolved before de
 - Request handlers with proper error handling
 - CORS enabled for development
 
-**Phase 4 - Integration (Next):**
-- Kafka event publishing
-- MCP tool definitions
-- Crossroads listing
+**Phase 4 - Integration (In Progress):**
+- Kafka event publishing (content.generated, content.posted, content.failed)
+- MCP tool definitions via nullblock-protocols
+- Erebus routing integration
+- Crossroads marketplace listing
 
 ### Database Tables
 - `content_queue` - Generated content pending review/posting (UUID, theme, text, tags, status, metadata)
