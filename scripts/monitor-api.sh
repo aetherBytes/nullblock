@@ -91,6 +91,38 @@ while true; do
   fi
   echo ""
 
+  # Content Service
+  echo -e "${CYAN}Testing Content Service...${NC}"
+  if content_health=$(curl -s --max-time 3 "http://localhost:8002/health" 2>/dev/null); then
+    if echo "$content_health" | jq -e '.status' > /dev/null 2>&1; then
+      status=$(echo "$content_health" | jq -r '.status')
+      version=$(echo "$content_health" | jq -r '.version // "unknown"')
+      echo -e "${GREEN}✅ GET /health (Content)${NC}" | tee -a logs/api-tests.log
+      echo "   Status: $status | Version: $version" | tee -a logs/api-tests.log
+    else
+      echo -e "${YELLOW}⚠️  GET /health - Unexpected format${NC}" | tee -a logs/api-tests.log
+    fi
+  else
+    echo -e "${RED}❌ GET /health - No response${NC}" | tee -a logs/api-tests.log
+    echo -e "${YELLOW}   → Is Content service running? Check: lsof -ti:8002${NC}"
+  fi
+  echo ""
+
+  # Content Queue Test
+  echo -e "${CYAN}Testing Content Queue...${NC}"
+  if queue_response=$(curl -s --max-time 3 "http://localhost:8002/api/content/queue" 2>/dev/null); then
+    if echo "$queue_response" | jq -e '.total' > /dev/null 2>&1; then
+      total=$(echo "$queue_response" | jq -r '.total')
+      echo -e "${GREEN}✅ GET /api/content/queue${NC}" | tee -a logs/api-tests.log
+      echo "   Total items: $total" | tee -a logs/api-tests.log
+    else
+      echo -e "${YELLOW}⚠️  GET /api/content/queue - Unexpected format${NC}" | tee -a logs/api-tests.log
+    fi
+  else
+    echo -e "${RED}❌ GET /api/content/queue - No response${NC}" | tee -a logs/api-tests.log
+  fi
+  echo ""
+
   echo "Next test in 60 seconds..." | tee -a logs/api-tests.log
   sleep 60
 done

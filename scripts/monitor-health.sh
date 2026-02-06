@@ -64,6 +64,17 @@ while true; do
     echo -e "${YELLOW}   → Start: cd ~/nullblock/svc/nullblock-engrams && cargo run${NC}"
   fi
 
+  # Content Service
+  if curl -s --max-time 2 "http://localhost:8002/health" > /dev/null 2>&1; then
+    content_health=$(curl -s --max-time 2 "http://localhost:8002/health")
+    version=$(echo "$content_health" | jq -r '.version // "unknown"' 2>/dev/null)
+    echo -e "${GREEN}✅${NC} Content Service (port 8002) - ${GREEN}HEALTHY${NC} [v$version]"
+  else
+    echo -e "${RED}❌${NC} Content Service (port 8002) - ${RED}NOT RESPONDING${NC}"
+    echo -e "${YELLOW}   → Check: tail -f ~/nullblock/svc/nullblock-content/logs/content.log${NC}"
+    echo -e "${YELLOW}   → Start: cd ~/nullblock/svc/nullblock-content && cargo run --release${NC}"
+  fi
+
   # Frontend
   if lsof -ti:5173 > /dev/null 2>&1; then
     echo -e "${GREEN}✅${NC} Frontend (port 5173) - ${GREEN}RUNNING${NC}"
@@ -97,6 +108,18 @@ while true; do
     fi
   else
     echo -e "${RED}❌${NC} Agents Database (port 5441) - ${RED}NOT RUNNING${NC}"
+    echo -e "${YELLOW}   → Start: just start${NC}"
+  fi
+
+  # Content Database
+  if docker ps --filter name=nullblock-postgres-content --format '{{.Names}}' | grep -q postgres; then
+    if docker exec nullblock-postgres-content pg_isready -U postgres > /dev/null 2>&1; then
+      echo -e "${GREEN}✅${NC} Content Database (port 5442) - ${GREEN}HEALTHY${NC}"
+    else
+      echo -e "${YELLOW}⚠️${NC}  Content Database (port 5442) - ${YELLOW}CONTAINER UP BUT NOT READY${NC}"
+    fi
+  else
+    echo -e "${RED}❌${NC} Content Database (port 5442) - ${RED}NOT RUNNING${NC}"
     echo -e "${YELLOW}   → Start: just start${NC}"
   fi
 
