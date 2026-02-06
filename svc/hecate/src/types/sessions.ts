@@ -19,6 +19,7 @@ export interface SessionSummary {
   session_id: string;
   engram_id: string;
   title: string;
+  summary?: string;
   message_count: number;
   created_at: string;
   updated_at: string;

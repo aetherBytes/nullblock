@@ -160,6 +160,38 @@ class AgentService {
     );
   }
 
+  async pinSession(walletAddress: string, sessionId: string): Promise<AgentServiceResponse<void>> {
+    return this.makeRequest<void>(`/api/agents/hecate/sessions/${sessionId}/pin`, {
+      method: 'POST',
+      body: JSON.stringify({ wallet_address: walletAddress }),
+    });
+  }
+
+  async unpinSession(walletAddress: string, sessionId: string): Promise<AgentServiceResponse<void>> {
+    return this.makeRequest<void>(`/api/agents/hecate/sessions/${sessionId}/unpin`, {
+      method: 'POST',
+      body: JSON.stringify({ wallet_address: walletAddress }),
+    });
+  }
+
+  async cleanupSessions(walletAddress: string): Promise<AgentServiceResponse<{ deleted_count: number }>> {
+    return this.makeRequest<{ deleted_count: number }>('/api/agents/hecate/sessions/cleanup', {
+      method: 'POST',
+      body: JSON.stringify({ wallet_address: walletAddress }),
+    });
+  }
+
+  async rememberContext(walletAddress: string, key: string, content: string): Promise<AgentServiceResponse<void>> {
+    return this.makeRequest<void>('/api/agents/hecate/remember', {
+      method: 'POST',
+      body: JSON.stringify({
+        wallet_address: walletAddress,
+        key,
+        content,
+      }),
+    });
+  }
+
   // Utility methods
   getAgentStatusColor(status: string): string {
     switch (status) {

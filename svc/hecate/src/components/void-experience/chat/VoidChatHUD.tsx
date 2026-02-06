@@ -134,6 +134,14 @@ const VoidChatHUD: React.FC<VoidChatHUDProps> = ({
   const [showSessionDrawer, setShowSessionDrawer] = useState(false);
   const sessionInitializedRef = useRef(false);
 
+  // Remember modal state
+  const [showRememberModal, setShowRememberModal] = useState(false);
+  const [rememberContent, setRememberContent] = useState('');
+  const [isRemembering, setIsRemembering] = useState(false);
+
+  // Cleanup state
+  const [isCleaningUp, setIsCleaningUp] = useState(false);
+
   // Resizable panel state
   const [panelWidth, setPanelWidth] = useState(() => {
     if (typeof window !== 'undefined') {
@@ -360,6 +368,54 @@ Connect wallet to unlock memories and tools.`;
       handleNewSession();
     }
   }, [currentSessionId, handleNewSession]);
+
+  // Remember context handler
+  const handleRememberSubmit = useCallback(async () => {
+    if (!publicKey || !rememberContent.trim()) return;
+
+    setIsRemembering(true);
+    try {
+      const key = `hecate.quick_memory.${Date.now()}`;
+      await agentService.rememberContext(publicKey, key, rememberContent.trim());
+      setShowRememberModal(false);
+      setRememberContent('');
+      // Show confirmation in chat
+      const confirmMsg: VoidMessage = {
+        id: `remember-${Date.now()}`,
+        text: `Memory saved: "${rememberContent.trim().substring(0, 50)}${rememberContent.length > 50 ? '...' : ''}"`,
+        sender: 'agent',
+        timestamp: new Date(),
+      };
+      setMessages((prev) => [...prev, confirmMsg]);
+    } catch (err) {
+      console.error('Failed to remember:', err);
+    } finally {
+      setIsRemembering(false);
+    }
+  }, [publicKey, rememberContent]);
+
+  // Cleanup sessions handler
+  const handleCleanupSessions = useCallback(async () => {
+    if (!publicKey) return;
+
+    setIsCleaningUp(true);
+    try {
+      const response = await agentService.cleanupSessions(publicKey);
+      if (response.success && response.data) {
+        const cleanupMsg: VoidMessage = {
+          id: `cleanup-${Date.now()}`,
+          text: `Sessions cleaned up. ${response.data.deleted_count} old sessions removed.`,
+          sender: 'agent',
+          timestamp: new Date(),
+        };
+        setMessages((prev) => [...prev, cleanupMsg]);
+      }
+    } catch (err) {
+      console.error('Failed to cleanup sessions:', err);
+    } finally {
+      setIsCleaningUp(false);
+    }
+  }, [publicKey]);
 
   // Auto-collapse chat when memcache/crossroads panels are open
   // Only auto-expand if user hasn't manually expanded while panel was open
@@ -797,23 +853,63 @@ Connect wallet to unlock memories and tools.`;
             </div>
             <div className={styles.headerActions}>
               {publicKey && (
-                <button
-                  className={styles.sessionsButton}
-                  onClick={() => setShowSessionDrawer(true)}
-                  aria-label="View sessions"
-                  title="View chat sessions"
-                >
-                  <svg
-                    width="16"
-                    height="16"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
+                <>
+                  <button
+                    className={styles.rememberButton}
+                    onClick={() => setShowRememberModal(true)}
+                    aria-label="Remember something"
+                    title="Quick remember"
+                    disabled={isRemembering}
                   >
-                    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-                  </svg>
-                </button>
+                    <svg
+                      width="16"
+                      height="16"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                    >
+                      <path d="M12 2a9 9 0 0 1 9 9c0 3.9-2.5 7.2-6 8.4V21h-6v-1.6c-3.5-1.2-6-4.5-6-8.4a9 9 0 0 1 9-9z" />
+                      <path d="M9 21v1a2 2 0 0 0 2 2h2a2 2 0 0 0 2-2v-1" />
+                    </svg>
+                  </button>
+                  <button
+                    className={styles.cleanupButton}
+                    onClick={handleCleanupSessions}
+                    aria-label="Cleanup old sessions"
+                    title="Cleanup old sessions"
+                    disabled={isCleaningUp}
+                  >
+                    <svg
+                      width="16"
+                      height="16"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                    >
+                      <path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6" />
+                      <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                    </svg>
+                  </button>
+                  <button
+                    className={styles.sessionsButton}
+                    onClick={() => setShowSessionDrawer(true)}
+                    aria-label="View sessions"
+                    title="View chat sessions"
+                  >
+                    <svg
+                      width="16"
+                      height="16"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                    >
+                      <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+                    </svg>
+                  </button>
+                </>
               )}
               <button
                 className={styles.historyClose}
@@ -957,7 +1053,39 @@ Connect wallet to unlock memories and tools.`;
           onNewSession={handleNewSession}
           onResumeSession={handleResumeSession}
           onDeleteSession={handleDeleteSession}
+          onCleanup={handleCleanupSessions}
         />
+        {showRememberModal && (
+          <div className={styles.rememberModal} onClick={() => setShowRememberModal(false)}>
+            <div className={styles.rememberModalContent} onClick={(e) => e.stopPropagation()}>
+              <h4>Quick Remember</h4>
+              <textarea
+                value={rememberContent}
+                onChange={(e) => setRememberContent(e.target.value)}
+                placeholder="What would you like me to remember?"
+                autoFocus
+              />
+              <div className={styles.rememberModalActions}>
+                <button
+                  className={styles.rememberCancel}
+                  onClick={() => {
+                    setShowRememberModal(false);
+                    setRememberContent('');
+                  }}
+                >
+                  Cancel
+                </button>
+                <button
+                  className={styles.rememberSubmit}
+                  onClick={handleRememberSubmit}
+                  disabled={!rememberContent.trim() || isRemembering}
+                >
+                  {isRemembering ? 'Saving...' : 'Remember'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </>,
       document.body
     );
