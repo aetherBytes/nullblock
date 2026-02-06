@@ -27,13 +27,15 @@ start-mac:
     @echo "📦 Creating persistent volumes..."
     @docker volume create nullblock-postgres-erebus-data 2>/dev/null || true
     @docker volume create nullblock-postgres-agents-data 2>/dev/null || true
+    @docker volume create nullblock-postgres-content-data 2>/dev/null || true
     @docker volume create nullblock-redis-data 2>/dev/null || true
     @echo "  ✅ Volumes ready"
     @echo ""
-    @docker rm -f nullblock-postgres-erebus nullblock-postgres-agents nullblock-redis nullblock-zookeeper nullblock-kafka 2>/dev/null || true
+    @docker rm -f nullblock-postgres-erebus nullblock-postgres-agents nullblock-postgres-content nullblock-redis nullblock-zookeeper nullblock-kafka 2>/dev/null || true
     @echo "📦 Starting PostgreSQL databases..."
     @docker run -d --name nullblock-postgres-erebus --network nullblock-network -p 5440:5432 -v nullblock-postgres-erebus-data:/var/lib/postgresql/data -e POSTGRES_DB=erebus -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=REDACTED_DB_PASS postgres:15-alpine postgres -c wal_level=logical -c max_replication_slots=4 -c max_wal_senders=4 -c max_logical_replication_workers=4
     @docker run -d --name nullblock-postgres-agents --network nullblock-network -p 5441:5432 -v nullblock-postgres-agents-data:/var/lib/postgresql/data -e POSTGRES_DB=agents -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=REDACTED_DB_PASS postgres:15-alpine postgres -c wal_level=logical -c max_replication_slots=4 -c max_wal_senders=4 -c max_logical_replication_workers=4
+    @docker run -d --name nullblock-postgres-content --network nullblock-network -p 5442:5432 -v nullblock-postgres-content-data:/var/lib/postgresql/data -e POSTGRES_DB=nullblock_content -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=REDACTED_DB_PASS postgres:15-alpine postgres -c wal_level=logical -c max_replication_slots=4 -c max_wal_senders=4 -c max_logical_replication_workers=4
     @echo "📦 Starting Redis..."
     @docker run -d --name nullblock-redis --network nullblock-network -p 6379:6379 -v nullblock-redis-data:/data redis:7-alpine redis-server --appendonly yes
     @echo "📦 Starting Zookeeper..."
@@ -45,6 +47,8 @@ start-mac:
     @echo "  ✅ Erebus PostgreSQL ready"
     @while ! docker exec nullblock-postgres-agents pg_isready -U postgres > /dev/null 2>&1; do echo "  ⏳ Waiting for Agents PostgreSQL..."; sleep 2; done
     @echo "  ✅ Agents PostgreSQL ready"
+    @while ! docker exec nullblock-postgres-content pg_isready -U postgres > /dev/null 2>&1; do echo "  ⏳ Waiting for Content PostgreSQL..."; sleep 2; done
+    @echo "  ✅ Content PostgreSQL ready"
     @while ! docker exec nullblock-redis redis-cli ping > /dev/null 2>&1; do echo "  ⏳ Waiting for Redis..."; sleep 2; done
     @echo "  ✅ Redis ready"
     @sleep 5
@@ -81,13 +85,15 @@ start-linux:
     @echo "📦 Creating persistent volumes..."
     @docker volume create nullblock-postgres-erebus-data 2>/dev/null || true
     @docker volume create nullblock-postgres-agents-data 2>/dev/null || true
+    @docker volume create nullblock-postgres-content-data 2>/dev/null || true
     @docker volume create nullblock-redis-data 2>/dev/null || true
     @echo "  ✅ Volumes ready"
     @echo ""
-    @docker rm -f nullblock-postgres-erebus nullblock-postgres-agents nullblock-redis nullblock-zookeeper nullblock-kafka 2>/dev/null || true
+    @docker rm -f nullblock-postgres-erebus nullblock-postgres-agents nullblock-postgres-content nullblock-redis nullblock-zookeeper nullblock-kafka 2>/dev/null || true
     @echo "📦 Starting PostgreSQL databases..."
     @docker run -d --name nullblock-postgres-erebus --network nullblock-network -p 5440:5432 -v nullblock-postgres-erebus-data:/var/lib/postgresql/data -e POSTGRES_DB=erebus -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=REDACTED_DB_PASS postgres:15-alpine postgres -c wal_level=logical -c max_replication_slots=4 -c max_wal_senders=4 -c max_logical_replication_workers=4
     @docker run -d --name nullblock-postgres-agents --network nullblock-network -p 5441:5432 -v nullblock-postgres-agents-data:/var/lib/postgresql/data -e POSTGRES_DB=agents -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=REDACTED_DB_PASS postgres:15-alpine postgres -c wal_level=logical -c max_replication_slots=4 -c max_wal_senders=4 -c max_logical_replication_workers=4
+    @docker run -d --name nullblock-postgres-content --network nullblock-network -p 5442:5432 -v nullblock-postgres-content-data:/var/lib/postgresql/data -e POSTGRES_DB=nullblock_content -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=REDACTED_DB_PASS postgres:15-alpine postgres -c wal_level=logical -c max_replication_slots=4 -c max_wal_senders=4 -c max_logical_replication_workers=4
     @echo "📦 Starting Redis..."
     @docker run -d --name nullblock-redis --network nullblock-network -p 6379:6379 -v nullblock-redis-data:/data redis:7-alpine redis-server --appendonly yes
     @echo "📦 Starting Zookeeper..."
@@ -99,6 +105,8 @@ start-linux:
     @echo "  ✅ Erebus PostgreSQL ready"
     @while ! docker exec nullblock-postgres-agents pg_isready -U postgres > /dev/null 2>&1; do echo "  ⏳ Waiting for Agents PostgreSQL..."; sleep 2; done
     @echo "  ✅ Agents PostgreSQL ready"
+    @while ! docker exec nullblock-postgres-content pg_isready -U postgres > /dev/null 2>&1; do echo "  ⏳ Waiting for Content PostgreSQL..."; sleep 2; done
+    @echo "  ✅ Content PostgreSQL ready"
     @while ! docker exec nullblock-redis redis-cli ping > /dev/null 2>&1; do echo "  ⏳ Waiting for Redis..."; sleep 2; done
     @echo "  ✅ Redis ready"
     @sleep 5
@@ -289,7 +297,7 @@ wipe-db:
     @just term
     @echo ""
     @echo "🗑️  Removing database volumes..."
-    @docker volume rm nullblock-postgres-erebus-data nullblock-postgres-agents-data 2>/dev/null || true
+    @docker volume rm nullblock-postgres-erebus-data nullblock-postgres-agents-data nullblock-postgres-content-data 2>/dev/null || true
     @echo "✅ Database volumes removed"
     @echo ""
     @echo "💡 Run 'just start' to create fresh databases with migrations"
@@ -490,6 +498,11 @@ migrate:
     @echo "Applying ArbFarm schema updates..."
     @./scripts/migrate-arbfarm.sh
     @echo "✅ ArbFarm migrations completed"
+    @echo ""
+    @echo "📋 Step 4: Running Content Service database migrations..."
+    @echo "Applying Content schema updates..."
+    @./scripts/migrate-content.sh
+    @echo "✅ Content migrations completed"
     @echo ""
     @echo "📊 Final status check..."
     @echo "Erebus tables:"
