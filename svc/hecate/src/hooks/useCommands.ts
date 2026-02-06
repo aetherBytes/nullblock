@@ -133,6 +133,7 @@ const TOOL_QUERY_PATTERNS = [
 
 export function useCommands(erebusUrl: string = 'http://localhost:3000', isAuthenticated: boolean = false) {
   const [mcpTools, setMcpTools] = useState<McpTool[]>([]);
+  const [agentTools, setAgentTools] = useState<McpTool[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -145,14 +146,25 @@ export function useCommands(erebusUrl: string = 'http://localhost:3000', isAuthe
     try {
       const allTools: McpTool[] = [];
       const seenNames = new Set<string>();
+      let fetchedAgentTools: McpTool[] = [];
 
-      // Fetch Hecate tools from agents service via Erebus
+      // Fetch agent tools from MCP endpoint (returns only allowed tools)
       try {
-        const hecateResponse = await fetch(`${erebusUrl}/api/agents/hecate/tools`);
-        if (hecateResponse.ok) {
-          const data = await hecateResponse.json();
-          const hecateTools = data.data?.hecate_tools || [];
-          hecateTools.forEach((tool: McpTool) => {
+        const agentMcpResponse = await fetch(`${erebusUrl}/api/agents/mcp/jsonrpc`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            jsonrpc: '2.0',
+            id: 1,
+            method: 'tools/list',
+            params: {}
+          })
+        });
+        if (agentMcpResponse.ok) {
+          const data = await agentMcpResponse.json();
+          const tools = data.result?.tools || [];
+          fetchedAgentTools = tools;
+          tools.forEach((tool: McpTool) => {
             if (!seenNames.has(tool.name)) {
               seenNames.add(tool.name);
               allTools.push(tool);
@@ -160,8 +172,30 @@ export function useCommands(erebusUrl: string = 'http://localhost:3000', isAuthe
           });
         }
       } catch (e) {
-        console.warn('Failed to fetch Hecate tools:', e);
+        console.warn('Failed to fetch agent MCP tools:', e);
       }
+
+      // Fallback: fetch from legacy endpoint
+      if (fetchedAgentTools.length === 0) {
+        try {
+          const hecateResponse = await fetch(`${erebusUrl}/api/agents/hecate/tools`);
+          if (hecateResponse.ok) {
+            const data = await hecateResponse.json();
+            const hecateTools = data.data?.hecate_tools || [];
+            fetchedAgentTools = hecateTools;
+            hecateTools.forEach((tool: McpTool) => {
+              if (!seenNames.has(tool.name)) {
+                seenNames.add(tool.name);
+                allTools.push(tool);
+              }
+            });
+          }
+        } catch (e) {
+          console.warn('Failed to fetch Hecate tools:', e);
+        }
+      }
+
+      setAgentTools(fetchedAgentTools);
 
       // Fetch ArbFarm tools
       try {
@@ -377,6 +411,7 @@ Use \`/list-tools\` to see all available tools.`;
   return {
     commands: allCommands,
     mcpTools,
+    agentTools,
     isLoading,
     error,
     filterCommands,

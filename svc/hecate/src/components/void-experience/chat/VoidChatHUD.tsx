@@ -155,7 +155,7 @@ const VoidChatHUD: React.FC<VoidChatHUDProps> = ({
     getHelpText,
     getToolListText,
     getMcpStatusText,
-    mcpTools,
+    agentTools,
   } = useCommands('http://localhost:3000', !!publicKey);
 
   // Compute filtered commands based on current input
@@ -216,7 +216,7 @@ Connect wallet to unlock memories and tools.`;
 
 **User**: Connected
 **Agent**: ${activeAgent.toUpperCase()} (${agentHealthStatus})
-**Tools**: 6 engram tools enabled`;
+**Tools**: ${agentTools.length} enabled`;
           }
           break;
         default:
@@ -248,7 +248,7 @@ Connect wallet to unlock memories and tools.`;
       setInput(commandMsg);
       inputRef.current?.focus();
     }
-  }, [activeAgent, agentHealthStatus, mcpTools.length, getHelpText, getToolListText, getMcpStatusText]);
+  }, [activeAgent, agentHealthStatus, agentTools.length, getHelpText, getToolListText, getMcpStatusText, publicKey]);
 
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const historyRef = useRef<HTMLDivElement>(null);
