@@ -5,12 +5,14 @@ const EREBUS_API_URL = import.meta.env.VITE_EREBUS_API_URL || 'http://localhost:
 
 interface UseLogsOptions {
   autoConnect?: boolean;
+  autoFetch?: boolean;
   maxLogs?: number;
   filters?: LogsQuery;
+  silentErrors?: boolean;
 }
 
 export const useLogs = (options: UseLogsOptions = {}) => {
-  const { autoConnect = true, maxLogs = 500, filters } = options;
+  const { autoConnect = false, autoFetch = false, maxLogs = 500, filters, silentErrors = true } = options;
 
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [isConnected, setIsConnected] = useState(false);
@@ -59,11 +61,13 @@ export const useLogs = (options: UseLogsOptions = {}) => {
       const errorMessage = err instanceof Error ? err.message : 'Failed to fetch logs';
 
       setError(errorMessage);
-      console.error('❌ Error fetching logs:', err);
+      if (!silentErrors) {
+        console.error('❌ Error fetching logs:', err);
+      }
     } finally {
       setIsLoading(false);
     }
-  }, [filters]);
+  }, [filters, silentErrors]);
 
   const connectToStream = useCallback(() => {
     if (eventSourceRef.current) {
@@ -182,7 +186,9 @@ export const useLogs = (options: UseLogsOptions = {}) => {
   );
 
   useEffect(() => {
-    fetchRecentLogs();
+    if (autoFetch) {
+      fetchRecentLogs();
+    }
 
     if (autoConnect) {
       connectToStream();
@@ -191,7 +197,7 @@ export const useLogs = (options: UseLogsOptions = {}) => {
     return () => {
       disconnectFromStream();
     };
-  }, []);
+  }, [autoFetch, autoConnect, fetchRecentLogs, connectToStream, disconnectFromStream]);
 
   return {
     logs,
