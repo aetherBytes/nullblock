@@ -120,18 +120,19 @@ windows:
       layout: tiled
       pre_window: |
         if [ -f .env.dev ]; then
-          export $(grep -v '^#' .env.dev | xargs -0)
+          set -a
+          source .env.dev
+          set +a
         fi
       panes:
         - |
           echo "🔗 Starting Erebus Server (Rust)..."
-          cd svc/erebus
-          mkdir -p logs
+          mkdir -p svc/erebus/logs
           export EREBUS_HOST=127.0.0.1
           export EREBUS_PORT=3000
           export DATABASE_URL="postgresql://postgres:REDACTED_DB_PASS@localhost:5440/erebus"
           export KAFKA_BOOTSTRAP_SERVERS="localhost:9092"
-          echo "📝 Logs will be written to logs/erebus.log"
+          echo "📝 Logs will be written to svc/erebus/logs/erebus.log"
           echo ""
           echo "🗄️  Waiting for Erebus database to be ready..."
           while ! docker exec nullblock-postgres-erebus pg_isready -U postgres > /dev/null 2>&1; do
@@ -152,6 +153,7 @@ windows:
           echo "✅ Kafka connection ready"
           echo ""
           echo "🚀 Starting Erebus Rust server..."
+          cd svc/erebus
           cargo run 2>&1 | tee logs/erebus.log
         - |
           echo "🗄️  Monitoring PostgreSQL for Erebus (Users DB)..."
@@ -192,7 +194,9 @@ windows:
       layout: tiled
       pre_window: |
         if [ -f .env.dev ]; then
-          export $(grep -v '^#' .env.dev | xargs -0)
+          set -a
+          source .env.dev
+          set +a
         fi
       panes:
         - |
@@ -438,7 +442,9 @@ windows:
       layout: tiled
       pre_window: |
         if [ -f .env.dev ]; then
-          export $(grep -v '^#' .env.dev | xargs -0)
+          set -a
+          source .env.dev
+          set +a
         fi
       panes:
         - |
@@ -509,7 +515,9 @@ windows:
       layout: tiled
       pre_window: |
         if [ -f .env.dev ]; then
-          export $(grep -v '^#' .env.dev | xargs -0)
+          set -a
+          source .env.dev
+          set +a
         fi
       panes:
         - |
@@ -619,7 +627,9 @@ windows:
       layout: tiled
       pre_window: |
         if [ -f .env.dev ]; then
-          export $(grep -v '^#' .env.dev | xargs -0)
+          set -a
+          source .env.dev
+          set +a
         fi
       panes:
         - |
@@ -708,7 +718,9 @@ windows:
       layout: tiled
       pre_window: |
         if [ -f .env.dev ]; then
-          export $(grep -v '^#' .env.dev | xargs -0)
+          set -a
+          source .env.dev
+          set +a
         fi
       panes:
         - |
@@ -743,7 +755,7 @@ windows:
           echo "🎨 Starting Frontend (Hecate React App)..."
           cd svc/hecate
           echo "Installing/updating npm dependencies..."
-          npm install
+          npm install --legacy-peer-deps
           export VITE_PROTOCOLS_API_URL=http://localhost:8001
           export VITE_A2A_API_URL=http://localhost:8001
           export VITE_EREBUS_API_URL=http://localhost:3000
