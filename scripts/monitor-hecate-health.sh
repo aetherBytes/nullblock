@@ -10,11 +10,9 @@ while true; do
     curl -s "http://localhost:9003/hecate/model-status" | jq -r '"🧠 Model: " + (.current_model // "unknown") + " | Status: " + (.status // "unknown")' 2>/dev/null | tee -a ~/nullblock/logs/hecate-health.log
     task_count=$(curl -s "http://localhost:9003/tasks" | jq '.total // 0' 2>/dev/null || echo "0")
     echo "📋 Current tasks: $task_count" | tee -a ~/nullblock/logs/hecate-health.log
-    if curl -s --max-time 3 "http://localhost:9003/health" | jq -r '.components.database.status' 2>/dev/null | grep -q "healthy"; then
-      echo "🗄️  Database migrations: ✅ Complete" | tee -a ~/nullblock/logs/hecate-health.log
-    else
-      echo "🗄️  Database migrations: ⚠️  Check required" | tee -a ~/nullblock/logs/hecate-health.log
-    fi
+    llm_status=$(curl -s --max-time 3 "http://localhost:9003/health" | jq -r '.components.llm_service.overall_status // "unknown"' 2>/dev/null)
+    llm_model=$(curl -s --max-time 3 "http://localhost:9003/health" | jq -r '.components.validated_model.model // "unknown"' 2>/dev/null)
+    echo "🧠 LLM: $llm_status | Model: $llm_model" | tee -a ~/nullblock/logs/hecate-health.log
   else
     echo "❌ Hecate agent not responding" | tee -a ~/nullblock/logs/hecate-health.log
   fi

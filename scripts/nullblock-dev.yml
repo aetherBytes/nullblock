@@ -6,115 +6,9 @@ windows:
   - monitoring:
       layout: tiled
       panes:
-        - |
-          echo "🎯 NullBlock System Health Dashboard"
-          echo "Comprehensive monitoring of all services and infrastructure..."
-          echo ""
-          mkdir -p logs
-          while true; do
-            clear
-            echo "🎯 NullBlock System Health Dashboard - $(date '+%Y-%m-%d %H:%M:%S')"
-            echo "==============================================================="
-            echo ""
-
-            # Service Health Checks
-            echo "📡 Service Health Status:"
-            for service in "erebus:3000" "nullblock-agents:9003" "nullblock-protocols:8001" "nullblock-engrams:9004" "arb-farm:9007" "frontend:5173"; do
-              name=$(echo $service | cut -d: -f1)
-              port=$(echo $service | cut -d: -f2)
-              if curl -s --max-time 3 "http://localhost:$port/health" > /dev/null 2>&1; then
-                echo "  ✅ $name (port $port) - Healthy"
-              else
-                echo "  ❌ $name (port $port) - Not responding"
-              fi
-            done
-            echo ""
-
-            # Database Connections (Docker)
-            echo "🗄️  Database Connections:"
-            if docker ps | grep -q nullblock-postgres-agents && docker exec nullblock-postgres-agents pg_isready -U postgres > /dev/null 2>&1; then
-              echo "  ✅ PostgreSQL (Agents) - Connected"
-              echo "     🔑 Test Credentials: postgres:REDACTED_DB_PASS@localhost:5441/agents"
-            else
-              echo "  ❌ PostgreSQL (Agents) - Connection failed"
-              echo "     🔑 Test Credentials: postgres:REDACTED_DB_PASS@localhost:5441/agents"
-            fi
-
-            if docker ps | grep -q nullblock-postgres-erebus && docker exec nullblock-postgres-erebus pg_isready -U postgres > /dev/null 2>&1; then
-              echo "  ✅ PostgreSQL (Erebus) - Connected"
-              echo "     🔑 Test Credentials: postgres:REDACTED_DB_PASS@localhost:5440/erebus"
-            else
-              echo "  ❌ PostgreSQL (Erebus) - Connection failed"
-              echo "     🔑 Test Credentials: postgres:REDACTED_DB_PASS@localhost:5440/erebus"
-            fi
-
-            if docker ps | grep -q nullblock-redis && docker exec nullblock-redis redis-cli ping > /dev/null 2>&1; then
-              echo "  ✅ Redis - Connected"
-              echo "     🔑 Test Credentials: localhost:6379 (no auth required)"
-            else
-              echo "  ❌ Redis - Connection failed"
-              echo "     🔑 Test Credentials: localhost:6379 (no auth required)"
-            fi
-            echo ""
-
-            # Kafka Health
-            echo "📨 Event Streaming:"
-            if docker ps | grep -q nullblock-kafka; then
-              echo "  ✅ Kafka - Running"
-              echo "  ✅ Zookeeper - Running"
-            else
-              echo "  ❌ Kafka/Zookeeper - Not running (use docker-compose up kafka zookeeper -d)"
-            fi
-
-            sleep 30
-          done
-        - |
-          echo "📊 Task Management Metrics"
-          echo "Real-time task and wallet-filtered task monitoring..."
-          echo ""
-          mkdir -p logs
-          while true; do
-            echo "$(date '+%Y-%m-%d %H:%M:%S') [METRICS] Task system status..." | tee -a logs/task-metrics.log
-
-            # Test task endpoints (both direct and via Erebus)
-            if curl -s --max-time 5 "http://localhost:3000/api/agents/tasks" > /dev/null 2>&1; then
-              # Via Erebus (production route)
-              task_response=$(curl -s "http://localhost:3000/api/agents/tasks" 2>/dev/null)
-              if echo "$task_response" | jq -e '.data' > /dev/null 2>&1; then
-                task_count=$(echo "$task_response" | jq '.data | length' 2>/dev/null || echo "0")
-                echo "📋 Tasks via Erebus: $task_count" | tee -a logs/task-metrics.log
-              else
-                total_count=$(echo "$task_response" | jq '.total // 0' 2>/dev/null || echo "0")
-                echo "📋 Total tasks: $total_count" | tee -a logs/task-metrics.log
-              fi
-
-              # Hecate agent model status
-              echo "🎯 Agent model status:" | tee -a logs/task-metrics.log
-              curl -s "http://localhost:9003/hecate/model-status" | jq -r '"  Model: " + (.current_model // "unknown") + " | Status: " + (.status // "unknown")' 2>/dev/null | tee -a logs/task-metrics.log
-
-              # Wallet-based filtering test
-              echo "🔐 Wallet filtering: Active (x-wallet-address headers)" | tee -a logs/task-metrics.log
-            else
-              echo "❌ Task system not available via Erebus" | tee -a logs/task-metrics.log
-            fi
-            sleep 45
-          done
-        - |
-          echo "🔄 Quick API Testing"
-          echo "Testing all service endpoints..."
-          echo ""
-          while true; do
-            echo "🧪 API Endpoint Tests - $(date '+%H:%M:%S')"
-            echo "curl http://localhost:3000/health (Erebus)"
-            curl -s --max-time 3 "http://localhost:3000/health" | jq . 2>/dev/null || echo "❌ Failed"
-            echo ""
-            echo "curl http://localhost:9003/health (Agents)"
-            curl -s --max-time 3 "http://localhost:9003/health" | jq . 2>/dev/null || echo "❌ Failed"
-            echo ""
-            echo "curl http://localhost:3000/api/agents/tasks (Task Management via Erebus)"
-            curl -s --max-time 3 "http://localhost:3000/api/agents/tasks" | jq '.data // .total // "error"' 2>/dev/null || echo "❌ Failed"
-            sleep 60
-          done
+        - ~/nullblock/scripts/monitor-health.sh
+        - ~/nullblock/scripts/monitor-tasks.sh
+        - ~/nullblock/scripts/monitor-api.sh
 
   - erebus:
       layout: tiled
@@ -125,70 +19,10 @@ windows:
           set +a
         fi
       panes:
-        - |
-          echo "🔗 Starting Erebus Server (Rust)..."
-          mkdir -p svc/erebus/logs
-          export EREBUS_HOST=127.0.0.1
-          export EREBUS_PORT=3000
-          export DATABASE_URL="postgresql://postgres:REDACTED_DB_PASS@localhost:5440/erebus"
-          export KAFKA_BOOTSTRAP_SERVERS="localhost:9092"
-          echo "📝 Logs will be written to svc/erebus/logs/erebus.log"
-          echo ""
-          echo "🗄️  Waiting for Erebus database to be ready..."
-          while ! docker exec nullblock-postgres-erebus pg_isready -U postgres > /dev/null 2>&1; do
-            echo "⏳ Waiting for Erebus PostgreSQL container to be ready..."
-            sleep 2
-          done
-          echo "✅ Erebus database connection ready"
-          echo ""
-          echo "📋 Running Erebus database migrations..."
-          $HOME/nullblock/scripts/run-erebus-migrations.sh
-          echo "✅ Erebus migrations complete"
-          echo ""
-          echo "📨 Waiting for Kafka to be ready..."
-          while ! docker exec nullblock-kafka kafka-broker-api-versions --bootstrap-server localhost:9092 > /dev/null 2>&1; do
-            echo "⏳ Waiting for Kafka container to be ready..."
-            sleep 3
-          done
-          echo "✅ Kafka connection ready"
-          echo ""
-          echo "🚀 Starting Erebus Rust server..."
-          cd svc/erebus
-          cargo run 2>&1 | tee logs/erebus.log
-        - |
-          echo "🗄️  Monitoring PostgreSQL for Erebus (Users DB)..."
-          echo "Using Docker PostgreSQL container on port 5440..."
-          echo ""
-          echo "📊 Database connection monitoring..."
-          while true; do
-            if docker ps | grep -q nullblock-postgres-erebus && docker exec nullblock-postgres-erebus pg_isready -U postgres > /dev/null 2>&1; then
-              echo "$(date '+%H:%M:%S') ✅ Erebus PostgreSQL (Docker) connection healthy"
-            else
-              echo "$(date '+%H:%M:%S') ❌ Erebus PostgreSQL (Docker) connection failed"
-            fi
-            sleep 30
-          done
-        - |
-          echo "🔄 Monitoring Redis for Erebus (Sessions)..."
-          echo "Using Docker Redis container on port 6379..."
-          echo ""
-          echo "📊 Redis connection monitoring..."
-          while true; do
-            if docker ps | grep -q nullblock-redis && docker exec nullblock-redis redis-cli ping > /dev/null 2>&1; then
-              echo "$(date '+%H:%M:%S') ✅ Redis (Docker) connection healthy"
-            else
-              echo "$(date '+%H:%M:%S') ❌ Redis (Docker) connection failed"
-            fi
-            sleep 30
-          done
-        - |
-          echo "📡 Erebus Service Logs & Monitoring"
-          echo "Monitoring Erebus unified router logs and user events..."
-          echo ""
-          cd svc/erebus
-          mkdir -p logs
-          echo "📝 Watching Erebus logs..."
-          tail -f logs/erebus.log 2>/dev/null || echo "⚠️ Waiting for Erebus logs..."
+        - ~/nullblock/scripts/start-erebus.sh
+        - ~/nullblock/scripts/monitor-erebus-db.sh
+        - ~/nullblock/scripts/monitor-erebus-redis.sh
+        - ~/nullblock/scripts/tail-erebus-logs.sh
 
   - nullblock-agents:
       layout: tiled
@@ -199,244 +33,10 @@ windows:
           set +a
         fi
       panes:
-        - |
-          echo "🎯 Starting Hecate Agent Server (Rust)..."
-          echo "🦀 High-performance Rust implementation with database & events"
-          echo ""
-          cd svc/nullblock-agents
-          mkdir -p logs
-          export AGENTS_PORT=9003
-          export DATABASE_URL="postgresql://postgres:REDACTED_DB_PASS@localhost:5441/agents"
-          export KAFKA_BOOTSTRAP_SERVERS="localhost:9092"
-          echo "🚀 Starting Rust agents service on port 9003..."
-          echo "📝 Logs will be written to logs/hecate-rust.log"
-          echo "🗄️  Using PostgreSQL for task persistence"
-          echo "📨 Using Kafka for event streaming"
-          echo ""
-          echo "🗄️  Setting up database schema..."
-          echo "📋 Waiting for database to be ready..."
-          while ! docker exec nullblock-postgres-agents pg_isready -U postgres > /dev/null 2>&1; do
-            echo "⏳ Waiting for PostgreSQL container to be ready..."
-            sleep 2
-          done
-          echo "✅ Database connection ready"
-          echo ""
-          echo "📋 Running database migrations..."
-          cat $HOME/nullblock/svc/nullblock-agents/migrations/001_create_tasks_table.sql | docker exec -i nullblock-postgres-agents psql -U postgres -d agents 2>&1 | grep -E "(ERROR|already exists)" || echo "✅ 001_create_tasks_table.sql applied"
-          cat $HOME/nullblock/svc/nullblock-agents/migrations/002_create_agents_table.sql | docker exec -i nullblock-postgres-agents psql -U postgres -d agents 2>&1 | grep -E "(ERROR|already exists)" || echo "✅ 002_create_agents_table.sql applied"
-          cat $HOME/nullblock/svc/nullblock-agents/migrations/003_create_user_references_table.sql | docker exec -i nullblock-postgres-agents psql -U postgres -d agents 2>&1 | grep -E "(ERROR|already exists)" || echo "✅ 003_create_user_references_table.sql applied"
-          cat $HOME/nullblock/svc/nullblock-agents/migrations/004_add_tasks_foreign_keys.sql | docker exec -i nullblock-postgres-agents psql -U postgres -d agents 2>&1 | grep -E "(ERROR|already exists)" || echo "✅ 004_add_tasks_foreign_keys.sql applied"
-          cat $HOME/nullblock/svc/nullblock-agents/migrations/006_fix_user_references_constraint_name.sql | docker exec -i nullblock-postgres-agents psql -U postgres -d agents 2>&1 | grep -E "(ERROR|NOTICE|Renamed)" || echo "✅ 006_fix_user_references_constraint_name.sql applied"
-          cat $HOME/nullblock/svc/nullblock-agents/migrations/005_setup_replication_subscription.sql | docker exec -i nullblock-postgres-agents psql -U postgres -d agents 2>&1 | grep -E "(ERROR|NOTICE|Created)" || echo "✅ 005_setup_replication_subscription.sql applied"
-          echo "✅ Database schema ready"
-          echo ""
-          echo "📨 Waiting for Kafka to be ready..."
-          while ! docker exec nullblock-kafka kafka-broker-api-versions --bootstrap-server localhost:9092 > /dev/null 2>&1; do
-            echo "⏳ Waiting for Kafka container to be ready..."
-            sleep 3
-          done
-          echo "✅ Kafka connection ready"
-          echo ""
-          echo "🚀 Starting Rust agents service..."
-          cargo run --release 2>&1 | tee logs/hecate-rust.log
-        - |
-          echo "🗄️  Agents Database Monitoring"
-          echo "PostgreSQL monitoring for tasks, agents, user_references tables..."
-          echo ""
-          mkdir -p logs
-          while true; do
-            echo "$(date '+%Y-%m-%d %H:%M:%S') [DB] Agents database status..." | tee -a logs/agents-db.log
-            if docker exec nullblock-postgres-agents psql -U postgres -d agents -c "SELECT COUNT(*) as task_count FROM tasks;" 2>/dev/null | grep -q "task_count"; then
-              # Basic counts
-              task_count=$(docker exec nullblock-postgres-agents psql -U postgres -d agents -t -c "SELECT COUNT(*) FROM tasks;" 2>/dev/null | xargs)
-              user_ref_count=$(docker exec nullblock-postgres-agents psql -U postgres -d agents -t -c "SELECT COUNT(*) FROM user_references;" 2>/dev/null | xargs)
-              agent_count=$(docker exec nullblock-postgres-agents psql -U postgres -d agents -t -c "SELECT COUNT(*) FROM agents;" 2>/dev/null | xargs)
-
-              # Task status breakdown
-              echo "📊 Total: Tasks=$task_count | Users=$user_ref_count | Agents=$agent_count" | tee -a logs/agents-db.log
-
-              # Task status distribution (aligned with new simplified status enum)
-              created_tasks=$(docker exec nullblock-postgres-agents psql -U postgres -d agents -t -c "SELECT COUNT(*) FROM tasks WHERE status='created';" 2>/dev/null | xargs)
-              running_tasks=$(docker exec nullblock-postgres-agents psql -U postgres -d agents -t -c "SELECT COUNT(*) FROM tasks WHERE status='running';" 2>/dev/null | xargs)
-              completed_tasks=$(docker exec nullblock-postgres-agents psql -U postgres -d agents -t -c "SELECT COUNT(*) FROM tasks WHERE status='completed';" 2>/dev/null | xargs)
-              failed_tasks=$(docker exec nullblock-postgres-agents psql -U postgres -d agents -t -c "SELECT COUNT(*) FROM tasks WHERE status='failed';" 2>/dev/null | xargs)
-              paused_tasks=$(docker exec nullblock-postgres-agents psql -U postgres -d agents -t -c "SELECT COUNT(*) FROM tasks WHERE status='paused';" 2>/dev/null | xargs)
-              cancelled_tasks=$(docker exec nullblock-postgres-agents psql -U postgres -d agents -t -c "SELECT COUNT(*) FROM tasks WHERE status='cancelled';" 2>/dev/null | xargs)
-
-              echo "📋 Status: Created=$created_tasks | Running=$running_tasks | Completed=$completed_tasks | Failed=$failed_tasks | Paused=$paused_tasks | Cancelled=$cancelled_tasks" | tee -a logs/agents-db.log
-
-              # Action tracking metrics (new feature)
-              actioned_tasks=$(docker exec nullblock-postgres-agents psql -U postgres -d agents -t -c "SELECT COUNT(*) FROM tasks WHERE actioned_at IS NOT NULL;" 2>/dev/null | xargs)
-              echo "⚡ Actions: $actioned_tasks tasks have been processed by agents" | tee -a logs/agents-db.log
-
-              # Recent activity
-              recent_tasks=$(docker exec nullblock-postgres-agents psql -U postgres -d agents -t -c "SELECT COUNT(*) FROM tasks WHERE created_at >= NOW() - INTERVAL '1 hour';" 2>/dev/null | xargs)
-              echo "⏰ Recent activity: $recent_tasks tasks created in last hour" | tee -a logs/agents-db.log
-            else
-              echo "❌ Database not accessible or tables not created" | tee -a logs/agents-db.log
-            fi
-            sleep 45
-          done
-        - |
-          echo "📨 Monitoring Kafka for Agents (Event Streaming)..."
-          echo "Kafka and Zookeeper should be running via Docker..."
-          echo ""
-          echo "📊 Kafka monitoring and topic management..."
-          sleep 10
-          echo "📋 Creating topics (if not exists)..."
-          docker exec nullblock-kafka kafka-topics --create --topic task.lifecycle --bootstrap-server localhost:9092 --partitions 3 --replication-factor 1 2>/dev/null || echo "Topic already exists"
-          docker exec nullblock-kafka kafka-topics --create --topic user.created --bootstrap-server localhost:9092 --partitions 3 --replication-factor 1 2>/dev/null || echo "Topic already exists"
-          docker exec nullblock-kafka kafka-topics --create --topic user.updated --bootstrap-server localhost:9092 --partitions 3 --replication-factor 1 2>/dev/null || echo "Topic already exists"
-          docker exec nullblock-kafka kafka-topics --create --topic user.deleted --bootstrap-server localhost:9092 --partitions 3 --replication-factor 1 2>/dev/null || echo "Topic already exists"
-          echo "✅ Topics created"
-          echo ""
-          echo "📨 Live Kafka Event Monitoring with Pretty JSON..."
-          echo "🔄 Task Lifecycle Events | 👤 User Events | 📊 Event Counters"
-          echo "=================================================="
-
-          # Function to pretty print JSON with fallback
-          pretty_json() {
-            local line="$1"
-            local topic="$2"
-            local timestamp=$(date '+%H:%M:%S')
-            
-            # Try to parse as JSON and pretty print
-            if echo "$line" | jq . >/dev/null 2>&1; then
-              echo "$timestamp [$topic] 📄 Pretty JSON:"
-              echo "$line" | jq . | sed 's/^/    /'
-              echo ""
-            else
-              # Fallback to raw output if not valid JSON
-              echo "$timestamp [$topic] 📄 Raw: $line"
-            fi
-          }
-
-          # Start background consumers for different topics with JSON formatting
-          (
-            echo "📋 Task Lifecycle Events (Pretty JSON):"
-            docker exec nullblock-kafka kafka-console-consumer \
-              --bootstrap-server localhost:9092 \
-              --topic task.lifecycle \
-              --from-beginning 2>/dev/null | \
-            while IFS= read -r line; do
-              pretty_json "$line" "TASK"
-            done
-          ) &
-
-          (
-            echo "👤 User Events (Pretty JSON):"
-            for topic in user.created user.updated user.deleted; do
-              docker exec nullblock-kafka kafka-console-consumer \
-                --bootstrap-server localhost:9092 \
-                --topic "$topic" \
-                --from-beginning 2>/dev/null | \
-              while IFS= read -r line; do
-                pretty_json "$line" "USER-$topic"
-              done &
-            done
-            wait
-          ) &
-
-          # Event counter with enhanced metrics
-          while true; do
-            echo "$(date '+%H:%M:%S') 📊 Kafka Event Metrics:"
-            
-            # Task events count
-            task_events=$(docker exec nullblock-kafka kafka-run-class kafka.tools.ConsumerOffsetChecker \
-              --zookeeper localhost:2181 \
-              --topic task.lifecycle 2>/dev/null | awk '{sum+=$4} END {print sum+0}' 2>/dev/null || echo "0")
-            echo "  📋 Task lifecycle events: $task_events"
-            
-            # User events count
-            user_created=$(docker exec nullblock-kafka kafka-run-class kafka.tools.ConsumerOffsetChecker \
-              --zookeeper localhost:2181 \
-              --topic user.created 2>/dev/null | awk '{sum+=$4} END {print sum+0}' 2>/dev/null || echo "0")
-            user_updated=$(docker exec nullblock-kafka kafka-run-class kafka.tools.ConsumerOffsetChecker \
-              --zookeeper localhost:2181 \
-              --topic user.updated 2>/dev/null | awk '{sum+=$4} END {print sum+0}' 2>/dev/null || echo "0")
-            user_deleted=$(docker exec nullblock-kafka kafka-run-class kafka.tools.ConsumerOffsetChecker \
-              --zookeeper localhost:2181 \
-              --topic user.deleted 2>/dev/null | awk '{sum+=$4} END {print sum+0}' 2>/dev/null || echo "0")
-            
-            echo "  👤 User events: created=$user_created, updated=$user_updated, deleted=$user_deleted"
-            echo "  📊 Total events: $((task_events + user_created + user_updated + user_deleted))"
-            echo ""
-            sleep 60
-          done
-        - |
-          echo "🎯 Hecate Agent Health & Task Monitoring"
-          echo "Real-time monitoring of agent health and task management..."
-          echo ""
-          mkdir -p logs
-          while true; do
-            echo "$(date '+%Y-%m-%d %H:%M:%S') [AGENT] Hecate health check..." | tee -a logs/hecate-health.log
-            if curl -s --max-time 5 "http://localhost:9003/hecate/health" > /dev/null 2>&1; then
-              echo "✅ Hecate agent healthy" | tee -a logs/hecate-health.log
-
-              # Model status
-              curl -s "http://localhost:9003/hecate/model-status" | jq -r '"🧠 Model: " + (.current_model // "unknown") + " | Status: " + (.status // "unknown")' 2>/dev/null | tee -a logs/hecate-health.log
-
-              # Task count
-              task_count=$(curl -s "http://localhost:9003/tasks" | jq '.total // 0' 2>/dev/null || echo "0")
-              echo "📋 Current tasks: $task_count" | tee -a logs/hecate-health.log
-
-              # Database migration status
-              if curl -s --max-time 3 "http://localhost:9003/health" | jq -r '.components.database.status' 2>/dev/null | grep -q "healthy"; then
-                echo "🗄️  Database migrations: ✅ Complete" | tee -a logs/hecate-health.log
-              else
-                echo "🗄️  Database migrations: ⚠️  Check required" | tee -a logs/hecate-health.log
-              fi
-            else
-              echo "❌ Hecate agent not responding" | tee -a logs/hecate-health.log
-            fi
-            sleep 30
-          done
-        - |
-          echo "📊 Live System Logs - Multi-Service Tailing"
-          echo "Real-time log monitoring across Hecate Agent, Erebus Router, and Task System..."
-          echo ""
-          mkdir -p logs
-          echo "🔄 Starting multi-log tail with service prefixes..."
-          echo "=================================================="
-
-          # Multi-log tailing with service identification
-          (
-            echo "🎯 [HECATE] Starting Hecate Rust agent log monitoring..."
-            tail -f $HOME/nullblock/svc/nullblock-agents/logs/hecate-rust.log 2>/dev/null | \
-            while IFS= read -r line; do
-              echo "$(date '+%H:%M:%S') [HECATE] $line"
-            done
-          ) &
-
-          (
-            echo "🔗 [EREBUS] Starting Erebus router log monitoring..."
-            tail -f $HOME/nullblock/svc/erebus/logs/erebus.log 2>/dev/null | \
-            while IFS= read -r line; do
-              echo "$(date '+%H:%M:%S') [EREBUS] $line"
-            done
-          ) &
-
-          (
-            echo "📋 [TASKS] Starting task system log monitoring..."
-            tail -f $HOME/nullblock/logs/task-system.log 2>/dev/null | \
-            while IFS= read -r line; do
-              echo "$(date '+%H:%M:%S') [TASKS] $line"
-            done
-          ) &
-
-          (
-            echo "🗄️  [DB] Starting database activity monitoring..."
-            tail -f $HOME/nullblock/logs/agents-db.log 2>/dev/null | \
-            while IFS= read -r line; do
-              echo "$(date '+%H:%M:%S') [DB] $line"
-            done
-          ) &
-
-          # Log summary every 2 minutes
-          while true; do
-            sleep 120
-            echo "$(date '+%H:%M:%S') 📊 [SUMMARY] Multi-service logs active: Hecate Agent, Erebus Router, Task System, Database"
-          done
+        - ~/nullblock/scripts/start-agents.sh
+        - ~/nullblock/scripts/monitor-agents-db.sh
+        - ~/nullblock/scripts/monitor-kafka-simple.sh
+        - ~/nullblock/scripts/monitor-hecate-health.sh
 
   - nullblock-protocols:
       layout: tiled
@@ -447,69 +47,10 @@ windows:
           set +a
         fi
       panes:
-        - |
-          echo "🌐 Starting Protocol Server..."
-          cd svc/nullblock-protocols
-          echo "🦀 Starting Rust protocol service with A2A and MCP support..."
-          export PORT=8001
-          export DATABASE_URL="postgresql://postgres:REDACTED_DB_PASS@localhost:5441/agents"
-          echo ""
-          echo "🗄️  Waiting for Agents database to be ready..."
-          while ! docker exec nullblock-postgres-agents pg_isready -U postgres > /dev/null 2>&1; do
-            echo "⏳ Waiting for Agents PostgreSQL container to be ready..."
-            sleep 2
-          done
-          echo "✅ Agents database connection ready"
-          echo ""
-          echo "📝 Starting protocol server with database connection..."
-          echo "🔗 A2A JSON-RPC endpoint: http://localhost:8001/a2a/jsonrpc"
-          echo "🌐 A2A REST endpoints: http://localhost:8001/v1/*"
-          echo "📄 Agent Card: http://localhost:8001/v1/card"
-          echo "📨 Messages: POST /v1/messages, /v1/messages/stream"
-          echo "📋 Tasks: GET /v1/tasks, /v1/tasks/:id, POST /v1/tasks/:id/cancel"
-          echo ""
-          cargo run 2>&1 | tee logs/protocols-server.log
-        - |
-          echo "🗄️  Protocol Service Database Integration Monitoring"
-          echo "Monitoring Agents database connection for protocol service integration..."
-          echo ""
-          mkdir -p logs
-          while true; do
-            echo "$(date '+%Y-%m-%d %H:%M:%S') [AGENTS-DB] Database status..." | tee -a logs/agents-db.log
-            if docker exec nullblock-postgres-agents pg_isready -U postgres > /dev/null 2>&1; then
-              echo "✅ PostgreSQL connection healthy" | tee -a logs/agents-db.log
-            else
-              echo "❌ PostgreSQL connection failed" | tee -a logs/agents-db.log
-            fi
-            sleep 45
-          done
-        - |
-          echo "🔗 Protocol Health Monitoring..."
-          echo "A2A and MCP protocol health monitoring..."
-          echo ""
-          echo "📊 Protocol endpoint monitoring..."
-          while true; do
-            # Test A2A endpoints
-            if curl -s --max-time 3 "http://localhost:8001/v1/card" > /dev/null 2>&1; then
-              echo "$(date '+%H:%M:%S') ✅ A2A Agent Card endpoint healthy"
-            else
-              echo "$(date '+%H:%M:%S') ❌ A2A Agent Card endpoint not responding"
-            fi
-
-            if curl -s --max-time 3 "http://localhost:8001/health" > /dev/null 2>&1; then
-              echo "$(date '+%H:%M:%S') ✅ Protocol health endpoint healthy"
-            else
-              echo "$(date '+%H:%M:%S') ❌ Protocol health endpoint not responding"
-            fi
-            sleep 60
-          done
-        - |
-          echo "🌐 Protocol Server Logs & Health"
-          echo "Monitoring protocol server logs and A2A/MCP operations..."
-          echo ""
-          cd svc/nullblock-protocols
-          mkdir -p logs
-          tail -f logs/protocols-server.log 2>/dev/null || echo "⚠️ Waiting for protocol server logs..."
+        - ~/nullblock/scripts/start-protocols.sh
+        - ~/nullblock/scripts/monitor-protocol-db.sh
+        - ~/nullblock/scripts/monitor-protocol-health.sh
+        - ~/nullblock/scripts/tail-protocol-logs.sh
 
   - nullblock-engrams:
       layout: tiled
@@ -520,108 +61,10 @@ windows:
           set +a
         fi
       panes:
-        - |
-          echo "🧠 Starting Engram Service (Rust)..."
-          echo "Universal memory/context persistence layer for NullBlock"
-          echo ""
-          cd svc/nullblock-engrams
-          mkdir -p logs
-          export ENGRAMS_PORT=9004
-          export DATABASE_URL="postgresql://postgres:REDACTED_DB_PASS@localhost:5441/agents"
-          echo "🚀 Starting Engram service on port 9004..."
-          echo "📝 Logs will be written to logs/engrams.log"
-          echo "🗄️  Using PostgreSQL for engram persistence"
-          echo ""
-          echo "🗄️  Waiting for database to be ready..."
-          while ! docker exec nullblock-postgres-agents pg_isready -U postgres > /dev/null 2>&1; do
-            echo "⏳ Waiting for PostgreSQL container to be ready..."
-            sleep 2
-          done
-          echo "✅ Database connection ready"
-          echo ""
-          echo "📋 Running engram migrations..."
-          cat $HOME/nullblock/svc/nullblock-engrams/migrations/001_create_engrams.sql | docker exec -i nullblock-postgres-agents psql -U postgres -d agents 2>&1 | grep -E "(ERROR|already exists)" || echo "✅ 001_create_engrams.sql applied"
-          echo "✅ Engram database schema ready"
-          echo ""
-          echo "🚀 Starting Engram service..."
-          cargo run 2>&1 | tee logs/engrams.log
-        - |
-          echo "📊 Engram Service Logs & Health Monitoring"
-          echo "Monitoring engram service logs and operations..."
-          echo ""
-          cd svc/nullblock-engrams
-          mkdir -p logs
-          echo "🧠 Watching Engram logs..."
-          sleep 10
-          tail -f logs/engrams.log 2>/dev/null || echo "⚠️ Waiting for Engram service logs..."
-        - |
-          echo "🔬 Engram API Testing & Monitoring"
-          echo "Interactive API testing for engram endpoints..."
-          echo ""
-          echo "📡 Engram Endpoints via Erebus (Port 3000):"
-          echo "  POST   /api/engrams                - Create engram"
-          echo "  GET    /api/engrams                - List engrams"
-          echo "  GET    /api/engrams/:id            - Get by ID"
-          echo "  PUT    /api/engrams/:id            - Update engram"
-          echo "  DELETE /api/engrams/:id            - Delete engram"
-          echo "  GET    /api/engrams/wallet/:wallet - Get by wallet"
-          echo "  POST   /api/engrams/search         - Search engrams"
-          echo "  POST   /api/engrams/:id/fork       - Fork engram"
-          echo "  POST   /api/engrams/:id/publish    - Publish engram"
-          echo ""
-          echo "🧪 Running API health checks..."
-          while true; do
-            echo ""
-            echo "$(date '+%Y-%m-%d %H:%M:%S') [ENGRAM] API Health Check..."
-
-            # Direct engram service health
-            if curl -s --max-time 3 "http://localhost:9004/health" > /dev/null 2>&1; then
-              echo "✅ Engram Service (9004) - Healthy"
-              curl -s "http://localhost:9004/health" | jq . 2>/dev/null || echo "  (raw response)"
-            else
-              echo "❌ Engram Service (9004) - Not responding"
-            fi
-
-            # Engram via Erebus
-            if curl -s --max-time 3 "http://localhost:3000/api/engrams/health" > /dev/null 2>&1; then
-              echo "✅ Engram via Erebus (3000) - Healthy"
-            else
-              echo "⚠️  Engram via Erebus (3000) - Not responding (Erebus may not be running)"
-            fi
-
-            # Engram count
-            engram_response=$(curl -s --max-time 3 "http://localhost:9004/engrams?limit=1" 2>/dev/null)
-            if [ ! -z "$engram_response" ]; then
-              total=$(echo "$engram_response" | jq '.total // 0' 2>/dev/null || echo "0")
-              echo "📊 Total engrams in database: $total"
-            fi
-
-            sleep 45
-          done
-        - |
-          echo "🔧 Engram Interactive Shell"
-          echo "Use this pane for manual API testing..."
-          echo ""
-          echo "📝 Example Commands:"
-          echo ""
-          echo "# Create an engram:"
-          echo 'curl -X POST http://localhost:3000/api/engrams \'
-          echo '  -H "Content-Type: application/json" \'
-          echo '  -d '"'"'{"wallet_address":"0x123","engram_type":"persona","key":"test.persona","content":{"name":"Test"},"tags":["test"]}'"'"' | jq .'
-          echo ""
-          echo "# List engrams:"
-          echo "curl -s http://localhost:3000/api/engrams | jq ."
-          echo ""
-          echo "# Search engrams:"
-          echo 'curl -X POST http://localhost:3000/api/engrams/search \'
-          echo '  -H "Content-Type: application/json" \'
-          echo '  -d '"'"'{"engram_type":"persona","tags":["test"]}'"'"' | jq .'
-          echo ""
-          echo "# Get by wallet:"
-          echo "curl -s http://localhost:3000/api/engrams/wallet/0x123 | jq ."
-          echo ""
-          echo "Ready for interactive testing..."
-          bash
+        - ~/nullblock/scripts/start-engrams.sh
+        - ~/nullblock/scripts/tail-engrams-logs.sh
+        - ~/nullblock/scripts/monitor-engrams-api.sh
+        - ~/nullblock/scripts/engrams-shell.sh
 
   - arb-farm:
       layout: tiled
@@ -632,87 +75,10 @@ windows:
           set +a
         fi
       panes:
-        - |
-          echo "⚡ Starting ArbFarm Service (Solana MEV)..."
-          echo "Observation mode: scanner ON, execution OFF by default"
-          echo ""
-          cd svc/arb-farm
-          mkdir -p logs
-          export ARB_FARM_PORT=9007
-          export DATABASE_URL="postgresql://postgres:REDACTED_DB_PASS@localhost:5441/agents"
-          echo "🚀 Starting ArbFarm service on port 9007..."
-          echo "📝 Logs will be written to logs/arb-farm.log"
-          echo ""
-          echo "🗄️  Waiting for database to be ready..."
-          while ! docker exec nullblock-postgres-erebus pg_isready -U postgres > /dev/null 2>&1; do
-            echo "⏳ Waiting for PostgreSQL container to be ready..."
-            sleep 2
-          done
-          echo "✅ Database connection ready"
-          echo ""
-          echo "🚀 Starting ArbFarm service..."
-          cargo run --release 2>&1 | tee logs/arb-farm.log
-        - |
-          echo "📊 ArbFarm Health & Contenders"
-          echo "Waiting for ArbFarm service..."
-          echo ""
-          while ! curl -s --max-time 3 "http://localhost:9007/health" > /dev/null 2>&1; do
-            sleep 3
-          done
-          echo "✅ ArbFarm is up (observation mode)"
-          sleep 2
-          while true; do
-            clear
-            RISK_LEVEL=$(curl -s http://localhost:9007/config/risk 2>/dev/null | jq -r '.level // "unknown"' | tr '[:lower:]' '[:upper:]')
-            echo "⚡ ArbFarm - $(date '+%H:%M:%S') [RISK: $RISK_LEVEL]"
-            echo "================================"
-            curl -s http://localhost:9007/scanner/status 2>/dev/null | jq -r '"Scanner: Running=\(.is_running) | Scans=\(.stats.total_scans) | Signals=\(.stats.total_signals)"' || true
-            EXEC_RUNNING=$(curl -s http://localhost:9007/executor/stats 2>/dev/null | jq -r '.is_running // false')
-            curl -s http://localhost:9007/executor/stats 2>/dev/null | jq -r '"Executor: Running=\(.is_running) | Executed=\(.executions_succeeded)"' || true
-            curl -s http://localhost:9007/positions/monitor/status 2>/dev/null | jq -r '"Monitor: Positions=\(.active_positions)"' || true
-            if [ "$EXEC_RUNNING" != "true" ]; then
-              echo ""
-              echo "⚠️  OBSERVATION MODE - signals are buy candidates (execution off)"
-            fi
-            echo ""
-            curl -s http://localhost:9007/wallet/balance 2>/dev/null | jq -r '"💰 Balance: \(.balance_sol) SOL"' || true
-            echo ""
-            echo "🎓 Top Contenders (approaching graduation)"
-            curl -s 'http://localhost:9007/scanner/contenders?limit=5' 2>/dev/null | jq -r '
-              if .count == 0 then "  No contenders yet (waiting for scan data)"
-              else .contenders[]? | "  \(.symbol) \(.graduation_progress | . * 10 | floor / 10)% | \(.market_cap_sol | . * 100 | floor / 100) SOL"
-              end
-            ' || echo "  Failed to get contenders"
-            sleep 5
-          done
-        - |
-          echo "📡 ArbFarm Event Stream"
-          echo "Waiting for ArbFarm..."
-          while ! curl -s --max-time 3 "http://localhost:9007/health" > /dev/null 2>&1; do
-            sleep 3
-          done
-          echo "✅ Connecting to event stream..."
-          while true; do
-            curl -sN http://localhost:9007/events/stream 2>/dev/null | while read line; do
-              if [[ "$line" == data:* ]]; then
-                json="${line#data: }"
-                ts=$(echo "$json" | jq -r '.timestamp[11:19]' 2>/dev/null)
-                evt=$(echo "$json" | jq -r '.event_type' 2>/dev/null)
-                if [ -n "$ts" ] && [ "$ts" != "null" ]; then
-                  echo "$ts | $evt"
-                fi
-              fi
-            done
-            echo "$(date '+%H:%M:%S') | Connection lost, retrying..."
-            sleep 5
-          done
-        - |
-          echo "📈 ArbFarm Logs"
-          echo "Watching ArbFarm service logs..."
-          echo ""
-          cd svc/arb-farm
-          mkdir -p logs
-          tail -f logs/arb-farm.log 2>/dev/null || echo "⚠️ Waiting for ArbFarm logs..."
+        - ~/nullblock/scripts/start-arb-farm.sh
+        - ~/nullblock/scripts/arb-monitor-health.sh
+        - ~/nullblock/scripts/arb-monitor-events.sh
+        - ~/nullblock/scripts/arb-monitor-positions.sh
 
   - task-management:
       layout: tiled
@@ -723,45 +89,15 @@ windows:
           set +a
         fi
       panes:
-        - |
-          echo "📋 Task Management System"
-          echo "The orchestration service has been integrated into the Hecate Agent (Rust)"
-          echo "Task management is now handled directly by the agents service on port 9003"
-          echo ""
-          echo "🔄 Monitoring Task System Performance..."
-          while true; do
-            echo "$(date '+%Y-%m-%d %H:%M:%S') [TASK-SYS] Task system metrics..."
-
-            # Task API health via Erebus
-            if curl -s --max-time 3 "http://localhost:3000/api/agents/tasks" > /dev/null 2>&1; then
-              echo "✅ Task API via Erebus - Healthy"
-            else
-              echo "❌ Task API via Erebus - Failed"
-            fi
-
-            # Direct agent API health
-            if curl -s --max-time 3 "http://localhost:9003/health" > /dev/null 2>&1; then
-              echo "✅ Hecate Agent Direct API - Healthy"
-            else
-              echo "❌ Hecate Agent Direct API - Failed"
-            fi
-
-            sleep 60
-          done
+        - ~/nullblock/scripts/monitor-task-system.sh
 
   - frontend:
       panes:
-        - |
-          echo "🎨 Starting Frontend (Hecate React App)..."
-          cd svc/hecate
-          echo "Installing/updating npm dependencies..."
-          npm install --legacy-peer-deps
-          export VITE_PROTOCOLS_API_URL=http://localhost:8001
-          export VITE_A2A_API_URL=http://localhost:8001
-          export VITE_EREBUS_API_URL=http://localhost:3000
-          export VITE_HECATE_API_URL=http://localhost:9003
-          echo "🚀 Starting React development server..."
-          npm run develop
+        - ~/nullblock/scripts/start-frontend.sh
+
+  - docs:
+      panes:
+        - cd ~/nullblock/docs-internal && mdbook serve --port 3001
 
 on_project_start: |
   if [ ! -f .env.dev ]; then
@@ -771,6 +107,16 @@ on_project_start: |
     echo "OPENROUTER_API_KEY=your-openrouter-key-here" >> .env.dev
     echo "Please edit .env.dev with your actual API keys"
   fi
+  echo "🧹 Cleaning up orphaned service processes..."
+  for port in 3000 3001 8001 9003 9004 9007; do
+    pid=$(lsof -ti :$port 2>/dev/null)
+    if [ -n "$pid" ]; then
+      echo "   Killing process on port $port (PID: $pid)"
+      kill $pid 2>/dev/null || true
+    fi
+  done
+  sleep 1
+  echo "✅ Ports cleared"
   echo "📁 Creating log directory structure..."
   mkdir -p logs
   mkdir -p svc/nullblock-agents/logs
@@ -784,7 +130,20 @@ on_project_start: |
   echo "🚀 Starting all infrastructure services using 'just start'..."
   just start
   echo ""
-  echo "🚀 Nullblock Development Environment Ready!"
+  echo "🗄️ Running ArbFarm database migrations..."
+  sleep 3
+  ~/nullblock/scripts/migrate-arbfarm.sh || echo "⚠️ Migration may have failed, check database"
+  echo ""
+  echo "🔑 Seeding agent API keys..."
+  if [ -f .env.dev ]; then
+    set -a
+    source .env.dev
+    set +a
+  fi
+  cd svc/erebus && DATABASE_URL="postgresql://postgres:REDACTED_DB_PASS@localhost:5440/erebus" cargo run --bin seed-agent-keys 2>&1 && echo "✅ Agent API keys seeded" || echo "⚠️ Agent key seeding failed (keys may already exist)"
+  cd ../..
+  echo ""
+  echo "🚀 Nullblock Development Environment Ready (Linux)!"
   echo "================================================"
   echo "🏗️  Architecture: Client ↔ Erebus ↔ Services"
   echo "🛡️  Security: All frontend requests route through Erebus (port 3000)"
@@ -796,6 +155,7 @@ on_project_start: |
   echo "   🧠 Engram Service: http://localhost:9004"
   echo "   ⚡ ArbFarm (Solana MEV): http://localhost:9007"
   echo "   🎨 Frontend: http://localhost:5173"
+  echo "   📚 Internal Docs: http://localhost:3001"
   echo ""
   echo "🦀 Rust Services:"
   echo "   ✅ Hecate Agent - High-performance conversational AI"
@@ -803,6 +163,7 @@ on_project_start: |
   echo "   ✅ Protocol Server - A2A and MCP protocol communication"
   echo "   ✅ Engram Service - Universal memory/context persistence"
   echo "   ✅ ArbFarm - Solana MEV agent swarm"
+  echo "   📚 mdBook Docs - Internal documentation with live reload"
   echo ""
   echo "🌐 A2A Protocol Integration:"
   echo "   📋 Specification: https://a2a-protocol.org/latest/specification/"
@@ -814,26 +175,8 @@ on_project_start: |
   echo "   ⚡ Provider: OpenRouter (cloud-based)"
   echo "   🎯 Default Model: deepseek/deepseek-chat-v3.1:free ($0.00)"
   echo "   💰 Cost Tracking: Real-time monitoring & analytics"
-  echo ""
-  echo "📋 Task Management:"
-  echo "   🏗️  Architecture: Simplified & wallet-based filtering"
-  echo "   📊 Categories: Todo, Running, Completed tabs"
-  echo "   🔐 Security: Wallet-scoped tasks with headers"
-  echo "   ⚡ Actions: Full lifecycle tracking & agent execution"
-  echo ""
-  echo "📊 Tabs Overview:"
-  echo "   📝 monitoring - Real-time service health & task metrics"
-  echo "   🔗 erebus - Unified router with wallet & session management"
-  echo "   🎯 nullblock-agents - Hecate Agent (Rust) with task system"
-  echo "   🌐 nullblock-protocols - Multi-protocol server (A2A/MCP) with agent communication"
-  echo "   🧠 nullblock-engrams - Memory/context persistence layer"
-  echo "   ⚡ arb-farm - Solana MEV agent swarm"
-  echo "   📋 task-management - Integrated task system monitoring"
-  echo "   🎨 frontend - React development server with wallet integration"
 
 on_project_stop: |
   echo "🛑 Stopping development services using 'just term'..."
   just term
-  echo "Stopping IPFS daemon..."
-  pkill -f "ipfs daemon" 2>/dev/null || true
   echo "✅ All services stopped and cleaned up"

@@ -1,6 +1,6 @@
 use axum::{extract::State, http::StatusCode, Json};
 use serde_json::json;
-use tracing::{error, info, warn};
+use tracing::{debug, error, info, warn};
 
 use super::handlers;
 use super::types::*;
@@ -10,15 +10,25 @@ pub async fn handle_jsonrpc(
     State(state): State<AppState>,
     Json(request): Json<JsonRpcRequest>,
 ) -> Result<Json<JsonRpcResponse>, StatusCode> {
-    info!(
-        "📨 MCP JSON-RPC request: method={}, id={:?}",
-        request.method, request.id
-    );
+    let is_notification = request.id.is_none();
+    let id = request.id.clone().unwrap_or(serde_json::Value::Null);
+
+    if is_notification {
+        debug!(
+            "📨 MCP JSON-RPC notification: method={}",
+            request.method
+        );
+    } else {
+        info!(
+            "📨 MCP JSON-RPC request: method={}, id={:?}",
+            request.method, id
+        );
+    }
 
     if request.jsonrpc != JSONRPC_VERSION {
         warn!("⚠️ Invalid JSON-RPC version: {}", request.jsonrpc);
         return Ok(Json(JsonRpcResponse::error(
-            request.id,
+            id,
             error_codes::INVALID_REQUEST,
             format!("Invalid JSON-RPC version: {}", request.jsonrpc),
         )));
@@ -225,14 +235,19 @@ pub async fn handle_jsonrpc(
         }
     };
 
+    if is_notification {
+        debug!("✅ MCP notification handled: {}", request.method);
+        return Ok(Json(JsonRpcResponse::success(serde_json::Value::Null, json!({}))));
+    }
+
     let response = match result {
         Ok(value) => {
             info!("✅ MCP JSON-RPC request succeeded");
-            JsonRpcResponse::success(request.id, value)
+            JsonRpcResponse::success(id, value)
         }
         Err((code, message)) => {
             error!("❌ MCP JSON-RPC request failed: {}", message);
-            JsonRpcResponse::error(request.id, code, message)
+            JsonRpcResponse::error(id, code, message)
         }
     };
 

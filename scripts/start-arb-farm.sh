@@ -35,6 +35,8 @@ if [ -f /tmp/arb-no-scan ]; then
   rm /tmp/arb-no-scan  # Clean up flag file
 fi
 
+export DATABASE_URL="${DATABASE_URL:-postgresql://postgres:REDACTED_DB_PASS@localhost:5441/agents}"
+export ARB_FARM_PORT=9007
 echo "📝 Logs will be written to logs/arb-farm.log and /tmp/arb-farm.log"
 echo ""
 
