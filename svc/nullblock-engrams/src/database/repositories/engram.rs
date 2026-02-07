@@ -80,9 +80,12 @@ impl EngramRepository {
         let engram = sqlx::query_as::<_, Engram>(
             r#"
             UPDATE engrams SET accessed_at = NOW()
-            WHERE wallet_address = $1 AND key = $2
-            ORDER BY version DESC
-            LIMIT 1
+            WHERE id = (
+                SELECT id FROM engrams
+                WHERE wallet_address = $1 AND key = $2
+                ORDER BY version DESC
+                LIMIT 1
+            )
             RETURNING *
             "#,
         )
