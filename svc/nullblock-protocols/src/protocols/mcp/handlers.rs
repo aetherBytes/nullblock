@@ -408,6 +408,50 @@ pub async fn list_tools(
             annotations: None,
             meta: None,
         },
+        Tool {
+            name: "llm_set_model".to_string(),
+            title: Some("Set LLM Model".to_string()),
+            description: Some("Set the preferred LLM model for an agent. Search by name or keyword (e.g., 'opus', 'claude-sonnet', 'gpt-4o', 'deepseek', 'llama'). Any model available on OpenRouter can be used.".to_string()),
+            input_schema: InputSchema {
+                schema_type: "object".to_string(),
+                properties: Some({
+                    let mut props = HashMap::new();
+                    props.insert("agent_name".to_string(), json!({
+                        "type": "string",
+                        "description": "Name of the agent to set model for (e.g., 'clawros', 'hecate', 'moros')"
+                    }));
+                    props.insert("query".to_string(), json!({
+                        "type": "string",
+                        "description": "Model name or keyword to search for"
+                    }));
+                    props
+                }),
+                required: Some(vec!["agent_name".to_string(), "query".to_string()]),
+            },
+            output_schema: None,
+            annotations: None,
+            meta: None,
+        },
+        Tool {
+            name: "llm_get_model".to_string(),
+            title: Some("Get LLM Model".to_string()),
+            description: Some("Get the current preferred LLM model for an agent.".to_string()),
+            input_schema: InputSchema {
+                schema_type: "object".to_string(),
+                properties: Some({
+                    let mut props = HashMap::new();
+                    props.insert("agent_name".to_string(), json!({
+                        "type": "string",
+                        "description": "Name of the agent to get model for (e.g., 'clawros', 'hecate', 'moros')"
+                    }));
+                    props
+                }),
+                required: Some(vec!["agent_name".to_string()]),
+            },
+            output_schema: None,
+            annotations: None,
+            meta: None,
+        },
     ];
 
     // Fetch and aggregate ArbFarm tools with arb_ prefix
@@ -1170,6 +1214,74 @@ pub async fn call_tool(
                 Err(e) => Ok(Json(CallToolResult {
                     content: vec![ContentBlock::Text {
                         text: format!("Failed to connect to Erebus: {}", e),
+                        annotations: None,
+                        meta: None,
+                    }],
+                    structured_content: None,
+                    is_error: Some(true),
+                })),
+            }
+        }
+        "llm_set_model" => {
+            let args = request.arguments.unwrap_or_default();
+            let agent_name = args.get("agent_name").and_then(|v| v.as_str())
+                .ok_or(StatusCode::BAD_REQUEST)?;
+            let query = args.get("query").and_then(|v| v.as_str())
+                .ok_or(StatusCode::BAD_REQUEST)?;
+
+            let url = format!("{}/v1/set-model", state.agents_service_url);
+            let body = json!({
+                "agent_name": agent_name,
+                "query": query
+            });
+
+            match state.http_client.post(&url).json(&body).send().await {
+                Ok(response) => {
+                    let text = response.text().await.unwrap_or_else(|e| format!("Read error: {}", e));
+                    Ok(Json(CallToolResult {
+                        content: vec![ContentBlock::Text {
+                            text,
+                            annotations: None,
+                            meta: None,
+                        }],
+                        structured_content: None,
+                        is_error: None,
+                    }))
+                }
+                Err(e) => Ok(Json(CallToolResult {
+                    content: vec![ContentBlock::Text {
+                        text: format!("Failed to connect to agents service: {}", e),
+                        annotations: None,
+                        meta: None,
+                    }],
+                    structured_content: None,
+                    is_error: Some(true),
+                })),
+            }
+        }
+        "llm_get_model" => {
+            let args = request.arguments.unwrap_or_default();
+            let agent_name = args.get("agent_name").and_then(|v| v.as_str())
+                .ok_or(StatusCode::BAD_REQUEST)?;
+
+            let url = format!("{}/v1/model-preference/{}", state.agents_service_url, agent_name);
+
+            match state.http_client.get(&url).send().await {
+                Ok(response) => {
+                    let text = response.text().await.unwrap_or_else(|e| format!("Read error: {}", e));
+                    Ok(Json(CallToolResult {
+                        content: vec![ContentBlock::Text {
+                            text,
+                            annotations: None,
+                            meta: None,
+                        }],
+                        structured_content: None,
+                        is_error: None,
+                    }))
+                }
+                Err(e) => Ok(Json(CallToolResult {
+                    content: vec![ContentBlock::Text {
+                        text: format!("Failed to connect to agents service: {}", e),
                         annotations: None,
                         meta: None,
                     }],

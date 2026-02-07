@@ -134,6 +134,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         agent_keys.push(("moros", "openrouter", key, "Moros Primary Key"));
     }
 
+    if let Ok(key) = env::var("OPENROUTER_KEY_CLAWROS") {
+        agent_keys.push(("clawros", "openrouter", key, "Clawros OpenClaw Key"));
+    }
+
     if agent_keys.is_empty() {
         println!("No API keys found in environment. Set OPENROUTER_KEY_* variables.");
         return Ok(());

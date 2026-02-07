@@ -624,6 +624,42 @@ fn get_llm_tools() -> Vec<McpTool> {
             annotations: Some(McpToolAnnotations::read_only()),
             tags: Some(vec!["llm.service".to_string()]),
         },
+        McpTool {
+            name: "llm_set_model".to_string(),
+            description: "Set the preferred LLM model for an agent. Search by name or keyword (e.g., 'opus', 'claude-sonnet', 'gpt-4o', 'deepseek', 'llama'). Any model available on OpenRouter can be used. Returns best match and alternatives.".to_string(),
+            input_schema: serde_json::json!({
+                "type": "object",
+                "properties": {
+                    "agent_name": {
+                        "type": "string",
+                        "description": "Name of the agent to set model for (e.g., 'clawros', 'hecate', 'moros')"
+                    },
+                    "query": {
+                        "type": "string",
+                        "description": "Model name or keyword to search for"
+                    }
+                },
+                "required": ["agent_name", "query"]
+            }),
+            annotations: Some(McpToolAnnotations::write()),
+            tags: Some(vec!["llm.service".to_string()]),
+        },
+        McpTool {
+            name: "llm_get_model".to_string(),
+            description: "Get the current preferred LLM model for an agent.".to_string(),
+            input_schema: serde_json::json!({
+                "type": "object",
+                "properties": {
+                    "agent_name": {
+                        "type": "string",
+                        "description": "Name of the agent to get model for (e.g., 'clawros', 'hecate', 'moros')"
+                    }
+                },
+                "required": ["agent_name"]
+            }),
+            annotations: Some(McpToolAnnotations::read_only()),
+            tags: Some(vec!["llm.service".to_string()]),
+        },
     ]
 }
 

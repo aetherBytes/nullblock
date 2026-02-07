@@ -7,6 +7,7 @@ use crate::{
     kafka::{KafkaConfig, KafkaProducer},
     services::ErebusClient,
 };
+use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 use tracing::{error, info, warn};
@@ -23,6 +24,8 @@ pub struct AppState {
     pub kafka_producer: Option<Arc<KafkaProducer>>,
     pub erebus_client: Arc<ErebusClient>,
     pub engrams_client: Arc<EngramsClient>,
+    pub agent_openrouter_keys: HashMap<String, String>,
+    pub agent_model_preferences: Arc<RwLock<HashMap<String, String>>>,
 }
 
 impl AppState {
@@ -110,6 +113,8 @@ impl AppState {
             None
         };
 
+        let agent_openrouter_keys = Self::resolve_agent_openrouter_keys(&erebus_client).await;
+
         // Seed First Encounter engrams in background (non-blocking)
         let seed_client = engrams_client.clone();
         tokio::spawn(async move {
@@ -131,6 +136,8 @@ impl AppState {
             kafka_producer,
             erebus_client,
             engrams_client,
+            agent_openrouter_keys,
+            agent_model_preferences: Arc::new(RwLock::new(HashMap::new())),
         })
     }
 
@@ -189,6 +196,57 @@ impl AppState {
             huggingface: env_keys.huggingface,
             openrouter: openrouter_key.or(env_keys.openrouter),
         }
+    }
+
+    async fn resolve_agent_openrouter_keys(erebus_client: &ErebusClient) -> HashMap<String, String> {
+        let mut keys = HashMap::new();
+        let agent_names = ["clawros"];
+
+        for agent_name in &agent_names {
+            const MAX_RETRIES: u32 = 5;
+            const INITIAL_DELAY_MS: u64 = 1000;
+
+            for attempt in 1..=MAX_RETRIES {
+                match erebus_client
+                    .get_agent_api_key(agent_name, "openrouter")
+                    .await
+                {
+                    Ok(Some(key)) => {
+                        info!(
+                            "✅ Retrieved {} OpenRouter key from Erebus (attempt {})",
+                            agent_name, attempt
+                        );
+                        keys.insert(agent_name.to_string(), key);
+                        break;
+                    }
+                    Ok(None) => {
+                        warn!("⚠️ No OpenRouter key found for {} in Erebus", agent_name);
+                        break;
+                    }
+                    Err(e) => {
+                        if attempt < MAX_RETRIES {
+                            let delay = INITIAL_DELAY_MS * 2_u64.pow(attempt - 1);
+                            warn!(
+                                "⚠️ Failed to fetch {} key (attempt {}/{}): {}. Retrying in {}ms...",
+                                agent_name, attempt, MAX_RETRIES, e, delay
+                            );
+                            tokio::time::sleep(tokio::time::Duration::from_millis(delay)).await;
+                        } else {
+                            error!(
+                                "❌ Failed to fetch {} key after {} attempts: {}",
+                                agent_name, MAX_RETRIES, e
+                            );
+                        }
+                    }
+                }
+            }
+        }
+
+        if !keys.is_empty() {
+            info!("🔑 Loaded {} agent OpenRouter key(s): {:?}", keys.len(), keys.keys().collect::<Vec<_>>());
+        }
+
+        keys
     }
 }
 

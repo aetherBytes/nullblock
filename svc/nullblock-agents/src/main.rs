@@ -151,6 +151,8 @@ fn create_router(state: server::AppState) -> Router {
         // OpenAI-compatible LLM proxy endpoints
         .route("/v1/chat/completions", post(llm_proxy::handle_chat_completions))
         .route("/v1/models", get(llm_proxy::handle_list_models))
+        .route("/v1/set-model", post(llm_proxy::handle_set_model_preference))
+        .route("/v1/model-preference/:agent_name", get(llm_proxy::handle_get_model_preference))
         // MCP JSON-RPC endpoint
         .route("/mcp/jsonrpc", post(mcp::jsonrpc::handle_jsonrpc))
         // User reference endpoints

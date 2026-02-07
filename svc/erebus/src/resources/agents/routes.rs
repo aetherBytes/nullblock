@@ -1737,69 +1737,128 @@ pub async fn learn_from_task(
 // ================================
 
 pub async fn llm_chat_completions(
+    headers: HeaderMap,
     Json(request): Json<Value>,
-) -> Result<ResponseJson<Value>, (StatusCode, ResponseJson<AgentErrorResponse>)> {
-    info!("LLM Proxy: chat completions request via Erebus");
+) -> axum::response::Response {
+    let agent_name = headers
+        .get("authorization")
+        .and_then(|v| v.to_str().ok())
+        .and_then(|v| v.strip_prefix("Bearer "))
+        .unwrap_or("default");
+
+    let stream = request.get("stream").and_then(|v| v.as_bool()).unwrap_or(false);
+    let model = request.get("model").and_then(|v| v.as_str()).unwrap_or("none");
+    let msg_count = request.get("messages").and_then(|v| v.as_array()).map_or(0, |a| a.len());
+    let tool_count = request.get("tools").and_then(|v| v.as_array()).map_or(0, |a| a.len());
+    info!(
+        "LLM Proxy: chat completions via Erebus — agent={}, model={}, messages={}, tools={}, stream={}",
+        agent_name, model, msg_count, tool_count, stream
+    );
 
     let client = reqwest::Client::new();
     let agents_url =
         std::env::var("AGENTS_SERVICE_URL").unwrap_or_else(|_| "http://localhost:9003".to_string());
     let url = format!("{}/v1/chat/completions", agents_url);
 
-    match client
+    let result = client
         .post(&url)
+        .header("x-agent-name", agent_name)
         .json(&request)
         .timeout(std::time::Duration::from_secs(300))
         .send()
-        .await
-    {
-        Ok(response) => {
-            if response.status().is_success() {
-                match response.json::<serde_json::Value>().await {
-                    Ok(json_response) => Ok(ResponseJson(json_response)),
-                    Err(e) => {
-                        error!("Failed to parse LLM proxy response: {}", e);
-                        Err((
-                            StatusCode::BAD_GATEWAY,
-                            ResponseJson(AgentErrorResponse {
-                                error: "parse_error".to_string(),
-                                code: "LLM_PARSE_ERROR".to_string(),
-                                message: format!("Failed to parse response: {}", e),
-                                agent_available: true,
-                            }),
-                        ))
-                    }
-                }
-            } else {
-                let status = response.status();
-                let error_text = response
-                    .text()
-                    .await
-                    .unwrap_or_else(|_| "Unknown error".to_string());
-                error!("LLM proxy error {}: {}", status, error_text);
-                Err((
-                    StatusCode::BAD_GATEWAY,
-                    ResponseJson(AgentErrorResponse {
-                        error: "llm_error".to_string(),
-                        code: "LLM_HTTP_ERROR".to_string(),
-                        message: error_text,
-                        agent_available: true,
-                    }),
-                ))
-            }
-        }
+        .await;
+
+    let response = match result {
+        Ok(r) => r,
         Err(e) => {
             error!("Failed to connect to agents service for LLM: {}", e);
-            Err((
-                StatusCode::SERVICE_UNAVAILABLE,
-                ResponseJson(AgentErrorResponse {
+            return axum::response::Response::builder()
+                .status(StatusCode::SERVICE_UNAVAILABLE)
+                .header("content-type", "application/json")
+                .body(axum::body::Body::from(serde_json::to_string(&AgentErrorResponse {
                     error: "connection_error".to_string(),
                     code: "LLM_UNAVAILABLE".to_string(),
                     message: format!("LLM service unavailable: {}", e),
                     agent_available: false,
-                }),
-            ))
+                }).unwrap_or_default()))
+                .unwrap();
         }
+    };
+
+    if !response.status().is_success() {
+        let status = response.status();
+        let error_text = response.text().await.unwrap_or_else(|_| "Unknown error".to_string());
+        error!("LLM proxy error {}: {}", status, error_text);
+        return axum::response::Response::builder()
+            .status(StatusCode::BAD_GATEWAY)
+            .header("content-type", "application/json")
+            .body(axum::body::Body::from(serde_json::to_string(&AgentErrorResponse {
+                error: "llm_error".to_string(),
+                code: "LLM_HTTP_ERROR".to_string(),
+                message: error_text,
+                agent_available: true,
+            }).unwrap_or_default()))
+            .unwrap();
+    }
+
+    let content_type = response
+        .headers()
+        .get("content-type")
+        .and_then(|v| v.to_str().ok())
+        .unwrap_or("application/json")
+        .to_string();
+
+    let body_bytes = response.bytes().await.unwrap_or_default();
+
+    if content_type.contains("text/event-stream") {
+        info!("LLM Proxy: passthrough SSE from agents service for agent={}", agent_name);
+        axum::response::Response::builder()
+            .status(StatusCode::OK)
+            .header("content-type", "text/event-stream")
+            .header("cache-control", "no-cache")
+            .header("connection", "keep-alive")
+            .body(axum::body::Body::from(body_bytes))
+            .unwrap()
+    } else if stream {
+        info!("LLM Proxy: converting JSON to SSE for agent={}", agent_name);
+        let json_response: serde_json::Value = serde_json::from_slice(&body_bytes).unwrap_or_default();
+
+        let id = json_response.get("id").and_then(|v| v.as_str()).unwrap_or("chatcmpl-0").to_string();
+        let created = json_response.get("created").and_then(|v| v.as_i64()).unwrap_or(0);
+        let model_used = json_response.get("model").and_then(|v| v.as_str()).unwrap_or("unknown").to_string();
+        let usage = json_response.get("usage").cloned();
+
+        let choice = json_response.get("choices").and_then(|v| v.as_array()).and_then(|a| a.first());
+        let content = choice.and_then(|c| c.get("message")).and_then(|m| m.get("content")).and_then(|c| c.as_str()).map(String::from);
+        let tool_calls = choice.and_then(|c| c.get("message")).and_then(|m| m.get("tool_calls")).cloned();
+        let finish_reason = choice.and_then(|c| c.get("finish_reason")).and_then(|f| f.as_str()).unwrap_or("stop").to_string();
+
+        let mut sse_body = String::new();
+        sse_body.push_str(&format!("data: {}\n\n", serde_json::json!({"id": id, "object": "chat.completion.chunk", "created": created, "model": model_used, "choices": [{"index": 0, "delta": {"role": "assistant"}, "finish_reason": null}]})));
+        if let Some(text) = content {
+            sse_body.push_str(&format!("data: {}\n\n", serde_json::json!({"id": id, "object": "chat.completion.chunk", "created": created, "model": model_used, "choices": [{"index": 0, "delta": {"content": text}, "finish_reason": null}]})));
+        }
+        if let Some(tc) = tool_calls {
+            sse_body.push_str(&format!("data: {}\n\n", serde_json::json!({"id": id, "object": "chat.completion.chunk", "created": created, "model": model_used, "choices": [{"index": 0, "delta": {"tool_calls": tc}, "finish_reason": null}]})));
+        }
+        let mut final_chunk = serde_json::json!({"id": id, "object": "chat.completion.chunk", "created": created, "model": model_used, "choices": [{"index": 0, "delta": {}, "finish_reason": finish_reason}]});
+        if let Some(u) = usage { final_chunk.as_object_mut().unwrap().insert("usage".to_string(), u); }
+        sse_body.push_str(&format!("data: {}\n\n", final_chunk));
+        sse_body.push_str("data: [DONE]\n\n");
+
+        axum::response::Response::builder()
+            .status(StatusCode::OK)
+            .header("content-type", "text/event-stream")
+            .header("cache-control", "no-cache")
+            .header("connection", "keep-alive")
+            .body(axum::body::Body::from(sse_body))
+            .unwrap()
+    } else {
+        axum::response::Response::builder()
+            .status(StatusCode::OK)
+            .header("content-type", "application/json")
+            .body(axum::body::Body::from(body_bytes))
+            .unwrap()
     }
 }
 

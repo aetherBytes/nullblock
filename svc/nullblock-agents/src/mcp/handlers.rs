@@ -55,6 +55,8 @@ pub async fn execute_tool(
         "llm_chat" => handle_llm_chat(state, args).await,
         "llm_list_models" => handle_llm_list_models(state, args).await,
         "llm_model_status" => handle_llm_model_status(state).await,
+        "llm_set_model" => handle_llm_set_model(state, args).await,
+        "llm_get_model" => handle_llm_get_model(state, args).await,
         _ => McpToolResult::error(format!("Unknown tool: {}", name)),
     }
 }
@@ -1087,6 +1089,91 @@ async fn handle_llm_model_status(state: &AppState) -> McpToolResult {
         "default_free_model": default_free,
         "health": health,
         "stats": stats,
+    });
+    McpToolResult::success(result.to_string())
+}
+
+async fn handle_llm_set_model(state: &AppState, args: Value) -> McpToolResult {
+    let agent_name = match args.get("agent_name").and_then(|v| v.as_str()) {
+        Some(name) => name.to_string(),
+        None => return McpToolResult::error("Missing required field: agent_name"),
+    };
+    let query = match args.get("query").and_then(|v| v.as_str()) {
+        Some(q) => q.to_lowercase(),
+        None => return McpToolResult::error("Missing required field: query"),
+    };
+
+    let agent = state.hecate_agent.read().await;
+    let llm_factory = match agent.llm_factory.as_ref() {
+        Some(f) => f.clone(),
+        None => return McpToolResult::error("LLM factory not initialized"),
+    };
+    drop(agent);
+
+    let factory = llm_factory.read().await;
+    let models = factory.fetch_available_models().await.unwrap_or_default();
+
+    let mut matches: Vec<(String, String, f64)> = Vec::new();
+    for model in &models {
+        let id = model.get("id").and_then(|v| v.as_str()).unwrap_or("");
+        let name = model.get("name").and_then(|v| v.as_str()).unwrap_or(id);
+        let id_lower = id.to_lowercase();
+        let name_lower = name.to_lowercase();
+
+        if id_lower == query || name_lower == query {
+            matches.push((id.to_string(), name.to_string(), 1.0));
+        } else if id_lower.contains(&query) || name_lower.contains(&query) {
+            let score = if id_lower.starts_with(&query) { 0.9 } else { 0.7 };
+            matches.push((id.to_string(), name.to_string(), score));
+        }
+    }
+
+    matches.sort_by(|a, b| b.2.partial_cmp(&a.2).unwrap_or(std::cmp::Ordering::Equal));
+
+    if matches.is_empty() {
+        return McpToolResult::error(format!(
+            "No models found matching '{}'. Try 'claude', 'gpt', 'deepseek', 'llama', or 'gemini'.",
+            query
+        ));
+    }
+
+    let best = &matches[0];
+    let previous = {
+        let mut prefs = state.agent_model_preferences.write().await;
+        let prev = prefs.get(&agent_name).cloned();
+        prefs.insert(agent_name.clone(), best.0.clone());
+        prev
+    };
+
+    let alternatives: Vec<String> = matches[1..matches.len().min(6)]
+        .iter()
+        .map(|m| format!("{} ({})", m.1, m.0))
+        .collect();
+
+    info!("🔄 Model preference set for {}: {} (was {:?})", agent_name, best.0, previous);
+
+    let mut result = format!("Switched {} to model: {} ({})", agent_name, best.1, best.0);
+    if let Some(prev) = previous {
+        result.push_str(&format!("\nPrevious model: {}", prev));
+    }
+    if !alternatives.is_empty() {
+        result.push_str(&format!("\nOther matches: {}", alternatives.join(", ")));
+    }
+    McpToolResult::success(result)
+}
+
+async fn handle_llm_get_model(state: &AppState, args: Value) -> McpToolResult {
+    let agent_name = match args.get("agent_name").and_then(|v| v.as_str()) {
+        Some(name) => name,
+        None => return McpToolResult::error("Missing required field: agent_name"),
+    };
+
+    let prefs = state.agent_model_preferences.read().await;
+    let model = prefs.get(agent_name).cloned();
+
+    let result = serde_json::json!({
+        "agent_name": agent_name,
+        "model": model.unwrap_or_else(|| "auto (no preference set)".to_string()),
     });
     McpToolResult::success(result.to_string())
 }
