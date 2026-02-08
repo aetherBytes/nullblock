@@ -40,19 +40,27 @@ const CockpitDash: React.FC<CockpitDashProps> = ({
   const showActions = !isLoggedIn && (loginAnimationPhase === 'navbar' || loginAnimationPhase === 'complete');
 
   type Point = { x: number; y: number };
+  type PanelFill = {
+    points: string;
+    outerX: number;
+    innerX: number;
+    midY: number;
+  };
+  type BackingFill = {
+    points: string;
+    gx1: number; gy1: number;
+    gx2: number; gy2: number;
+  };
   type ConnectorData = {
     w: number; h: number;
     lines: Array<{x1: number; y1: number; x2: number; y2: number}>;
-    panels: Array<{
-      points: string;
-      outerX: number;
-      innerX: number;
-      midY: number;
-    }>;
+    backLines: Array<{x1: number; y1: number; x2: number; y2: number}>;
+    panels: PanelFill[];
+    backings: BackingFill[];
   };
 
   const mfdRowRef = useRef<HTMLDivElement>(null);
-  const [svgData, setSvgData] = useState<ConnectorData>({ w: 0, h: 0, lines: [], panels: [] });
+  const [svgData, setSvgData] = useState<ConnectorData>({ w: 0, h: 0, lines: [], backLines: [], panels: [], backings: [] });
 
   const measureConnectors = useCallback(() => {
     const row = mfdRowRef.current;
@@ -74,14 +82,18 @@ const CockpitDash: React.FC<CockpitDashProps> = ({
       return { x: r.left - rowRect.left, y: r.top - rowRect.top };
     };
 
+    const leftTL = corner(styles.mfdLeft, true, true);
     const leftTR = corner(styles.mfdLeft, true, false);
+    const leftBL = corner(styles.mfdLeft, false, true);
     const leftBR = corner(styles.mfdLeft, false, false);
     const centerTL = corner(styles.mfdCenter, true, true);
     const centerTR = corner(styles.mfdCenter, true, false);
     const centerBL = corner(styles.mfdCenter, false, true);
     const centerBR = corner(styles.mfdCenter, false, false);
     const rightTL = corner(styles.mfdRight, true, true);
+    const rightTR = corner(styles.mfdRight, true, false);
     const rightBL = corner(styles.mfdRight, false, true);
+    const rightBR = corner(styles.mfdRight, false, false);
 
     const lines: ConnectorData['lines'] = [];
     if (leftTR && centerTL) lines.push({ x1: leftTR.x, y1: leftTR.y, x2: centerTL.x, y2: centerTL.y });
@@ -109,7 +121,49 @@ const CockpitDash: React.FC<CockpitDashProps> = ({
       });
     }
 
-    setSvgData({ w: rowRect.width, h: rowRect.height, lines, panels });
+    const backLines: ConnectorData['backLines'] = [];
+    const backings: ConnectorData['backings'] = [];
+    if (leftTL && leftBL) {
+      const bTL = { x: leftTL.x - 22, y: leftTL.y + 18 };
+      const bBL = { x: leftBL.x - 14, y: leftBL.y + 6 };
+      const midY = (leftTL.y + leftBL.y + bTL.y + bBL.y) / 4;
+      backings.push({
+        points: `${leftTL.x},${leftTL.y} ${bTL.x},${bTL.y} ${bBL.x},${bBL.y} ${leftBL.x},${leftBL.y}`,
+        gx1: Math.max(leftTL.x, leftBL.x), gy1: midY,
+        gx2: Math.min(bTL.x, bBL.x), gy2: midY,
+      });
+      backLines.push({ x1: leftTL.x, y1: leftTL.y, x2: bTL.x, y2: bTL.y });
+      backLines.push({ x1: leftBL.x, y1: leftBL.y, x2: bBL.x, y2: bBL.y });
+      backLines.push({ x1: bTL.x, y1: bTL.y, x2: bBL.x, y2: bBL.y });
+    }
+    if (rightTR && rightBR) {
+      const bTR = { x: rightTR.x + 22, y: rightTR.y + 18 };
+      const bBR = { x: rightBR.x + 14, y: rightBR.y + 6 };
+      const midY = (rightTR.y + rightBR.y + bTR.y + bBR.y) / 4;
+      backings.push({
+        points: `${rightTR.x},${rightTR.y} ${bTR.x},${bTR.y} ${bBR.x},${bBR.y} ${rightBR.x},${rightBR.y}`,
+        gx1: Math.min(rightTR.x, rightBR.x), gy1: midY,
+        gx2: Math.max(bTR.x, bBR.x), gy2: midY,
+      });
+      backLines.push({ x1: rightTR.x, y1: rightTR.y, x2: bTR.x, y2: bTR.y });
+      backLines.push({ x1: rightBR.x, y1: rightBR.y, x2: bBR.x, y2: bBR.y });
+      backLines.push({ x1: bTR.x, y1: bTR.y, x2: bBR.x, y2: bBR.y });
+    }
+    if (centerBL && centerBR) {
+      const bCBL = { x: centerBL.x + 6, y: centerBL.y + 14 };
+      const bCBR = { x: centerBR.x - 6, y: centerBR.y + 14 };
+      const midX = (centerBL.x + centerBR.x) / 2;
+      backings.push({
+        points: `${centerBL.x},${centerBL.y} ${centerBR.x},${centerBR.y} ${bCBR.x},${bCBR.y} ${bCBL.x},${bCBL.y}`,
+        gx1: midX, gy1: centerBL.y,
+        gx2: midX, gy2: bCBL.y,
+      });
+      backLines.push({ x1: centerBL.x, y1: centerBL.y, x2: bCBL.x, y2: bCBL.y });
+      backLines.push({ x1: centerBR.x, y1: centerBR.y, x2: bCBR.x, y2: bCBR.y });
+      backLines.push({ x1: bCBL.x, y1: bCBL.y, x2: bCBR.x, y2: bCBR.y });
+    }
+
+    setSvgData({ w: rowRect.width, h: rowRect.height, lines, backLines, panels, backings });
   }, []);
 
   useEffect(() => {
@@ -186,7 +240,7 @@ const CockpitDash: React.FC<CockpitDashProps> = ({
 
       {/* MFD row — 3 pane cockpit */}
       <div ref={mfdRowRef} className={styles.mfdRow}>
-        {(svgData.lines.length > 0 || svgData.panels.length > 0) && (
+        {(svgData.lines.length > 0 || svgData.panels.length > 0 || svgData.backings.length > 0) && (
           <svg
             className={styles.connectorSvg}
             viewBox={`0 0 ${svgData.w} ${svgData.h}`}
@@ -212,13 +266,42 @@ const CockpitDash: React.FC<CockpitDashProps> = ({
                   <stop offset="100%" stopColor="rgb(20, 16, 40)" stopOpacity="0.7" />
                 </linearGradient>
               ))}
+              {svgData.backings.map((b, i) => (
+                <linearGradient
+                  key={`bgrad-${i}`}
+                  id={`backingGrad${i}`}
+                  gradientUnits="userSpaceOnUse"
+                  x1={b.gx1} y1={b.gy1}
+                  x2={b.gx2} y2={b.gy2}
+                >
+                  <stop offset="0%" stopColor="rgb(12, 10, 24)" stopOpacity="0.85" />
+                  <stop offset="60%" stopColor="rgb(6, 4, 14)" stopOpacity="0.92" />
+                  <stop offset="100%" stopColor="rgb(2, 2, 6)" stopOpacity="0.95" />
+                </linearGradient>
+              ))}
             </defs>
+            {svgData.backings.map((b, i) => (
+              <polygon
+                key={`backing-${i}`}
+                points={b.points}
+                fill={`url(#backingGrad${i})`}
+                stroke="none"
+              />
+            ))}
             {svgData.panels.map((p, i) => (
               <polygon
                 key={`panel-${i}`}
                 points={p.points}
                 fill={`url(#panelGrad${i})`}
                 stroke="none"
+              />
+            ))}
+            {svgData.backLines.map((l, i) => (
+              <line
+                key={`bl-${i}`}
+                x1={l.x1} y1={l.y1} x2={l.x2} y2={l.y2}
+                stroke="rgba(154, 123, 255, 0.15)"
+                strokeWidth="0.5"
               />
             ))}
             {svgData.lines.map((l, i) => (
