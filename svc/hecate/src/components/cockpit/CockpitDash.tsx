@@ -39,18 +39,27 @@ const CockpitDash: React.FC<CockpitDashProps> = ({
 }) => {
   const showActions = !isLoggedIn && (loginAnimationPhase === 'navbar' || loginAnimationPhase === 'complete');
 
-  const mfdRowRef = useRef<HTMLDivElement>(null);
-  const [svgData, setSvgData] = useState<{
+  type Point = { x: number; y: number };
+  type ConnectorData = {
     w: number; h: number;
     lines: Array<{x1: number; y1: number; x2: number; y2: number}>;
-  }>({ w: 0, h: 0, lines: [] });
+    panels: Array<{
+      points: string;
+      outerX: number;
+      innerX: number;
+      midY: number;
+    }>;
+  };
+
+  const mfdRowRef = useRef<HTMLDivElement>(null);
+  const [svgData, setSvgData] = useState<ConnectorData>({ w: 0, h: 0, lines: [], panels: [] });
 
   const measureConnectors = useCallback(() => {
     const row = mfdRowRef.current;
     if (!row) return;
     const rowRect = row.getBoundingClientRect();
 
-    const corner = (panelCls: string, top: boolean, left: boolean) => {
+    const corner = (panelCls: string, top: boolean, left: boolean): Point | null => {
       const panel = row.getElementsByClassName(panelCls)[0] as HTMLElement | undefined;
       const bezel = panel?.firstElementChild as HTMLElement | undefined;
       if (!bezel) return null;
@@ -74,13 +83,33 @@ const CockpitDash: React.FC<CockpitDashProps> = ({
     const rightTL = corner(styles.mfdRight, true, true);
     const rightBL = corner(styles.mfdRight, false, true);
 
-    const lines: typeof svgData.lines = [];
+    const lines: ConnectorData['lines'] = [];
     if (leftTR && centerTL) lines.push({ x1: leftTR.x, y1: leftTR.y, x2: centerTL.x, y2: centerTL.y });
     if (centerTR && rightTL) lines.push({ x1: centerTR.x, y1: centerTR.y, x2: rightTL.x, y2: rightTL.y });
     if (leftBR && centerBL) lines.push({ x1: leftBR.x, y1: leftBR.y, x2: centerBL.x, y2: centerBL.y });
     if (centerBR && rightBL) lines.push({ x1: centerBR.x, y1: centerBR.y, x2: rightBL.x, y2: rightBL.y });
 
-    setSvgData({ w: rowRect.width, h: rowRect.height, lines });
+    const panels: ConnectorData['panels'] = [];
+    if (leftTR && centerTL && centerBL && leftBR) {
+      const midY = (leftTR.y + centerTL.y + centerBL.y + leftBR.y) / 4;
+      panels.push({
+        points: `${leftTR.x},${leftTR.y} ${centerTL.x},${centerTL.y} ${centerBL.x},${centerBL.y} ${leftBR.x},${leftBR.y}`,
+        outerX: Math.min(leftTR.x, leftBR.x),
+        innerX: Math.max(centerTL.x, centerBL.x),
+        midY,
+      });
+    }
+    if (centerTR && rightTL && rightBL && centerBR) {
+      const midY = (centerTR.y + rightTL.y + rightBL.y + centerBR.y) / 4;
+      panels.push({
+        points: `${centerTR.x},${centerTR.y} ${rightTL.x},${rightTL.y} ${rightBL.x},${rightBL.y} ${centerBR.x},${centerBR.y}`,
+        outerX: Math.max(rightTL.x, rightBL.x),
+        innerX: Math.min(centerTR.x, centerBR.x),
+        midY,
+      });
+    }
+
+    setSvgData({ w: rowRect.width, h: rowRect.height, lines, panels });
   }, []);
 
   useEffect(() => {
@@ -157,7 +186,7 @@ const CockpitDash: React.FC<CockpitDashProps> = ({
 
       {/* MFD row — 3 pane cockpit */}
       <div ref={mfdRowRef} className={styles.mfdRow}>
-        {svgData.lines.length > 0 && (
+        {(svgData.lines.length > 0 || svgData.panels.length > 0) && (
           <svg
             className={styles.connectorSvg}
             viewBox={`0 0 ${svgData.w} ${svgData.h}`}
@@ -170,7 +199,28 @@ const CockpitDash: React.FC<CockpitDashProps> = ({
                   <feMergeNode in="SourceGraphic" />
                 </feMerge>
               </filter>
+              {svgData.panels.map((p, i) => (
+                <linearGradient
+                  key={`grad-${i}`}
+                  id={`panelGrad${i}`}
+                  gradientUnits="userSpaceOnUse"
+                  x1={p.outerX} y1={p.midY}
+                  x2={p.innerX} y2={p.midY}
+                >
+                  <stop offset="0%" stopColor="rgb(8, 6, 18)" stopOpacity="0.95" />
+                  <stop offset="50%" stopColor="rgb(14, 12, 30)" stopOpacity="0.85" />
+                  <stop offset="100%" stopColor="rgb(20, 16, 40)" stopOpacity="0.7" />
+                </linearGradient>
+              ))}
             </defs>
+            {svgData.panels.map((p, i) => (
+              <polygon
+                key={`panel-${i}`}
+                points={p.points}
+                fill={`url(#panelGrad${i})`}
+                stroke="none"
+              />
+            ))}
             {svgData.lines.map((l, i) => (
               <React.Fragment key={i}>
                 <line

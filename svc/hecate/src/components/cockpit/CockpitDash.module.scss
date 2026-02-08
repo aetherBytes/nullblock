@@ -232,6 +232,23 @@ $purple: #b967ff;
   margin-right: -44px;
   z-index: 1;
 
+  &::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 40%;
+    height: 100%;
+    background: linear-gradient(to right,
+      transparent 0%,
+      rgba(4, 2, 12, 0.3) 50%,
+      rgba(4, 2, 12, 0.55) 100%
+    );
+    pointer-events: none;
+    z-index: 5;
+    border-radius: 0 10px 10px 0;
+  }
+
   @media (max-width: 1024px) {
     height: calc(100% + 40px);
     transform: perspective(800px) rotateY(6deg) rotateX(1.5deg) translateY(10px);
@@ -254,6 +271,23 @@ $purple: #b967ff;
   transform-style: preserve-3d;
   margin-left: -44px;
   z-index: 1;
+
+  &::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 40%;
+    height: 100%;
+    background: linear-gradient(to left,
+      transparent 0%,
+      rgba(4, 2, 12, 0.3) 50%,
+      rgba(4, 2, 12, 0.55) 100%
+    );
+    pointer-events: none;
+    z-index: 5;
+    border-radius: 10px 0 0 10px;
+  }
 
   @media (max-width: 1024px) {
     height: calc(100% + 40px);
