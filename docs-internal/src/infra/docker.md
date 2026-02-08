@@ -86,13 +86,13 @@ CREATE SUBSCRIPTION agents_user_sync
 
 ```bash
 # Check subscription status
-PGPASSWORD="REDACTED_DB_PASS" psql -h localhost -p 5441 -U postgres -d agents \
+PGPASSWORD="$POSTGRES_PASSWORD" psql -h localhost -p 5441 -U postgres -d agents \
   -c "SELECT subname, subenabled FROM pg_subscription;"
 
 # Compare user counts
-PGPASSWORD="REDACTED_DB_PASS" psql -h localhost -p 5440 -U postgres -d erebus \
+PGPASSWORD="$POSTGRES_PASSWORD" psql -h localhost -p 5440 -U postgres -d erebus \
   -c "SELECT COUNT(*) FROM user_references;"
-PGPASSWORD="REDACTED_DB_PASS" psql -h localhost -p 5441 -U postgres -d agents \
+PGPASSWORD="$POSTGRES_PASSWORD" psql -h localhost -p 5441 -U postgres -d agents \
   -c "SELECT COUNT(*) FROM user_references;"
 ```
 

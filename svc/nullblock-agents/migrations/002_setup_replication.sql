@@ -6,7 +6,7 @@
 DROP SUBSCRIPTION IF EXISTS agents_user_sync;
 
 CREATE SUBSCRIPTION agents_user_sync
-CONNECTION 'host=nullblock-postgres-erebus port=5432 dbname=erebus user=postgres password=REDACTED_DB_PASS'
+CONNECTION 'host=nullblock-postgres-erebus port=5432 dbname=erebus user=postgres password=CHANGEME'
 PUBLICATION erebus_user_sync
 WITH (
     copy_data = true,

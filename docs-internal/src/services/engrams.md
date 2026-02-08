@@ -147,7 +147,7 @@ CREATE TABLE engrams (
 ## Configuration
 
 ```bash
-DATABASE_URL=postgresql://postgres:REDACTED_DB_PASS@localhost:5441/agents
+DATABASE_URL=postgresql://postgres:$POSTGRES_PASSWORD@localhost:5441/agents
 ENGRAMS_PORT=9004
 ```
 

@@ -69,7 +69,7 @@ BITTENSOR_NETWORK=test
 BITTENSOR_WALLET_PATH=your-bittensor-wallet-path
 
 # Database Configuration
-DATABASE_URL=postgresql://nullblock:REDACTED_DB_PASS@postgres:5432/nullblock
+DATABASE_URL=postgresql://nullblock:${POSTGRES_PASSWORD:-changeme}@postgres:5432/nullblock
 REDIS_URL=redis://redis:6379
 
 # IPFS Configuration

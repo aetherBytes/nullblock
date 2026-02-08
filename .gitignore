@@ -70,6 +70,20 @@ build/
 .pytest_cache/
 .coverage
 
+# IDE
+.cursor/
+.vscode/
+.idea/
+
+# Content queue (generated data)
+content-queue/
+
 # Terraform
 **/.terraform/
 *.terraform.lock.hcl
+
+# Secrets / credentials
+*.pem
+*.key
+*.p12
+*.keystore

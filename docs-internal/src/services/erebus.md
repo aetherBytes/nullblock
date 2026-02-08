@@ -101,7 +101,7 @@ Erebus owns the following tables:
 ```bash
 # Environment
 EREBUS_PORT=3000
-DATABASE_URL=postgresql://postgres:REDACTED_DB_PASS@localhost:5440/erebus
+DATABASE_URL=postgresql://postgres:$POSTGRES_PASSWORD@localhost:5440/erebus
 
 # Service URLs (for proxying)
 AGENTS_SERVICE_URL=http://localhost:9003

@@ -24,7 +24,7 @@
 ### Connection
 
 ```bash
-PGPASSWORD="REDACTED_DB_PASS" psql -h localhost -p 5440 -U postgres -d erebus
+PGPASSWORD="$POSTGRES_PASSWORD" psql -h localhost -p 5440 -U postgres -d erebus
 ```
 
 ## Agents Database (Port 5441)
@@ -41,7 +41,7 @@ PGPASSWORD="REDACTED_DB_PASS" psql -h localhost -p 5440 -U postgres -d erebus
 ### Connection
 
 ```bash
-PGPASSWORD="REDACTED_DB_PASS" psql -h localhost -p 5441 -U postgres -d agents
+PGPASSWORD="$POSTGRES_PASSWORD" psql -h localhost -p 5441 -U postgres -d agents
 ```
 
 ## Replication

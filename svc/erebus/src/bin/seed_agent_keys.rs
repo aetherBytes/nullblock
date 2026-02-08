@@ -79,14 +79,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let encryption_key = env::var("ENCRYPTION_MASTER_KEY")
         .expect("ENCRYPTION_MASTER_KEY must be set in environment");
 
-    let database_url = env::var("DATABASE_URL").unwrap_or_else(|_| {
-        "postgresql://postgres:REDACTED_DB_PASS@localhost:5440/erebus".to_string()
-    });
+    let database_url = env::var("DATABASE_URL")
+        .expect("DATABASE_URL must be set in environment");
 
-    println!(
-        "Database URL: {}",
-        database_url.replace("REDACTED_DB_PASS", "***")
-    );
+    println!("Database URL: [configured via DATABASE_URL env var]");
 
     // Verify encryption key format
     let key_bytes = hex::decode(&encryption_key)

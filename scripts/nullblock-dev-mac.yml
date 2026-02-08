@@ -103,9 +103,14 @@ on_project_start: |
   if [ ! -f .env.dev ]; then
     echo "Creating .env.dev file..."
     echo "# Nullblock Development Environment" > .env.dev
-    echo "ETHEREUM_RPC_URL=https://eth-sepolia.alchemyapi.io/v2/your-key" >> .env.dev
+    echo "POSTGRES_PASSWORD=changeme" >> .env.dev
     echo "OPENROUTER_API_KEY=your-openrouter-key-here" >> .env.dev
-    echo "Please edit .env.dev with your actual API keys"
+    echo "Please edit .env.dev with your actual API keys and passwords"
+  fi
+  if [ -f .env.dev ]; then
+    set -a
+    source .env.dev
+    set +a
   fi
   echo "🧹 Cleaning up orphaned service processes..."
   for port in 3000 3001 8001 9003 9004 9007; do
@@ -137,6 +142,10 @@ on_project_start: |
   echo "🗄️ Running ArbFarm database migrations..."
   sleep 3  # Wait for postgres to be ready
   ~/nullblock/scripts/migrate-arbfarm.sh || echo "⚠️ Migration may have failed, check database"
+  echo ""
+  echo "🔑 Seeding agent API keys..."
+  cd svc/erebus && DATABASE_URL="${DATABASE_URL:-postgresql://postgres:${POSTGRES_PASSWORD:-changeme}@localhost:5440/erebus}" cargo run --bin seed-agent-keys 2>&1 && echo "✅ Agent API keys seeded" || echo "⚠️ Agent key seeding failed (keys may already exist)"
+  cd ../..
   echo ""
   echo "🚀 Nullblock Development Environment Ready (macOS)!"
   echo "================================================"

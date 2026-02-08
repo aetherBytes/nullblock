@@ -74,7 +74,7 @@ Keys in Erebus database (`agent_api_keys` table):
 ```sql
 SELECT agent_name, provider, key_prefix, key_suffix, is_active
 FROM agent_api_keys;
--- Example: hecate | openrouter | sk-or-v1-8 | e098 | t
+-- Example: hecate | openrouter | sk-or-v1-x | xxxx | t
 ```
 
 **Seed keys**:

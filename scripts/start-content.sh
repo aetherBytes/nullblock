@@ -16,7 +16,7 @@ if [ -f ../../.env.dev ]; then
 fi
 
 export PORT=8002
-export DATABASE_URL="postgresql://postgres:REDACTED_DB_PASS@localhost:5442/nullblock_content"
+export DATABASE_URL="${DATABASE_URL:-postgresql://postgres:${POSTGRES_PASSWORD:-changeme}@localhost:5442/nullblock_content}"
 echo "🚀 Starting Content service on port 8002..."
 echo "📝 Logs will be written to logs/content.log"
 echo "🗄️  Using PostgreSQL for content persistence"

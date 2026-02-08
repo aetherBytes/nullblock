@@ -5,7 +5,7 @@
 DO $$
 BEGIN
     IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'nullblock') THEN
-        CREATE USER nullblock WITH PASSWORD 'REDACTED_DB_PASS' SUPERUSER;
+        CREATE USER nullblock WITH PASSWORD 'changeme' SUPERUSER;
     END IF;
 END
 $$;

@@ -8,7 +8,7 @@ Complete reference for NullBlock environment configuration.
 
 ```bash
 EREBUS_PORT=3000
-DATABASE_URL=postgresql://postgres:REDACTED_DB_PASS@localhost:5440/erebus
+DATABASE_URL=postgresql://postgres:$POSTGRES_PASSWORD@localhost:5440/erebus
 
 # Service URLs (for proxying)
 AGENTS_SERVICE_URL=http://localhost:9003
@@ -19,7 +19,7 @@ ENGRAMS_SERVICE_URL=http://localhost:9004
 ### Agents
 
 ```bash
-DATABASE_URL=postgresql://postgres:REDACTED_DB_PASS@localhost:5441/agents
+DATABASE_URL=postgresql://postgres:$POSTGRES_PASSWORD@localhost:5441/agents
 EREBUS_BASE_URL=http://localhost:3000
 KAFKA_BOOTSTRAP_SERVERS=localhost:9092
 
@@ -31,7 +31,7 @@ LLM_REQUEST_TIMEOUT_MS=300000
 ### Engrams
 
 ```bash
-DATABASE_URL=postgresql://postgres:REDACTED_DB_PASS@localhost:5441/agents
+DATABASE_URL=postgresql://postgres:$POSTGRES_PASSWORD@localhost:5441/agents
 ENGRAMS_PORT=9004
 ```
 
@@ -60,14 +60,14 @@ CORS_ORIGINS=http://localhost:5173,http://localhost:3000
 POSTGRES_HOST=localhost
 POSTGRES_PORT=5440
 POSTGRES_USER=postgres
-POSTGRES_PASSWORD=REDACTED_DB_PASS
+POSTGRES_PASSWORD=$POSTGRES_PASSWORD
 POSTGRES_DB=erebus
 
 # Agents DB
 POSTGRES_HOST=localhost
 POSTGRES_PORT=5441
 POSTGRES_USER=postgres
-POSTGRES_PASSWORD=REDACTED_DB_PASS
+POSTGRES_PASSWORD=$POSTGRES_PASSWORD
 POSTGRES_DB=agents
 ```
 
@@ -107,7 +107,7 @@ Create `.env.dev` in project root:
 
 ```bash
 # ~/nullblock/.env.dev
-DATABASE_URL=postgresql://postgres:REDACTED_DB_PASS@localhost:5441/agents
+DATABASE_URL=postgresql://postgres:$POSTGRES_PASSWORD@localhost:5441/agents
 EREBUS_BASE_URL=http://localhost:3000
 # ... other non-secret config
 ```

@@ -67,9 +67,8 @@ pub async fn create_user_endpoint(
         serde_json::to_string_pretty(&request).unwrap_or_default()
     );
 
-    let database_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| {
-        "postgresql://postgres:REDACTED_DB_PASS@localhost:5440/erebus".to_string()
-    });
+    let database_url = std::env::var("DATABASE_URL")
+        .expect("DATABASE_URL must be set in environment");
 
     let database = match Database::new(&database_url).await {
         Ok(db) => db,
@@ -161,9 +160,8 @@ pub async fn lookup_user_endpoint(
         serde_json::to_string_pretty(&request).unwrap_or_default()
     );
 
-    let database_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| {
-        "postgresql://postgres:REDACTED_DB_PASS@localhost:5440/erebus".to_string()
-    });
+    let database_url = std::env::var("DATABASE_URL")
+        .expect("DATABASE_URL must be set in environment");
 
     let database = match Database::new(&database_url).await {
         Ok(db) => db,
@@ -229,9 +227,8 @@ pub async fn get_user_endpoint(
 ) -> Result<ResponseJson<LookupUserResponse>, (StatusCode, ResponseJson<ErrorResponse>)> {
     info!("👤 Get user by ID request received: {}", user_id);
 
-    let database_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| {
-        "postgresql://postgres:REDACTED_DB_PASS@localhost:5440/erebus".to_string()
-    });
+    let database_url = std::env::var("DATABASE_URL")
+        .expect("DATABASE_URL must be set in environment");
 
     let database = match Database::new(&database_url).await {
         Ok(db) => db,

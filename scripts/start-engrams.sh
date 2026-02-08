@@ -18,7 +18,7 @@ if [ -f ../../.env.dev ]; then
 fi
 
 export ENGRAMS_PORT=9004
-export DATABASE_URL="postgresql://postgres:REDACTED_DB_PASS@localhost:5441/agents"
+export DATABASE_URL="${DATABASE_URL:-postgresql://postgres:${POSTGRES_PASSWORD:-changeme}@localhost:5441/agents}"
 echo "🚀 Starting Engram service on port 9004..."
 echo "📝 Logs will be written to logs/engrams.log"
 echo "🗄️  Using PostgreSQL for engram persistence"

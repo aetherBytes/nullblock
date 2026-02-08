@@ -1,6 +1,9 @@
 # Nullblock MVP Commands
 # Run with: just <command>
 
+set dotenv-load
+set dotenv-filename := ".env.dev"
+
 # OS detection (used by dev command)
 _os := if os() == "macos" { "macos" } else { "linux" }
 
@@ -33,9 +36,9 @@ start-mac:
     @echo ""
     @docker rm -f nullblock-postgres-erebus nullblock-postgres-agents nullblock-postgres-content nullblock-redis nullblock-zookeeper nullblock-kafka 2>/dev/null || true
     @echo "📦 Starting PostgreSQL databases..."
-    @docker run -d --name nullblock-postgres-erebus --network nullblock-network -p 5440:5432 -v nullblock-postgres-erebus-data:/var/lib/postgresql/data -e POSTGRES_DB=erebus -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=REDACTED_DB_PASS postgres:15-alpine postgres -c wal_level=logical -c max_replication_slots=4 -c max_wal_senders=4 -c max_logical_replication_workers=4
-    @docker run -d --name nullblock-postgres-agents --network nullblock-network -p 5441:5432 -v nullblock-postgres-agents-data:/var/lib/postgresql/data -e POSTGRES_DB=agents -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=REDACTED_DB_PASS postgres:15-alpine postgres -c wal_level=logical -c max_replication_slots=4 -c max_wal_senders=4 -c max_logical_replication_workers=4
-    @docker run -d --name nullblock-postgres-content --network nullblock-network -p 5442:5432 -v nullblock-postgres-content-data:/var/lib/postgresql/data -e POSTGRES_DB=nullblock_content -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=REDACTED_DB_PASS postgres:15-alpine postgres -c wal_level=logical -c max_replication_slots=4 -c max_wal_senders=4 -c max_logical_replication_workers=4
+    @docker run -d --name nullblock-postgres-erebus --network nullblock-network -p 5440:5432 -v nullblock-postgres-erebus-data:/var/lib/postgresql/data -e POSTGRES_DB=erebus -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-changeme} postgres:15-alpine postgres -c wal_level=logical -c max_replication_slots=4 -c max_wal_senders=4 -c max_logical_replication_workers=4
+    @docker run -d --name nullblock-postgres-agents --network nullblock-network -p 5441:5432 -v nullblock-postgres-agents-data:/var/lib/postgresql/data -e POSTGRES_DB=agents -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-changeme} postgres:15-alpine postgres -c wal_level=logical -c max_replication_slots=4 -c max_wal_senders=4 -c max_logical_replication_workers=4
+    @docker run -d --name nullblock-postgres-content --network nullblock-network -p 5442:5432 -v nullblock-postgres-content-data:/var/lib/postgresql/data -e POSTGRES_DB=nullblock_content -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-changeme} postgres:15-alpine postgres -c wal_level=logical -c max_replication_slots=4 -c max_wal_senders=4 -c max_logical_replication_workers=4
     @echo "📦 Starting Redis..."
     @docker run -d --name nullblock-redis --network nullblock-network -p 6379:6379 -v nullblock-redis-data:/data redis:7-alpine redis-server --appendonly yes
     @echo "📦 Starting Zookeeper..."
@@ -91,9 +94,9 @@ start-linux:
     @echo ""
     @docker rm -f nullblock-postgres-erebus nullblock-postgres-agents nullblock-postgres-content nullblock-redis nullblock-zookeeper nullblock-kafka 2>/dev/null || true
     @echo "📦 Starting PostgreSQL databases..."
-    @docker run -d --name nullblock-postgres-erebus --network nullblock-network -p 5440:5432 -v nullblock-postgres-erebus-data:/var/lib/postgresql/data -e POSTGRES_DB=erebus -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=REDACTED_DB_PASS postgres:15-alpine postgres -c wal_level=logical -c max_replication_slots=4 -c max_wal_senders=4 -c max_logical_replication_workers=4
-    @docker run -d --name nullblock-postgres-agents --network nullblock-network -p 5441:5432 -v nullblock-postgres-agents-data:/var/lib/postgresql/data -e POSTGRES_DB=agents -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=REDACTED_DB_PASS postgres:15-alpine postgres -c wal_level=logical -c max_replication_slots=4 -c max_wal_senders=4 -c max_logical_replication_workers=4
-    @docker run -d --name nullblock-postgres-content --network nullblock-network -p 5442:5432 -v nullblock-postgres-content-data:/var/lib/postgresql/data -e POSTGRES_DB=nullblock_content -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=REDACTED_DB_PASS postgres:15-alpine postgres -c wal_level=logical -c max_replication_slots=4 -c max_wal_senders=4 -c max_logical_replication_workers=4
+    @docker run -d --name nullblock-postgres-erebus --network nullblock-network -p 5440:5432 -v nullblock-postgres-erebus-data:/var/lib/postgresql/data -e POSTGRES_DB=erebus -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-changeme} postgres:15-alpine postgres -c wal_level=logical -c max_replication_slots=4 -c max_wal_senders=4 -c max_logical_replication_workers=4
+    @docker run -d --name nullblock-postgres-agents --network nullblock-network -p 5441:5432 -v nullblock-postgres-agents-data:/var/lib/postgresql/data -e POSTGRES_DB=agents -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-changeme} postgres:15-alpine postgres -c wal_level=logical -c max_replication_slots=4 -c max_wal_senders=4 -c max_logical_replication_workers=4
+    @docker run -d --name nullblock-postgres-content --network nullblock-network -p 5442:5432 -v nullblock-postgres-content-data:/var/lib/postgresql/data -e POSTGRES_DB=nullblock_content -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-changeme} postgres:15-alpine postgres -c wal_level=logical -c max_replication_slots=4 -c max_wal_senders=4 -c max_logical_replication_workers=4
     @echo "📦 Starting Redis..."
     @docker run -d --name nullblock-redis --network nullblock-network -p 6379:6379 -v nullblock-redis-data:/data redis:7-alpine redis-server --appendonly yes
     @echo "📦 Starting Zookeeper..."
@@ -469,11 +472,11 @@ init-db:
 # Show Docker database connections
 docker-db-info:
     @echo "🗄️ Docker Database Connection Info..."
-    @echo "PostgreSQL Agents:     postgresql://postgres:REDACTED_DB_PASS@localhost:5441/agents"
-    @echo "PostgreSQL Erebus:     postgresql://postgres:REDACTED_DB_PASS@localhost:5440/erebus"
-    @echo "PostgreSQL MCP:        postgresql://postgres:REDACTED_DB_PASS@localhost:5442/mcp"
-    @echo "PostgreSQL Orchestration: postgresql://postgres:REDACTED_DB_PASS@localhost:5443/orchestration"
-    @echo "PostgreSQL Analytics:  postgresql://postgres:REDACTED_DB_PASS@localhost:5444/analytics"
+    @echo "PostgreSQL Agents:     postgresql://postgres:$POSTGRES_PASSWORD@localhost:5441/agents"
+    @echo "PostgreSQL Erebus:     postgresql://postgres:$POSTGRES_PASSWORD@localhost:5440/erebus"
+    @echo "PostgreSQL MCP:        postgresql://postgres:$POSTGRES_PASSWORD@localhost:5442/mcp"
+    @echo "PostgreSQL Orchestration: postgresql://postgres:$POSTGRES_PASSWORD@localhost:5443/orchestration"
+    @echo "PostgreSQL Analytics:  postgresql://postgres:$POSTGRES_PASSWORD@localhost:5444/analytics"
     @echo "Redis:                 redis://localhost:6379"
     @echo "Kafka:                 localhost:9092"
     @echo "IPFS API:              http://localhost:5001"

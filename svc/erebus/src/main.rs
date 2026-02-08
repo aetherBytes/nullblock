@@ -468,9 +468,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     info!("============================================================");
 
     // Initialize database connection
-    let database_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| {
-        "postgresql://postgres:REDACTED_DB_PASS@localhost:5440/erebus".to_string()
-    });
+    let database_url = std::env::var("DATABASE_URL")
+        .expect("DATABASE_URL must be set in environment");
 
     info!("🗄️ Initializing database connection...");
     let database = match database::Database::new(&database_url).await {

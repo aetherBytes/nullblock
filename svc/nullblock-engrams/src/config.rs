@@ -15,7 +15,7 @@ impl Config {
             database_url: env::var("ENGRAMS_DATABASE_URL")
                 .or_else(|_| env::var("DATABASE_URL"))
                 .unwrap_or_else(|_| {
-                    "postgresql://postgres:REDACTED_DB_PASS@localhost:5441/agents".to_string()
+                    panic!("DATABASE_URL or ENGRAMS_DATABASE_URL must be set")
                 }),
             erebus_url: env::var("EREBUS_BASE_URL")
                 .unwrap_or_else(|_| "http://localhost:3000".to_string()),

@@ -124,13 +124,13 @@ BITTENSOR_WALLET_PATH=your-bittensor-wallet-path
 
 # Database Configuration (local)
 # Docker Database URLs (using mapped ports)
-DATABASE_URL=postgresql://postgres:REDACTED_DB_PASS@localhost:5441/agents
+DATABASE_URL=postgresql://postgres:\${POSTGRES_PASSWORD:-changeme}@localhost:5441/agents
 # Note: Protocols service uses Agents database for integration (no separate database needed)
-ORCHESTRATION_DATABASE_URL=postgresql://postgres:REDACTED_DB_PASS@localhost:5443/orchestration
-AGENTS_DATABASE_URL=postgresql://postgres:REDACTED_DB_PASS@localhost:5441/agents
-EREBUS_DATABASE_URL=postgresql://postgres:REDACTED_DB_PASS@localhost:5440/erebus
-HECATE_DATABASE_URL=postgresql://postgres:REDACTED_DB_PASS@localhost:5441/agents
-PLATFORM_DATABASE_URL=postgresql://postgres:REDACTED_DB_PASS@localhost:5444/analytics
+ORCHESTRATION_DATABASE_URL=postgresql://postgres:\${POSTGRES_PASSWORD:-changeme}@localhost:5443/orchestration
+AGENTS_DATABASE_URL=postgresql://postgres:\${POSTGRES_PASSWORD:-changeme}@localhost:5441/agents
+EREBUS_DATABASE_URL=postgresql://postgres:\${POSTGRES_PASSWORD:-changeme}@localhost:5440/erebus
+HECATE_DATABASE_URL=postgresql://postgres:\${POSTGRES_PASSWORD:-changeme}@localhost:5441/agents
+PLATFORM_DATABASE_URL=postgresql://postgres:\${POSTGRES_PASSWORD:-changeme}@localhost:5444/analytics
 REDIS_URL=redis://localhost:6379
 
 # IPFS Configuration (local)

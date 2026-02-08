@@ -14,7 +14,7 @@ services:
     environment:
       POSTGRES_DB: erebus
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: REDACTED_DB_PASS
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-changeme}
     volumes:
       - postgres_erebus_data:/var/lib/postgresql/data
     ports:
@@ -40,7 +40,7 @@ services:
     environment:
       POSTGRES_DB: agents
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: REDACTED_DB_PASS
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-changeme}
     volumes:
       - postgres_agents_data:/var/lib/postgresql/data
     ports:
@@ -62,7 +62,7 @@ services:
     environment:
       POSTGRES_DB: mcp
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: REDACTED_DB_PASS
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-changeme}
     volumes:
       - postgres_mcp_data:/var/lib/postgresql/data
     ports:
@@ -80,7 +80,7 @@ services:
     environment:
       POSTGRES_DB: orchestration
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: REDACTED_DB_PASS
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-changeme}
     volumes:
       - postgres_orchestration_data:/var/lib/postgresql/data
     ports:
@@ -98,7 +98,7 @@ services:
     environment:
       POSTGRES_DB: analytics
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: REDACTED_DB_PASS
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-changeme}
     volumes:
       - postgres_analytics_data:/var/lib/postgresql/data
     ports:
@@ -193,7 +193,7 @@ services:
       dockerfile: Dockerfile
     container_name: nullblock-mcp
     environment:
-      - DATABASE_URL=postgresql://postgres:REDACTED_DB_PASS@postgres-mcp:5432/mcp
+      - DATABASE_URL=postgresql://postgres:${POSTGRES_PASSWORD:-changeme}@postgres-mcp:5432/mcp
       - REDIS_URL=redis://redis:6379
       - IPFS_API_URL=http://ipfs:5001
       - FLASHBOTS_RPC_URL=${FLASHBOTS_RPC_URL}
@@ -223,7 +223,7 @@ services:
       dockerfile: Dockerfile
     container_name: nullblock-orchestration
     environment:
-      - DATABASE_URL=postgresql://postgres:REDACTED_DB_PASS@postgres-orchestration:5432/orchestration
+      - DATABASE_URL=postgresql://postgres:${POSTGRES_PASSWORD:-changeme}@postgres-orchestration:5432/orchestration
       - REDIS_URL=redis://redis:6379
       - MCP_SERVER_URL=http://nullblock-mcp:8001
       - BITTENSOR_NETWORK=${BITTENSOR_NETWORK:-test}
@@ -250,7 +250,7 @@ services:
       dockerfile: Dockerfile
     container_name: nullblock-agents
     environment:
-      - DATABASE_URL=postgresql://postgres:REDACTED_DB_PASS@postgres-agents:5432/agents
+      - DATABASE_URL=postgresql://postgres:${POSTGRES_PASSWORD:-changeme}@postgres-agents:5432/agents
       - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
       - REDIS_URL=redis://redis:6379
       - MCP_SERVER_URL=http://nullblock-mcp:8000
@@ -283,7 +283,7 @@ services:
       dockerfile: Dockerfile
     container_name: nullblock-hecate
     environment:
-      - DATABASE_URL=postgresql://nullblock:REDACTED_DB_PASS@postgres:5432/nullblock_hecate
+      - DATABASE_URL=postgresql://nullblock:${POSTGRES_PASSWORD:-changeme}@postgres:5432/nullblock_hecate
       - VITE_MCP_API_URL=http://localhost:8000
       - VITE_ORCHESTRATION_API_URL=http://localhost:8001
       - VITE_AGENTS_API_URL=http://localhost:8002
@@ -306,7 +306,7 @@ services:
       dockerfile: Dockerfile
     container_name: nullblock-erebus
     environment:
-      - DATABASE_URL=postgresql://postgres:REDACTED_DB_PASS@postgres-erebus:5432/erebus
+      - DATABASE_URL=postgresql://postgres:${POSTGRES_PASSWORD:-changeme}@postgres-erebus:5432/erebus
       - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
       - REDIS_URL=redis://redis:6379
       - SOLANA_RPC_URL=${SOLANA_RPC_URL:-https://api.devnet.solana.com}

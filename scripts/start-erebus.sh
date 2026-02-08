@@ -16,7 +16,7 @@ fi
 
 export EREBUS_HOST=127.0.0.1
 export EREBUS_PORT=3000
-export DATABASE_URL="postgresql://postgres:REDACTED_DB_PASS@localhost:5440/erebus"
+export DATABASE_URL="${DATABASE_URL:-postgresql://postgres:${POSTGRES_PASSWORD:-changeme}@localhost:5440/erebus}"
 export KAFKA_BOOTSTRAP_SERVERS="localhost:9092"
 echo "📝 Logs will be written to logs/erebus.log"
 echo ""

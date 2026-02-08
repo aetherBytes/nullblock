@@ -16,7 +16,7 @@ fi
 
 echo "🦀 Starting Rust protocol service with A2A and MCP support..."
 export PORT=8001
-export DATABASE_URL="postgresql://postgres:REDACTED_DB_PASS@localhost:5441/agents"
+export DATABASE_URL="${DATABASE_URL:-postgresql://postgres:${POSTGRES_PASSWORD:-changeme}@localhost:5441/agents}"
 export KAFKA_BOOTSTRAP_SERVERS="localhost:9092"
 echo ""
 echo "🗄️  Waiting for Agents database to be ready..."

@@ -126,7 +126,7 @@ Other states: `input-required`, `canceled`, `failed`, `rejected`, `auth-required
 ## Configuration
 
 ```bash
-DATABASE_URL=postgresql://postgres:REDACTED_DB_PASS@localhost:5441/agents
+DATABASE_URL=postgresql://postgres:$POSTGRES_PASSWORD@localhost:5441/agents
 EREBUS_BASE_URL=http://localhost:3000
 DEFAULT_LLM_MODEL=cognitivecomputations/dolphin3.0-mistral-24b:free
 LLM_REQUEST_TIMEOUT_MS=300000

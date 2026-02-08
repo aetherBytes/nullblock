@@ -36,7 +36,7 @@ INSERT INTO user_references (
 SELECT 
     id, source_identifier, chain, user_type, source_type, wallet_type,
     email, metadata, preferences, additional_metadata, is_active
-FROM dblink('host=localhost port=5440 dbname=erebus user=postgres password=REDACTED_DB_PASS',
+FROM dblink('host=localhost port=5440 dbname=erebus user=postgres password=$POSTGRES_PASSWORD',
     'SELECT id, source_identifier, chain, user_type, source_type, wallet_type, 
             email, metadata, preferences, additional_metadata, is_active 
      FROM user_references WHERE is_active = true'
@@ -59,7 +59,7 @@ UPDATE user_sync_queue SET processed = true, processed_at = NOW() WHERE processe
 
 -- Show final status
 SELECT 'Final Status:' as status;
-SELECT 'Erebus users:' as database, COUNT(*) as count FROM dblink('host=localhost port=5440 dbname=erebus user=postgres password=REDACTED_DB_PASS', 'SELECT COUNT(*) FROM user_references WHERE is_active = true') AS erebus_count(count bigint)
+SELECT 'Erebus users:' as database, COUNT(*) as count FROM dblink('host=localhost port=5440 dbname=erebus user=postgres password=$POSTGRES_PASSWORD', 'SELECT COUNT(*) FROM user_references WHERE is_active = true') AS erebus_count(count bigint)
 UNION ALL
 SELECT 'Agents users:' as database, COUNT(*) as count FROM user_references WHERE is_active = true;
 

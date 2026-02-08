@@ -17,7 +17,7 @@ else
 fi
 
 export AGENTS_PORT=9003
-export DATABASE_URL="postgresql://postgres:REDACTED_DB_PASS@localhost:5441/agents"
+export DATABASE_URL="${DATABASE_URL:-postgresql://postgres:${POSTGRES_PASSWORD:-changeme}@localhost:5441/agents}"
 export KAFKA_BOOTSTRAP_SERVERS="localhost:9092"
 echo "🚀 Starting Rust agents service on port 9003..."
 echo "📝 Logs will be written to logs/hecate-rust.log"

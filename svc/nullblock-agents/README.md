@@ -47,7 +47,7 @@ The NullBlock Agents service is the core agent orchestration platform that manag
 docker-compose up postgres-agents kafka zookeeper -d
 
 # Required environment variables
-export DATABASE_URL="postgresql://postgres:REDACTED_DB_PASS@localhost:5441/agents"
+export DATABASE_URL="postgresql://postgres:$POSTGRES_PASSWORD@localhost:5441/agents"
 export KAFKA_BOOTSTRAP_SERVERS="localhost:9092"
 export OPENROUTER_API_KEY="your_openrouter_key"  # Optional but recommended
 ```
@@ -253,7 +253,7 @@ pg_isready -h localhost -p 5441 -U postgres
 **Enum Serialization Errors**
 ```bash
 # Fix data inconsistencies
-PGPASSWORD="REDACTED_DB_PASS" psql -h localhost -p 5441 -U postgres -d agents \
+PGPASSWORD="$POSTGRES_PASSWORD" psql -h localhost -p 5441 -U postgres -d agents \
   -c "UPDATE tasks SET category = 'user_assigned' WHERE category = 'userassigned';"
 ```
 
