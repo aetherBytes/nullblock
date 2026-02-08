@@ -19,7 +19,23 @@ interface CockpitDashProps {
   pendingCrossroadsTransition?: boolean;
   autopilot?: boolean;
   onToggleAutopilot?: () => void;
+  activeTab?: 'crossroads' | 'memcache' | null;
 }
+
+const PAGE_INFO: Record<string, { title: string; subtitle: string }> = {
+  crossroads: {
+    title: 'Picks and shovels for the new age.',
+    subtitle: 'Agents are the new users. Own the tools that own the future.',
+  },
+  memcache: {
+    title: 'MemCache',
+    subtitle: 'Memory, context, and operational intelligence.',
+  },
+  void: {
+    title: 'Picks and shovels for the new age.',
+    subtitle: 'Agents are the new users. Own the tools that own the future.',
+  },
+};
 
 const CockpitDash: React.FC<CockpitDashProps> = ({
   visible,
@@ -36,8 +52,10 @@ const CockpitDash: React.FC<CockpitDashProps> = ({
   pendingCrossroadsTransition = false,
   autopilot: _autopilot = true,
   onToggleAutopilot: _onToggleAutopilot,
+  activeTab,
 }) => {
   const showActions = !isLoggedIn && (loginAnimationPhase === 'navbar' || loginAnimationPhase === 'complete');
+  const pageInfo = PAGE_INFO[activeTab || 'void'] || PAGE_INFO.void;
 
   type Point = { x: number; y: number };
   type PanelFill = {
@@ -69,7 +87,9 @@ const CockpitDash: React.FC<CockpitDashProps> = ({
   };
 
   const mfdRowRef = useRef<HTMLDivElement>(null);
+  const mfdRowTopRef = useRef<HTMLDivElement>(null);
   const [svgData, setSvgData] = useState<ConnectorData>({ w: 0, h: 0, lines: [], backLines: [], panels: [], backings: [], windshields: [] });
+  const [topSvgData, setTopSvgData] = useState<{ w: number; h: number; lines: ConnectorData['lines']; panels: PanelFill[] }>({ w: 0, h: 0, lines: [], panels: [] });
 
   const measureConnectors = useCallback(() => {
     const row = mfdRowRef.current;
@@ -173,67 +193,135 @@ const CockpitDash: React.FC<CockpitDashProps> = ({
     }
 
     const windshields: ConnectorData['windshields'] = [];
-    const wsHeight = 390;
-    const wsTopRatio = 0.25;
-    let leftWsInnerTop: Point | null = null;
-    let rightWsInnerTop: Point | null = null;
+    const topRow = mfdRowTopRef.current;
+    let topLeftBR: Point | null = null;
+    let topCenterBL: Point | null = null;
+    let topCenterBR: Point | null = null;
+    let topRightBL: Point | null = null;
 
-    if (leftTR && centerTL) {
-      const midX = (leftTR.x + centerTL.x) / 2;
+    if (topRow) {
+      const tc = (panelCls: string, left: boolean): Point | null => {
+        const panel = topRow.getElementsByClassName(panelCls)[0] as HTMLElement | undefined;
+        const bezel = panel?.firstElementChild as HTMLElement | undefined;
+        if (!bezel) return null;
+        const prev = bezel.style.position;
+        if (!prev) bezel.style.position = 'relative';
+        const m = document.createElement('div');
+        m.style.cssText = `position:absolute;width:0;height:0;pointer-events:none;bottom:0;${left ? 'left:0' : 'right:0'}`;
+        bezel.appendChild(m);
+        const r = m.getBoundingClientRect();
+        bezel.removeChild(m);
+        if (!prev) bezel.style.position = '';
+        return { x: r.left - rowRect.left, y: r.top - rowRect.top };
+      };
+      topLeftBR = tc(styles.mfdTopLeft, false);
+      topCenterBL = tc(styles.mfdTopCenter, true);
+      topCenterBR = tc(styles.mfdTopCenter, false);
+      topRightBL = tc(styles.mfdTopRight, true);
+    }
+
+    if (leftTR && centerTL && topLeftBR && topCenterBL) {
       const midBottomY = (leftTR.y + centerTL.y) / 2;
       const bottomW = centerTL.x - leftTR.x;
-      const topW = bottomW * wsTopRatio;
-      const topY = midBottomY - wsHeight;
-      const tl = { x: midX - topW / 2, y: topY };
-      const tr = { x: midX + topW / 2, y: topY };
-      leftWsInnerTop = tr;
+      const midTopY = (topLeftBR.y + topCenterBL.y) / 2;
+      const topW = Math.abs(topCenterBL.x - topLeftBR.x);
+      const midX = (leftTR.x + centerTL.x + topLeftBR.x + topCenterBL.x) / 4;
       windshields.push({
-        points: `${leftTR.x},${leftTR.y} ${centerTL.x},${centerTL.y} ${tr.x},${tr.y} ${tl.x},${tl.y}`,
-        midX, topY, bottomY: midBottomY, topW: topW, bottomW,
+        points: `${leftTR.x},${leftTR.y} ${centerTL.x},${centerTL.y} ${topCenterBL.x},${topCenterBL.y} ${topLeftBR.x},${topLeftBR.y}`,
+        midX, topY: midTopY, bottomY: midBottomY, topW, bottomW,
       });
-      backLines.push({ x1: leftTR.x, y1: leftTR.y, x2: tl.x, y2: tl.y });
-      backLines.push({ x1: centerTL.x, y1: centerTL.y, x2: tr.x, y2: tr.y });
-      backLines.push({ x1: tl.x, y1: tl.y, x2: tr.x, y2: tr.y });
+      backLines.push({ x1: leftTR.x, y1: leftTR.y, x2: topLeftBR.x, y2: topLeftBR.y });
+      backLines.push({ x1: centerTL.x, y1: centerTL.y, x2: topCenterBL.x, y2: topCenterBL.y });
     }
-    if (centerTR && rightTL) {
-      const midX = (centerTR.x + rightTL.x) / 2;
+    if (centerTR && rightTL && topCenterBR && topRightBL) {
       const midBottomY = (centerTR.y + rightTL.y) / 2;
       const bottomW = rightTL.x - centerTR.x;
-      const topW = bottomW * wsTopRatio;
-      const topY = midBottomY - wsHeight;
-      const tl = { x: midX - topW / 2, y: topY };
-      const tr = { x: midX + topW / 2, y: topY };
-      rightWsInnerTop = tl;
+      const midTopY = (topCenterBR.y + topRightBL.y) / 2;
+      const topW = Math.abs(topRightBL.x - topCenterBR.x);
+      const midX = (centerTR.x + rightTL.x + topCenterBR.x + topRightBL.x) / 4;
       windshields.push({
-        points: `${centerTR.x},${centerTR.y} ${rightTL.x},${rightTL.y} ${tr.x},${tr.y} ${tl.x},${tl.y}`,
-        midX, topY, bottomY: midBottomY, topW: topW, bottomW,
+        points: `${centerTR.x},${centerTR.y} ${rightTL.x},${rightTL.y} ${topRightBL.x},${topRightBL.y} ${topCenterBR.x},${topCenterBR.y}`,
+        midX, topY: midTopY, bottomY: midBottomY, topW, bottomW,
       });
-      backLines.push({ x1: centerTR.x, y1: centerTR.y, x2: tl.x, y2: tl.y });
-      backLines.push({ x1: rightTL.x, y1: rightTL.y, x2: tr.x, y2: tr.y });
-      backLines.push({ x1: tl.x, y1: tl.y, x2: tr.x, y2: tr.y });
+      backLines.push({ x1: centerTR.x, y1: centerTR.y, x2: topCenterBR.x, y2: topCenterBR.y });
+      backLines.push({ x1: rightTL.x, y1: rightTL.y, x2: topRightBL.x, y2: topRightBL.y });
     }
-    if (centerTL && centerTR && leftWsInnerTop && rightWsInnerTop) {
-      const midX = (leftWsInnerTop.x + rightWsInnerTop.x) / 2;
-      const topY = leftWsInnerTop.y;
-      const bottomY = (centerTL.y + centerTR.y) / 2;
-      const cTopW = rightWsInnerTop.x - leftWsInnerTop.x;
-      const cBottomW = centerTR.x - centerTL.x;
+    if (centerTL && centerTR && topCenterBL && topCenterBR) {
+      const midBottomY = (centerTL.y + centerTR.y) / 2;
+      const bottomW = centerTR.x - centerTL.x;
+      const midTopY = (topCenterBL.y + topCenterBR.y) / 2;
+      const topW = topCenterBR.x - topCenterBL.x;
+      const midX = (centerTL.x + centerTR.x + topCenterBL.x + topCenterBR.x) / 4;
       windshields.push({
-        points: `${centerTL.x},${centerTL.y} ${centerTR.x},${centerTR.y} ${rightWsInnerTop.x},${rightWsInnerTop.y} ${leftWsInnerTop.x},${leftWsInnerTop.y}`,
-        midX, topY, bottomY, topW: cTopW, bottomW: cBottomW,
+        points: `${centerTL.x},${centerTL.y} ${centerTR.x},${centerTR.y} ${topCenterBR.x},${topCenterBR.y} ${topCenterBL.x},${topCenterBL.y}`,
+        midX, topY: midTopY, bottomY: midBottomY, topW, bottomW,
       });
-      backLines.push({ x1: leftWsInnerTop.x, y1: leftWsInnerTop.y, x2: rightWsInnerTop.x, y2: rightWsInnerTop.y });
     }
 
     setSvgData({ w: rowRect.width, h: rowRect.height, lines, backLines, panels, backings, windshields });
   }, []);
 
+  const measureTopConnectors = useCallback(() => {
+    const row = mfdRowTopRef.current;
+    if (!row) return;
+    const rowRect = row.getBoundingClientRect();
+
+    const c = (panelCls: string, top: boolean, left: boolean): Point | null => {
+      const panel = row.getElementsByClassName(panelCls)[0] as HTMLElement | undefined;
+      const bezel = panel?.firstElementChild as HTMLElement | undefined;
+      if (!bezel) return null;
+      const prev = bezel.style.position;
+      if (!prev) bezel.style.position = 'relative';
+      const m = document.createElement('div');
+      m.style.cssText = `position:absolute;width:0;height:0;pointer-events:none;${top ? 'top:0' : 'bottom:0'};${left ? 'left:0' : 'right:0'}`;
+      bezel.appendChild(m);
+      const r = m.getBoundingClientRect();
+      bezel.removeChild(m);
+      if (!prev) bezel.style.position = '';
+      return { x: r.left - rowRect.left, y: r.top - rowRect.top };
+    };
+
+    const lTR = c(styles.mfdTopLeft, true, false);
+    const lBR = c(styles.mfdTopLeft, false, false);
+    const cTL = c(styles.mfdTopCenter, true, true);
+    const cTR = c(styles.mfdTopCenter, true, false);
+    const cBL = c(styles.mfdTopCenter, false, true);
+    const cBR = c(styles.mfdTopCenter, false, false);
+    const rTL = c(styles.mfdTopRight, true, true);
+    const rBL = c(styles.mfdTopRight, false, true);
+
+    const tLines: ConnectorData['lines'] = [];
+    if (lTR && cTL) tLines.push({ x1: lTR.x, y1: lTR.y, x2: cTL.x, y2: cTL.y });
+    if (cTR && rTL) tLines.push({ x1: cTR.x, y1: cTR.y, x2: rTL.x, y2: rTL.y });
+    if (lBR && cBL) tLines.push({ x1: lBR.x, y1: lBR.y, x2: cBL.x, y2: cBL.y });
+    if (cBR && rBL) tLines.push({ x1: cBR.x, y1: cBR.y, x2: rBL.x, y2: rBL.y });
+
+    const tPanels: PanelFill[] = [];
+    if (lTR && cTL && cBL && lBR) {
+      const midY = (lTR.y + cTL.y + cBL.y + lBR.y) / 4;
+      tPanels.push({
+        points: `${lTR.x},${lTR.y} ${cTL.x},${cTL.y} ${cBL.x},${cBL.y} ${lBR.x},${lBR.y}`,
+        outerX: Math.min(lTR.x, lBR.x), innerX: Math.max(cTL.x, cBL.x), midY,
+      });
+    }
+    if (cTR && rTL && rBL && cBR) {
+      const midY = (cTR.y + rTL.y + rBL.y + cBR.y) / 4;
+      tPanels.push({
+        points: `${cTR.x},${cTR.y} ${rTL.x},${rTL.y} ${rBL.x},${rBL.y} ${cBR.x},${cBR.y}`,
+        outerX: Math.max(rTL.x, rBL.x), innerX: Math.min(cTR.x, cBR.x), midY,
+      });
+    }
+
+    setTopSvgData({ w: rowRect.width, h: rowRect.height, lines: tLines, panels: tPanels });
+  }, []);
+
   useEffect(() => {
     if (!visible) return;
-    const id = requestAnimationFrame(() => requestAnimationFrame(measureConnectors));
-    window.addEventListener('resize', measureConnectors);
-    return () => { cancelAnimationFrame(id); window.removeEventListener('resize', measureConnectors); };
-  }, [visible, measureConnectors]);
+    const measureAll = () => { measureConnectors(); measureTopConnectors(); };
+    const id = requestAnimationFrame(() => requestAnimationFrame(measureAll));
+    window.addEventListener('resize', measureAll);
+    return () => { cancelAnimationFrame(id); window.removeEventListener('resize', measureAll); };
+  }, [visible, measureConnectors, measureTopConnectors]);
 
   return (
     <div className={`${styles.cockpitDash} ${visible ? styles.visible : ''}`}>
@@ -251,54 +339,90 @@ const CockpitDash: React.FC<CockpitDashProps> = ({
         <div className={styles.vignette} />
       </div>
 
-      {/* Center reticle — commented out while focusing on bottom 3 MFDs
-      <div className={styles.reticle}>
-        <div className={styles.ringOuter} />
-        <div className={styles.ringInner} />
-        <div className={styles.ringCore} />
-        <div className={styles.reticleCross} />
+      {/* Top MFD row — overhead panels (inverse of bottom, thinner) */}
+      <div ref={mfdRowTopRef} className={styles.mfdRowTop}>
+        {(topSvgData.lines.length > 0 || topSvgData.panels.length > 0) && (
+          <svg
+            className={styles.connectorSvg}
+            viewBox={`0 0 ${topSvgData.w} ${topSvgData.h}`}
+          >
+            <defs>
+              <filter id="topConnGlow">
+                <feGaussianBlur stdDeviation="3" result="b" />
+                <feMerge>
+                  <feMergeNode in="b" />
+                  <feMergeNode in="SourceGraphic" />
+                </feMerge>
+              </filter>
+              {topSvgData.panels.map((p, i) => (
+                <linearGradient
+                  key={`tgrad-${i}`}
+                  id={`topPanelGrad${i}`}
+                  gradientUnits="userSpaceOnUse"
+                  x1={p.outerX} y1={p.midY}
+                  x2={p.innerX} y2={p.midY}
+                >
+                  <stop offset="0%" stopColor="rgb(8, 6, 18)" stopOpacity="0.95" />
+                  <stop offset="50%" stopColor="rgb(14, 12, 30)" stopOpacity="0.85" />
+                  <stop offset="100%" stopColor="rgb(20, 16, 40)" stopOpacity="0.7" />
+                </linearGradient>
+              ))}
+            </defs>
+            {topSvgData.panels.map((p, i) => (
+              <polygon
+                key={`tp-${i}`}
+                points={p.points}
+                fill={`url(#topPanelGrad${i})`}
+                stroke="none"
+              />
+            ))}
+            {topSvgData.lines.map((l, i) => (
+              <React.Fragment key={`tl-${i}`}>
+                <line
+                  x1={l.x1} y1={l.y1} x2={l.x2} y2={l.y2}
+                  stroke="rgba(154, 123, 255, 0.06)"
+                  strokeWidth="6"
+                  filter="url(#topConnGlow)"
+                />
+                <line
+                  x1={l.x1} y1={l.y1} x2={l.x2} y2={l.y2}
+                  stroke="rgba(154, 123, 255, 0.3)"
+                  strokeWidth="1"
+                />
+              </React.Fragment>
+            ))}
+          </svg>
+        )}
+        <PipBoyScreen className={styles.mfdTopLeft} isLoggedIn={isLoggedIn}>
+          <div className={styles.visorTitleWrap} key={activeTab || 'void'}>
+            <div className={styles.visorTitle}>{pageInfo.title}</div>
+            <div className={styles.visorSubtitle}>{pageInfo.subtitle}</div>
+            <div className={styles.visorCursor}>&gt;_</div>
+          </div>
+        </PipBoyScreen>
+        <MFDScreen
+          title="VISOR"
+          statusColor="green"
+          className={styles.mfdTopCenter}
+        >
+          <div className={styles.visorContent}>
+            <div className={styles.visorPinSlot}>
+              <div className={styles.visorPinDot} />
+              <span>AGENTIC TOOLS</span>
+            </div>
+            <div className={styles.visorPinSlot}>
+              <div className={styles.visorPinDot} />
+              <span>CROSSROADS</span>
+            </div>
+          </div>
+        </MFDScreen>
+        <PipBoyScreen className={styles.mfdTopRight} isLoggedIn={isLoggedIn} tabs={['SYS', 'NET']}>
+          <div className={styles.visorPinSlot}>
+            <div className={styles.visorPinDot} />
+            <span>NB-7741</span>
+          </div>
+        </PipBoyScreen>
       </div>
-      */}
-
-      {/* Right panel — commented out while focusing on bottom 3 MFDs
-      <div className={styles.rightPanel}>
-        <div className={styles.sidePanelInner}>
-          <div className={styles.hudRow}>
-            <span className={styles.hudLabel}>SECTOR</span>
-            <span className={styles.hudValGreen}>7G</span>
-          </div>
-          <div className={styles.hudRow}>
-            <span className={styles.hudLabel}>RANGE</span>
-            <span className={styles.hudValCyan}>202.6 m</span>
-          </div>
-          <div className={styles.hudRow}>
-            <span className={styles.hudLabel}>RATE</span>
-            <span className={styles.hudValCyan}>0.038 m/s</span>
-          </div>
-          <div className={styles.hudRow}>
-            <span className={styles.hudLabel}>DRIFT</span>
-            <span className={styles.hudValAmber}>0.2°/s</span>
-          </div>
-        </div>
-        <div className={styles.ticks}>
-          {[...Array(11)].map((_, i) => (
-            <div key={i} className={`${styles.tick} ${i === 5 ? styles.tickLong : ''}`} />
-          ))}
-        </div>
-      </div>
-      */}
-
-      {/* Hecate left-wall HUD panel — commented out while focusing on bottom 3 MFDs
-      <div className={styles.hecateColumn}>
-        <HecateHologram
-          agentState={agentState}
-          agentName={agentName}
-          currentModel={currentModel}
-          healthStatus={agentHealthStatus}
-          sessionMessageCount={sessionMessageCount}
-        />
-      </div>
-      */}
 
       {/* MFD row — 3 pane cockpit */}
       <div ref={mfdRowRef} className={styles.mfdRow}>

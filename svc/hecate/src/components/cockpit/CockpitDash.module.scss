@@ -548,6 +548,256 @@ $purple: #b967ff;
 }
 
 // =========================================
+// TOP MFD ROW — overhead panels (inverse of bottom)
+// =========================================
+
+.mfdRowTop {
+  position: absolute;
+  top: 4px;
+  left: 0;
+  right: 0;
+  display: flex;
+  align-items: flex-start;
+  gap: 0;
+  padding: 0 4px;
+  height: clamp(75px, 12vh, 120px);
+  z-index: 4;
+  perspective: 800px;
+
+  @media (max-width: 1024px) {
+    height: clamp(60px, 10vh, 100px);
+  }
+
+  @media (max-width: 768px) {
+    height: clamp(50px, 8vh, 75px);
+  }
+}
+
+.mfdTopLeft, .mfdTopCenter, .mfdTopRight {
+  flex: 1;
+  min-width: 0;
+  pointer-events: auto;
+}
+
+.mfdTopCenter {
+  height: calc(100% + 10px);
+  transform: perspective(800px) rotateX(-4deg);
+  transform-origin: top center;
+  transform-style: preserve-3d;
+  position: relative;
+  z-index: 3;
+
+  @media (max-width: 768px) {
+    height: 100%;
+    transform: perspective(800px) rotateX(-1.5deg);
+  }
+}
+
+.mfdTopLeft {
+  flex: 1.5;
+  height: calc(100% + 15px);
+  min-height: 0;
+  position: relative;
+  transform: perspective(800px) rotateY(9deg) rotateX(-2deg) translateY(-14px);
+  transform-origin: left top;
+  transform-style: preserve-3d;
+  margin-right: -44px;
+  z-index: 1;
+
+  &::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 40%;
+    height: 100%;
+    background: linear-gradient(to right,
+      transparent 0%,
+      rgba(4, 2, 12, 0.3) 50%,
+      rgba(4, 2, 12, 0.55) 100%
+    );
+    pointer-events: none;
+    z-index: 5;
+    border-radius: 0 10px 10px 0;
+  }
+
+  @media (max-width: 1024px) {
+    height: calc(100% + 10px);
+    transform: perspective(800px) rotateY(6deg) rotateX(-1.5deg) translateY(-10px);
+    margin-right: -24px;
+  }
+
+  @media (max-width: 768px) {
+    display: none;
+  }
+}
+
+.mfdTopRight {
+  flex: 1.5;
+  height: calc(100% + 15px);
+  min-height: 0;
+  position: relative;
+  transform: perspective(800px) rotateY(-9deg) rotateX(-2deg) translateY(-14px);
+  transform-origin: right top;
+  transform-style: preserve-3d;
+  margin-left: -44px;
+  z-index: 1;
+
+  &::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 40%;
+    height: 100%;
+    background: linear-gradient(to left,
+      transparent 0%,
+      rgba(4, 2, 12, 0.3) 50%,
+      rgba(4, 2, 12, 0.55) 100%
+    );
+    pointer-events: none;
+    z-index: 5;
+    border-radius: 10px 0 0 10px;
+  }
+
+  @media (max-width: 1024px) {
+    height: calc(100% + 10px);
+    transform: perspective(800px) rotateY(-6deg) rotateX(-1.5deg) translateY(-10px);
+    margin-left: -24px;
+  }
+
+  @media (max-width: 768px) {
+    display: none;
+  }
+}
+
+.mfdTopLeft > :first-child {
+  border-bottom-right-radius: 0;
+  border-left: 1px solid rgba(154, 123, 255, 0.2);
+  box-shadow: -2px 0 12px rgba(154, 123, 255, 0.06), inset 2px 0 8px rgba(154, 123, 255, 0.03);
+}
+
+.mfdTopRight > :first-child {
+  border-bottom-left-radius: 0;
+  border-right: 1px solid rgba(154, 123, 255, 0.2);
+  box-shadow: 2px 0 12px rgba(154, 123, 255, 0.06), inset -2px 0 8px rgba(154, 123, 255, 0.03);
+}
+
+.visorContent {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 4px 8px;
+  height: 100%;
+}
+
+.visorPinSlot {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 8px;
+  border: 1px solid rgba(154, 123, 255, 0.06);
+  border-radius: 3px;
+  background: rgba(0, 0, 0, 0.2);
+  transition: all 0.3s ease;
+
+  span {
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 7px;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: rgba(154, 123, 255, 0.3);
+  }
+
+  &:hover {
+    border-color: rgba(154, 123, 255, 0.15);
+    background: rgba(154, 123, 255, 0.04);
+
+    span {
+      color: rgba(154, 123, 255, 0.5);
+    }
+  }
+}
+
+.visorPinDot {
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: rgba(154, 123, 255, 0.25);
+}
+
+.visorTitleWrap {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 6px 10px;
+  overflow: hidden;
+}
+
+.visorTitle {
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.9);
+  text-shadow:
+    0 0 16px rgba($glow, 0.5),
+    0 0 40px rgba($glow, 0.2);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.3;
+  margin: 0;
+
+  @media (max-width: 1024px) {
+    font-size: 11px;
+    letter-spacing: 2px;
+  }
+
+  @media (max-width: 768px) {
+    font-size: 9px;
+    letter-spacing: 1.5px;
+  }
+}
+
+.visorSubtitle {
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 1.5px;
+  color: rgba($glow, 0.65);
+  text-shadow:
+    0 0 14px rgba($glow, 0.4),
+    0 0 35px rgba($purple, 0.2);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.4;
+  margin-top: 3px;
+
+  @media (max-width: 1024px) {
+    font-size: 9px;
+    letter-spacing: 1px;
+  }
+
+  @media (max-width: 768px) {
+    font-size: 7px;
+    letter-spacing: 1px;
+  }
+}
+
+.visorCursor {
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 11px;
+  color: rgba($pip-glow, 0.5);
+  text-shadow: 0 0 10px rgba($pip-glow, 0.3);
+  margin-top: 3px;
+  animation: promptBlink 1.2s step-end infinite;
+}
+
+// =========================================
 // COCKPIT FLOOR — beneath MFD panels
 // =========================================
 

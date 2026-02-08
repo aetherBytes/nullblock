@@ -514,6 +514,7 @@ const Home: React.FC = () => {
         pendingCrossroadsTransition={pendingCrossroadsTransition}
         autopilot={autopilot}
         onToggleAutopilot={() => setAutopilot(prev => !prev)}
+        activeTab={activeHudTab === 'crossroads' || activeHudTab === 'memcache' ? activeHudTab : null}
       />
 
       <div className={`${styles.scene} ${showHUD ? styles.hudActive : ''}`} />
