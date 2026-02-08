@@ -192,7 +192,7 @@ impl Provider for AnthropicProvider {
         if let Some(history) = &request.messages {
             for msg in history {
                 if let Some(role_value) = msg.get("role") {
-                    if role_value.as_str() != "system" {
+                    if role_value.as_str() != Some("system") {
                         messages.push(json!(msg));
                     }
                 }

@@ -1644,31 +1644,26 @@ TOOL AWARENESS:
         }
     }
 
-    async fn build_messages_history(&self) -> Vec<HashMap<String, String>> {
+    async fn build_messages_history(&self) -> Vec<serde_json::Value> {
         let mut messages = Vec::new();
 
-        // Add system message first
         let personality_config = self
             .personalities
             .get(&self.personality)
             .unwrap_or(&self.personalities["unified"]);
 
-        let mut system_msg = HashMap::new();
-        system_msg.insert("role".to_string(), "system".to_string());
-        system_msg.insert(
-            "content".to_string(),
-            personality_config.system_prompt.clone(),
-        );
-        messages.push(system_msg);
+        messages.push(serde_json::json!({
+            "role": "system",
+            "content": personality_config.system_prompt
+        }));
 
-        // Add conversation history (excluding system messages since we added our own)
         let history = self.conversation_history.read().await;
         for msg in history.iter() {
             if msg.role != "system" {
-                let mut message = HashMap::new();
-                message.insert("role".to_string(), msg.role.clone());
-                message.insert("content".to_string(), msg.content.clone());
-                messages.push(message);
+                messages.push(serde_json::json!({
+                    "role": msg.role,
+                    "content": msg.content
+                }));
             }
         }
 
@@ -1678,7 +1673,7 @@ TOOL AWARENESS:
     async fn build_image_generation_context(
         &self,
         user_context: &Option<HashMap<String, serde_json::Value>>,
-    ) -> (String, Option<Vec<HashMap<String, String>>>) {
+    ) -> (String, Option<Vec<serde_json::Value>>) {
         // For image generation, use full personality but strip images from history
         let personality_config = self
             .personalities
@@ -1730,11 +1725,10 @@ TOOL AWARENESS:
         // Build messages with images stripped
         let mut messages = Vec::new();
 
-        // Add system message
-        let mut system_msg = HashMap::new();
-        system_msg.insert("role".to_string(), "system".to_string());
-        system_msg.insert("content".to_string(), base_system_prompt.clone());
-        messages.push(system_msg);
+        messages.push(serde_json::json!({
+            "role": "system",
+            "content": base_system_prompt
+        }));
 
         // Add conversation history with images replaced by lightweight references
         let history = self.conversation_history.read().await;
@@ -1785,10 +1779,10 @@ TOOL AWARENESS:
                     msg.content.clone()
                 };
 
-                let mut message = HashMap::new();
-                message.insert("role".to_string(), msg.role.clone());
-                message.insert("content".to_string(), content_with_refs);
-                messages.push(message);
+                messages.push(serde_json::json!({
+                    "role": msg.role,
+                    "content": content_with_refs
+                }));
             }
         }
 
@@ -2385,5 +2379,5 @@ TOOL AWARENESS:
 #[derive(Debug)]
 struct ConversationContext {
     system_prompt: String,
-    messages: Vec<HashMap<String, String>>,
+    messages: Vec<serde_json::Value>,
 }

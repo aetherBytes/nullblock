@@ -5,7 +5,6 @@ use super::tools::McpToolResult;
 use crate::engrams::{CreateEngramRequest, EngramsClient, SearchRequest};
 use crate::models::LLMRequest;
 use crate::server::AppState;
-use std::collections::HashMap;
 use std::sync::Arc;
 
 pub async fn execute_tool_with_engrams(
@@ -941,17 +940,7 @@ async fn handle_llm_chat(state: &AppState, args: Value) -> McpToolResult {
         None => return McpToolResult::error("Missing required field: messages"),
     };
 
-    let messages_for_llm: Vec<HashMap<String, String>> = messages
-        .iter()
-        .filter_map(|m| {
-            let role = m.get("role")?.as_str()?.to_string();
-            let content = m.get("content")?.as_str()?.to_string();
-            let mut map = HashMap::new();
-            map.insert("role".to_string(), role);
-            map.insert("content".to_string(), content);
-            Some(map)
-        })
-        .collect();
+    let messages_for_llm: Vec<serde_json::Value> = messages.clone();
 
     let prompt = messages
         .last()

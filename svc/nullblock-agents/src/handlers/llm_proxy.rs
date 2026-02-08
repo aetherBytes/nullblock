@@ -6,7 +6,6 @@ use crate::{
 use axum::{extract::Path, extract::State, http::HeaderMap, Json};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
-use std::collections::HashMap;
 use tracing::{info, warn};
 
 #[derive(Debug, Deserialize)]
@@ -122,15 +121,10 @@ pub async fn handle_chat_completions(
         stream
     );
 
-    let messages_for_llm: Vec<HashMap<String, String>> = request
+    let messages_for_llm: Vec<Value> = request
         .messages
         .iter()
-        .map(|m| {
-            let mut map = HashMap::new();
-            map.insert("role".to_string(), m.role.clone());
-            map.insert("content".to_string(), extract_text_content(&m.content));
-            map
-        })
+        .map(|m| serde_json::to_value(m).unwrap_or_default())
         .collect();
 
     let prompt = request

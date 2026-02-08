@@ -202,7 +202,7 @@ pub struct ModelConfig {
 pub struct LLMRequest {
     pub prompt: String,
     pub system_prompt: Option<String>,
-    pub messages: Option<Vec<HashMap<String, String>>>,
+    pub messages: Option<Vec<serde_json::Value>>,
     pub max_tokens: Option<u32>,
     pub temperature: Option<f64>,
     pub top_p: Option<f64>,

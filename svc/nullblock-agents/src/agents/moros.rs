@@ -1063,7 +1063,7 @@ When asked about capabilities, features, tools, or what you can do:
         }
     }
 
-    async fn build_messages_history(&self) -> Vec<HashMap<String, String>> {
+    async fn build_messages_history(&self) -> Vec<serde_json::Value> {
         let mut messages = Vec::new();
 
         let personality_config = self
@@ -1071,21 +1071,18 @@ When asked about capabilities, features, tools, or what you can do:
             .get(&self.personality)
             .unwrap_or(&self.personalities["unified"]);
 
-        let mut system_msg = HashMap::new();
-        system_msg.insert("role".to_string(), "system".to_string());
-        system_msg.insert(
-            "content".to_string(),
-            personality_config.system_prompt.clone(),
-        );
-        messages.push(system_msg);
+        messages.push(serde_json::json!({
+            "role": "system",
+            "content": personality_config.system_prompt
+        }));
 
         let history = self.conversation_history.read().await;
         for msg in history.iter() {
             if msg.role != "system" {
-                let mut message = HashMap::new();
-                message.insert("role".to_string(), msg.role.clone());
-                message.insert("content".to_string(), msg.content.clone());
-                messages.push(message);
+                messages.push(serde_json::json!({
+                    "role": msg.role,
+                    "content": msg.content
+                }));
             }
         }
 
@@ -1389,5 +1386,5 @@ When asked about capabilities, features, tools, or what you can do:
 #[derive(Debug)]
 struct ConversationContext {
     system_prompt: String,
-    messages: Vec<HashMap<String, String>>,
+    messages: Vec<serde_json::Value>,
 }

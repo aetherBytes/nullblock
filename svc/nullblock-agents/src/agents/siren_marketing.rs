@@ -601,23 +601,21 @@ I create content that educates, engages, and excites our community about the fut
         prompt
     }
 
-    async fn build_messages_history(&self) -> Vec<HashMap<String, String>> {
+    async fn build_messages_history(&self) -> Vec<serde_json::Value> {
         let mut messages = Vec::new();
 
-        // Add system message first
-        let mut system_msg = HashMap::new();
-        system_msg.insert("role".to_string(), "system".to_string());
-        system_msg.insert("content".to_string(), self.build_system_prompt());
-        messages.push(system_msg);
+        messages.push(serde_json::json!({
+            "role": "system",
+            "content": self.build_system_prompt()
+        }));
 
-        // Add conversation history (excluding system messages since we added our own)
         let history = self.conversation_history.read().await;
         for msg in history.iter() {
             if msg.role != "system" {
-                let mut message = HashMap::new();
-                message.insert("role".to_string(), msg.role.clone());
-                message.insert("content".to_string(), msg.content.clone());
-                messages.push(message);
+                messages.push(serde_json::json!({
+                    "role": msg.role,
+                    "content": msg.content
+                }));
             }
         }
 
