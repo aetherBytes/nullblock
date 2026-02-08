@@ -581,7 +581,7 @@ $purple: #b967ff;
 
 .mfdTopCenter {
   height: calc(100% + 10px);
-  transform: perspective(800px) rotateX(-4deg);
+  transform: perspective(800px) rotateX(4deg);
   transform-origin: top center;
   transform-style: preserve-3d;
   position: relative;
@@ -589,7 +589,7 @@ $purple: #b967ff;
 
   @media (max-width: 768px) {
     height: 100%;
-    transform: perspective(800px) rotateX(-1.5deg);
+    transform: perspective(800px) rotateX(1.5deg);
   }
 }
 
@@ -598,10 +598,10 @@ $purple: #b967ff;
   height: calc(100% + 15px);
   min-height: 0;
   position: relative;
-  transform: perspective(800px) rotateY(9deg) rotateX(-2deg) translateY(-14px);
+  transform: perspective(800px) rotateY(9deg) rotateX(2deg) skewX(var(--visor-skew, 22deg)) translateY(-14px);
   transform-origin: left top;
   transform-style: preserve-3d;
-  margin-right: -44px;
+  margin-right: var(--visor-margin, -24px);
   z-index: 1;
 
   &::after {
@@ -623,8 +623,7 @@ $purple: #b967ff;
 
   @media (max-width: 1024px) {
     height: calc(100% + 10px);
-    transform: perspective(800px) rotateY(6deg) rotateX(-1.5deg) translateY(-10px);
-    margin-right: -24px;
+    transform: perspective(800px) rotateY(6deg) rotateX(1.5deg) skewX(var(--visor-skew, 4deg)) translateY(-10px);
   }
 
   @media (max-width: 768px) {
@@ -637,10 +636,10 @@ $purple: #b967ff;
   height: calc(100% + 15px);
   min-height: 0;
   position: relative;
-  transform: perspective(800px) rotateY(-9deg) rotateX(-2deg) translateY(-14px);
+  transform: perspective(800px) rotateY(-9deg) rotateX(2deg) skewX(calc(var(--visor-skew, 22deg) * -1)) translateY(-14px);
   transform-origin: right top;
   transform-style: preserve-3d;
-  margin-left: -44px;
+  margin-left: var(--visor-margin, -24px);
   z-index: 1;
 
   &::after {
@@ -662,8 +661,7 @@ $purple: #b967ff;
 
   @media (max-width: 1024px) {
     height: calc(100% + 10px);
-    transform: perspective(800px) rotateY(-6deg) rotateX(-1.5deg) translateY(-10px);
-    margin-left: -24px;
+    transform: perspective(800px) rotateY(-6deg) rotateX(1.5deg) skewX(calc(var(--visor-skew, 4deg) * -1)) translateY(-10px);
   }
 
   @media (max-width: 768px) {
