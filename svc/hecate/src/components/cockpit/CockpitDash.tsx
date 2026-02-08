@@ -200,6 +200,7 @@ const CockpitDash: React.FC<CockpitDashProps> = ({
             </>
           )}
         </MFDScreen>
+        <div className={styles.landscapeWarning}>ROTATE DEVICE FOR FULL COCKPIT</div>
         <PipBoyScreen className={styles.mfdRight} isLoggedIn={isLoggedIn} tabs={['STATUS', 'SYS', 'NAV']}>
           <div className={styles.mfdStatusWrap}>
             <div className={styles.statusLinks}>

@@ -358,8 +358,8 @@ $purple: #b967ff;
   left: 0;
   right: 0;
   display: flex;
-  align-items: stretch;
-  gap: 2px;
+  align-items: flex-end;
+  gap: 0;
   padding: 0 4px;
   height: clamp(200px, 30vh, 320px);
   z-index: 4;
@@ -372,32 +372,26 @@ $purple: #b967ff;
 
   @media (max-width: 768px) {
     height: clamp(130px, 20vh, 200px);
-    gap: 2px;
-    padding: 0 2px;
+    gap: 0;
+    padding: 0 8px;
+    justify-content: center;
   }
 }
 
 .strutLeft, .strutRight {
-  width: 1px;
-  flex-shrink: 0;
-  background: linear-gradient(180deg, transparent, $glow-line 30%, $glow-line 70%, transparent);
-  opacity: 0.3;
-
-  @media (max-width: 768px) {
-    display: none;
-  }
+  display: none;
 }
 
-// Left offset = mfdRow padding (12px) + strutLeft (2px) + gap (8px)
-$mfd-left-offset: 22px;
-$mfd-left-offset-md: 18px;
+// Left offset = mfdRow padding (4px)
+$mfd-left-offset: 4px;
+$mfd-left-offset-md: 4px;
 
 .hecateColumn {
   position: absolute;
   left: $mfd-left-offset;
   top: 60px;
   bottom: calc(28px + clamp(200px, 30vh, 320px) - 2px);
-  width: calc((100vw - #{$mfd-left-offset} - 4px - 2px - 2px - 2px * 2) / 3);
+  width: calc((100vw - #{$mfd-left-offset} * 2) * 1.5 / 4);
   display: flex;
   flex-direction: column;
   gap: 0;
@@ -421,7 +415,7 @@ $mfd-left-offset-md: 18px;
     left: $mfd-left-offset-md;
     top: 50px;
     bottom: calc(28px + clamp(160px, 26vh, 260px) - 2px);
-    width: calc((100vw - #{$mfd-left-offset-md} - 4px - 2px - 2px - 2px * 2) / 3);
+    width: calc((100vw - #{$mfd-left-offset-md} * 2) * 1.5 / 4);
     transform: perspective(800px) rotateY(10deg) rotateX(-1deg);
   }
 
@@ -437,18 +431,67 @@ $mfd-left-offset-md: 18px;
 }
 
 .mfdCenter {
-  transform: perspective(800px) rotateX(3deg);
+  height: calc(100% + 50px);
+  transform: perspective(800px) rotateX(4deg);
   transform-origin: bottom center;
+  transform-style: preserve-3d;
+  position: relative;
+  z-index: 3;
+
+  @media (max-width: 1024px) {
+    height: calc(100% + 35px);
+    transform: perspective(800px) rotateX(3deg);
+  }
+
+  @media (max-width: 768px) {
+    height: 100%;
+    flex: 1;
+    max-width: 100%;
+    transform: perspective(800px) rotateX(1.5deg);
+  }
+
+  &::before,
+  &::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 1px;
+    background: linear-gradient(180deg, transparent, rgba($glow, 0.15) 30%, rgba($glow, 0.15) 70%, transparent);
+    box-shadow: 0 0 4px rgba($glow, 0.08);
+    pointer-events: none;
+    z-index: 5;
+  }
+
+  &::before {
+    left: 0;
+  }
+
+  &::after {
+    right: 0;
+  }
 }
 
 .mfdLeft {
   flex: 1.5;
+  height: calc(100% + 60px);
   min-height: 0;
   position: relative;
-  transform: perspective(800px) rotateY(6deg) rotateX(-0.5deg);
-  transform-origin: left top;
+  transform: perspective(800px) rotateY(9deg) rotateX(2deg) translateY(14px);
+  transform-origin: left bottom;
   transform-style: preserve-3d;
-  margin-left: -1.5px;
+  margin-right: -44px;
+  z-index: 1;
+
+  @media (max-width: 1024px) {
+    height: calc(100% + 40px);
+    transform: perspective(800px) rotateY(6deg) rotateX(1.5deg) translateY(10px);
+    margin-right: -24px;
+  }
+
+  @media (max-width: 768px) {
+    display: none;
+  }
 
   &::before {
     content: '';
@@ -470,12 +513,24 @@ $mfd-left-offset-md: 18px;
 
 .mfdRight {
   flex: 1.5;
+  height: calc(100% + 60px);
   min-height: 0;
   position: relative;
-  transform: perspective(800px) rotateY(-6deg) rotateX(-0.5deg);
-  transform-origin: right top;
+  transform: perspective(800px) rotateY(-9deg) rotateX(2deg) translateY(14px);
+  transform-origin: right bottom;
   transform-style: preserve-3d;
-  margin-right: -1.5px;
+  margin-left: -44px;
+  z-index: 1;
+
+  @media (max-width: 1024px) {
+    height: calc(100% + 40px);
+    transform: perspective(800px) rotateY(-6deg) rotateX(1.5deg) translateY(10px);
+    margin-left: -24px;
+  }
+
+  @media (max-width: 768px) {
+    display: none;
+  }
 
   &::before {
     content: '';
@@ -493,6 +548,16 @@ $mfd-left-offset-md: 18px;
     pointer-events: none;
     z-index: 5;
   }
+}
+
+.mfdLeft > :first-child {
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
+}
+
+.mfdRight > :first-child {
+  border-top-left-radius: 0;
+  border-bottom-left-radius: 0;
 }
 
 // MFD Chat wrap
@@ -1263,4 +1328,23 @@ $mfd-left-offset-md: 18px;
   letter-spacing: 1px;
   text-transform: uppercase;
   flex-shrink: 0;
+}
+
+// =========================================
+// LANDSCAPE WARNING — portrait phones only
+// =========================================
+
+.landscapeWarning {
+  display: none;
+  font-family: 'Courier New', Courier, monospace;
+  text-align: center;
+  padding: 8px 12px;
+  color: rgba($glow, 0.5);
+  font-size: 8px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+
+  @media (max-width: 768px) and (orientation: portrait) {
+    display: block;
+  }
 }
