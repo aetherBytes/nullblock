@@ -8,12 +8,14 @@ interface CrossroadsLandingProps {
   onConnectWallet: () => void;
   onNavigateCrossroads: () => void;
   animationPhase?: AnimationPhase;
+  pendingTransition?: boolean;
 }
 
 const CrossroadsLanding: React.FC<CrossroadsLandingProps> = ({
   onConnectWallet,
   onNavigateCrossroads,
   animationPhase = 'complete',
+  pendingTransition = false,
 }) => {
   // Determine CSS classes based on animation phase
   const getMissionPrimaryClass = () => {
@@ -66,8 +68,15 @@ const CrossroadsLanding: React.FC<CrossroadsLandingProps> = ({
               <button className={styles.connectButton} onClick={onConnectWallet}>
                 <span>Connect to Full Interface</span>
               </button>
-              <button className={styles.crossroadsButton} onClick={onNavigateCrossroads}>
-                <span>Enter the Crossroads</span>
+              <button
+                className={`${styles.crossroadsButton} ${pendingTransition ? styles.transitioning : ''}`}
+                onClick={() => {
+                  console.log('🔮 Enter the Crossroads button clicked');
+                  onNavigateCrossroads();
+                }}
+                disabled={pendingTransition}
+              >
+                <span>{pendingTransition ? 'Aligning...' : 'Enter the Crossroads'}</span>
               </button>
             </div>
           </div>

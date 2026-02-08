@@ -50,6 +50,8 @@ interface HUDProps {
   onActiveTabChange?: (
     tab: 'crossroads' | 'memcache' | 'tasks' | 'agents' | 'logs' | 'canvas' | null,
   ) => void;
+  onEnterCrossroads?: () => void;
+  pendingCrossroadsTransition?: boolean;
 }
 
 
@@ -65,6 +67,8 @@ const HUD: React.FC<HUDProps> = ({
   hecatePanelOpen: externalHecatePanelOpen,
   onHecatePanelChange,
   onActiveTabChange,
+  onEnterCrossroads,
+  pendingCrossroadsTransition = false,
 }) => {
   const [nullviewState, setNulleyeState] = useState<
     | 'base'
@@ -715,6 +719,8 @@ const HUD: React.FC<HUDProps> = ({
               showMarketplace={showCrossroadsMarketplace}
               resetToLanding={resetCrossroadsToLanding}
               animationPhase={loginAnimationPhase}
+              onEnterCrossroads={onEnterCrossroads}
+              pendingTransition={pendingCrossroadsTransition}
             />
           </div>
           <div
@@ -761,6 +767,8 @@ const HUD: React.FC<HUDProps> = ({
             showMarketplace={showCrossroadsMarketplace}
             resetToLanding={resetCrossroadsToLanding}
             animationPhase={loginAnimationPhase}
+            onEnterCrossroads={onEnterCrossroads}
+            pendingTransition={pendingCrossroadsTransition}
           />
         </div>
         <div

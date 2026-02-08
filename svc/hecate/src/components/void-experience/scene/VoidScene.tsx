@@ -19,7 +19,17 @@ export interface ClusterOrbit {
   phase: number; // Initial phase offset
 }
 
-const VoidScene: React.FC = () => {
+interface VoidSceneProps {
+  triggerAlignment?: boolean;
+  onAlignmentComplete?: () => void;
+  keepAligned?: boolean;
+}
+
+const VoidScene: React.FC<VoidSceneProps> = ({
+  triggerAlignment = false,
+  onAlignmentComplete,
+  keepAligned = false,
+}) => {
   // Track which constellation nodes have active tendrils
   const [activeNodes, setActiveNodes] = useState<Set<number>>(new Set());
 
@@ -355,6 +365,9 @@ const VoidScene: React.FC = () => {
         outerNodes={outerNodes}
         outerAnimatedPositionsRef={outerAnimatedPositionsRef}
         onActiveNodesChange={handleActiveNodesChange}
+        triggerAlignment={triggerAlignment}
+        onAlignmentComplete={onAlignmentComplete}
+        keepAligned={keepAligned}
       />
     </group>
   );

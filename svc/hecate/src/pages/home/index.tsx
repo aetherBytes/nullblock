@@ -76,6 +76,10 @@ const Home: React.FC = () => {
     'crossroads' | 'memcache' | 'tasks' | 'agents' | 'logs' | 'canvas' | null
   >(initialSession.hasSession ? 'memcache' : null);
 
+  // Crossroads orb ring alignment state
+  const [triggerOrbAlignment, setTriggerOrbAlignment] = useState<boolean>(false);
+  const [pendingCrossroadsTransition, setPendingCrossroadsTransition] = useState<boolean>(false);
+
   // Login animation state
   const [loginAnimationPhase, setLoginAnimationPhase] = useState<LoginAnimationPhase>(
     initialSession.hasSession ? 'black' : 'idle',
@@ -421,6 +425,23 @@ const Home: React.FC = () => {
     }
   };
 
+  // Handle "Enter the Crossroads" button - triggers orb ring alignment
+  const handleEnterCrossroads = () => {
+    console.log('🔮 Triggering orb alignment for Crossroads transition');
+    setPendingCrossroadsTransition(true);
+    setTriggerOrbAlignment(true);
+  };
+
+  // Handle orb alignment completion - now show Crossroads UI
+  const handleAlignmentComplete = () => {
+    console.log('✨ Orb alignment complete, showing Crossroads');
+    setTriggerOrbAlignment(false);
+    if (pendingCrossroadsTransition) {
+      setPendingCrossroadsTransition(false);
+      setHudInitialTab('crossroads');
+    }
+  };
+
   // Get current animation phase
   // Use initialSession.hasSession for returning users before connectedAddress is restored by hook
   // After logout, use pre-login animation even if initialSession.hasSession was true
@@ -513,6 +534,9 @@ const Home: React.FC = () => {
         hecatePanelOpen={hecatePanelOpen}
         onHecatePanelChange={setHecatePanelOpen}
         hasOverlappingPanels={activeHudTab === 'memcache' || activeHudTab === 'crossroads'}
+        triggerAlignment={triggerOrbAlignment}
+        onAlignmentComplete={handleAlignmentComplete}
+        keepAligned={activeHudTab === 'crossroads'}
       />
 
       <div className={`${styles.scene} ${showHUD ? styles.hudActive : ''}`} />
@@ -542,6 +566,8 @@ const Home: React.FC = () => {
             hecatePanelOpen={hecatePanelOpen}
             onHecatePanelChange={setHecatePanelOpen}
             onActiveTabChange={setActiveHudTab}
+            onEnterCrossroads={handleEnterCrossroads}
+            pendingCrossroadsTransition={pendingCrossroadsTransition}
           />
         )}
 

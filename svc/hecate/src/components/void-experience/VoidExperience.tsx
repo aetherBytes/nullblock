@@ -29,10 +29,13 @@ interface VoidExperienceProps {
   hecatePanelOpen?: boolean;
   onHecatePanelChange?: (open: boolean) => void;
   hasOverlappingPanels?: boolean;
+  triggerAlignment?: boolean;
+  onAlignmentComplete?: () => void;
+  keepAligned?: boolean;
 }
 
 // Camera positions for different states
-const PRE_LOGIN_POSITION = new THREE.Vector3(3.5, 2.5, 9);
+const PRE_LOGIN_POSITION = new THREE.Vector3(6, 4.5, 20);
 const POST_LOGIN_POSITION = new THREE.Vector3(6, 4.5, 18);
 const LOOK_AT_TARGET = new THREE.Vector3(0, 0, 0);
 
@@ -112,6 +115,9 @@ const VoidExperience: React.FC<VoidExperienceProps> = ({
   hecatePanelOpen = false,
   onHecatePanelChange,
   hasOverlappingPanels = false,
+  triggerAlignment = false,
+  onAlignmentComplete,
+  keepAligned = false,
 }) => {
   const [isInteracting, setIsInteracting] = useState(false);
   const [glowActive, setGlowActive] = useState(false);
@@ -146,7 +152,11 @@ const VoidExperience: React.FC<VoidExperienceProps> = ({
         <fog attach="fog" args={['#000000', 15, 55]} />
 
         <Suspense fallback={null}>
-          <VoidScene />
+          <VoidScene
+            triggerAlignment={triggerAlignment}
+            onAlignmentComplete={onAlignmentComplete}
+            keepAligned={keepAligned}
+          />
         </Suspense>
 
         <CameraAnimator isLoggedIn={isLoggedIn} orbitControlsRef={orbitControlsRef} />

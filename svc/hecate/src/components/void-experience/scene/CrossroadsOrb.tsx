@@ -660,6 +660,9 @@ interface CrossroadsOrbProps {
   outerNodes?: ConstellationNode[];
   outerAnimatedPositionsRef?: React.MutableRefObject<THREE.Vector3[]>;
   onActiveNodesChange?: (activeNodes: Set<number>) => void;
+  triggerAlignment?: boolean;
+  onAlignmentComplete?: () => void;
+  keepAligned?: boolean;
 }
 
 // Outer glow texture - very smooth exponential falloff
@@ -741,6 +744,9 @@ const CrossroadsOrb: React.FC<CrossroadsOrbProps> = ({
   outerNodes = [],
   outerAnimatedPositionsRef,
   onActiveNodesChange,
+  triggerAlignment = false,
+  onAlignmentComplete,
+  keepAligned = false,
 }) => {
   const groupRef = useRef<THREE.Group>(null);
   const sunPlaneRef = useRef<THREE.Mesh>(null);
@@ -822,11 +828,18 @@ const CrossroadsOrb: React.FC<CrossroadsOrbProps> = ({
     alignProgress: 0, // 0 = normal rotation, 1 = fully aligned
     holdTime: 0,
     nextAlignTime: 8 + Math.random() * 12, // First alignment in 8-20 seconds
-    // Store the rotation offsets to blend back to
-    ring1BaseRot: { x: 0, z: 0 },
-    ring2BaseRot: { z: 0, y: 0 },
-    ring3BaseRot: { y: 0, x: 0 },
+    // Store the rotation offsets to blend from/to
+    ring1BaseRot: { x: 0, z: 0, y: 0 },
+    ring2BaseRot: { x: 0, z: 0, y: 0 },
+    ring3BaseRot: { x: 0, z: 0, y: 0 },
+    // Target rotations for alignment (computed to face camera)
+    targetRot: { x: 0, y: 0 },
+    triggeredExternally: false, // Track if alignment was triggered externally
+    isExiting: false, // Track if we're transitioning out of alignment
+    exitProgress: 0, // 0 = aligned, 1 = back to normal
   });
+  const prevTriggerAlignment = useRef(false);
+  const prevKeepAligned = useRef(false);
 
   // Initialize dendrite slots with well-staggered timing
   useMemo(() => {
@@ -1114,88 +1127,253 @@ const CrossroadsOrb: React.FC<CrossroadsOrbProps> = ({
     // Animate corona shells - TRUE GYROSCOPE EFFECT with periodic alignment
     const align = alignmentState.current;
 
-    // Update alignment timer
-    align.nextAlignTime -= delta;
+    // Compute target rotation to face camera
+    const cameraDir = camera.position.clone().normalize();
+    // We want rings to face the camera - compute pitch to tilt toward camera
+    const targetPitch = Math.asin(cameraDir.y); // Tilt up/down toward camera
+    const targetYaw = Math.atan2(cameraDir.x, cameraDir.z); // Rotate to face camera
+    align.targetRot.x = -targetPitch * 0.5; // Partial tilt toward camera
+    align.targetRot.y = targetYaw;
 
-    if (!align.isAligning && align.nextAlignTime <= 0) {
-      // Start alignment sequence
-      align.isAligning = true;
-      align.alignProgress = 0;
-      align.holdTime = 0;
+    // Handle external trigger for alignment (rising edge only)
+    if (triggerAlignment && !prevTriggerAlignment.current) {
+      if (!align.isAligning || align.isExiting) {
+        console.log('🌟 External alignment triggered!');
+        align.triggeredExternally = true;
+        align.isExiting = false;
+        align.exitProgress = 0;
 
-      // Store current rotations as base to blend from
-      if (coronaGroupRef.current) {
-        align.ring1BaseRot.x = coronaGroupRef.current.rotation.x;
-        align.ring1BaseRot.z = coronaGroupRef.current.rotation.z;
+        // If not already aligning, start fresh
+        if (!align.isAligning) {
+          align.isAligning = true;
+          align.alignProgress = 0;
+          align.holdTime = 0;
+
+          // Store current rotations as base to blend from
+          if (coronaGroupRef.current) {
+            align.ring1BaseRot.x = coronaGroupRef.current.rotation.x;
+            align.ring1BaseRot.y = coronaGroupRef.current.rotation.y;
+            align.ring1BaseRot.z = coronaGroupRef.current.rotation.z;
+          }
+          if (corona2GroupRef.current) {
+            align.ring2BaseRot.x = corona2GroupRef.current.rotation.x;
+            align.ring2BaseRot.y = corona2GroupRef.current.rotation.y;
+            align.ring2BaseRot.z = corona2GroupRef.current.rotation.z;
+          }
+          if (corona3GroupRef.current) {
+            align.ring3BaseRot.x = corona3GroupRef.current.rotation.x;
+            align.ring3BaseRot.y = corona3GroupRef.current.rotation.y;
+            align.ring3BaseRot.z = corona3GroupRef.current.rotation.z;
+          }
+        }
       }
+    }
+    prevTriggerAlignment.current = triggerAlignment;
 
-      if (corona2GroupRef.current) {
-        align.ring2BaseRot.z = corona2GroupRef.current.rotation.z;
-        align.ring2BaseRot.y = corona2GroupRef.current.rotation.y;
+    // Handle keepAligned changes
+    if (keepAligned && !prevKeepAligned.current) {
+      // keepAligned just turned on - ensure we're aligning
+      if (!align.isAligning) {
+        align.isAligning = true;
+        align.alignProgress = 0;
+        align.holdTime = 0;
+        align.isExiting = false;
+        align.exitProgress = 0;
+
+        if (coronaGroupRef.current) {
+          align.ring1BaseRot.x = coronaGroupRef.current.rotation.x;
+          align.ring1BaseRot.y = coronaGroupRef.current.rotation.y;
+          align.ring1BaseRot.z = coronaGroupRef.current.rotation.z;
+        }
+        if (corona2GroupRef.current) {
+          align.ring2BaseRot.x = corona2GroupRef.current.rotation.x;
+          align.ring2BaseRot.y = corona2GroupRef.current.rotation.y;
+          align.ring2BaseRot.z = corona2GroupRef.current.rotation.z;
+        }
+        if (corona3GroupRef.current) {
+          align.ring3BaseRot.x = corona3GroupRef.current.rotation.x;
+          align.ring3BaseRot.y = corona3GroupRef.current.rotation.y;
+          align.ring3BaseRot.z = corona3GroupRef.current.rotation.z;
+        }
+      } else if (align.isExiting) {
+        // Was exiting, now need to stay - reverse the exit
+        align.isExiting = false;
       }
+    } else if (!keepAligned && prevKeepAligned.current) {
+      // keepAligned just turned off - start smooth exit
+      if (align.isAligning && align.alignProgress >= 1 && !align.isExiting) {
+        align.isExiting = true;
+        align.exitProgress = 0;
 
-      if (corona3GroupRef.current) {
-        align.ring3BaseRot.y = corona3GroupRef.current.rotation.y;
-        align.ring3BaseRot.x = corona3GroupRef.current.rotation.x;
+        // Store aligned positions as base for exit transition
+        if (coronaGroupRef.current) {
+          align.ring1BaseRot.x = coronaGroupRef.current.rotation.x;
+          align.ring1BaseRot.y = coronaGroupRef.current.rotation.y;
+          align.ring1BaseRot.z = coronaGroupRef.current.rotation.z;
+        }
+        if (corona2GroupRef.current) {
+          align.ring2BaseRot.x = corona2GroupRef.current.rotation.x;
+          align.ring2BaseRot.y = corona2GroupRef.current.rotation.y;
+          align.ring2BaseRot.z = corona2GroupRef.current.rotation.z;
+        }
+        if (corona3GroupRef.current) {
+          align.ring3BaseRot.x = corona3GroupRef.current.rotation.x;
+          align.ring3BaseRot.y = corona3GroupRef.current.rotation.y;
+          align.ring3BaseRot.z = corona3GroupRef.current.rotation.z;
+        }
+      }
+    }
+    prevKeepAligned.current = keepAligned;
+
+    // Update alignment timer for periodic natural alignments
+    if (!keepAligned && !align.isAligning) {
+      align.nextAlignTime -= delta;
+
+      if (align.nextAlignTime <= 0) {
+        // Start natural alignment sequence
+        align.isAligning = true;
+        align.alignProgress = 0;
+        align.holdTime = 0;
+        align.isExiting = false;
+        align.exitProgress = 0;
+
+        if (coronaGroupRef.current) {
+          align.ring1BaseRot.x = coronaGroupRef.current.rotation.x;
+          align.ring1BaseRot.y = coronaGroupRef.current.rotation.y;
+          align.ring1BaseRot.z = coronaGroupRef.current.rotation.z;
+        }
+        if (corona2GroupRef.current) {
+          align.ring2BaseRot.x = corona2GroupRef.current.rotation.x;
+          align.ring2BaseRot.y = corona2GroupRef.current.rotation.y;
+          align.ring2BaseRot.z = corona2GroupRef.current.rotation.z;
+        }
+        if (corona3GroupRef.current) {
+          align.ring3BaseRot.x = corona3GroupRef.current.rotation.x;
+          align.ring3BaseRot.y = corona3GroupRef.current.rotation.y;
+          align.ring3BaseRot.z = corona3GroupRef.current.rotation.z;
+        }
       }
     }
 
     if (align.isAligning) {
-      if (align.alignProgress < 1) {
-        // Ease into alignment
-        align.alignProgress = Math.min(1, align.alignProgress + delta * 0.8);
-        const ease = 1 - Math.pow(1 - align.alignProgress, 3); // Ease out cubic
+      if (align.isExiting) {
+        // Smoothly exit from aligned state back to gyroscope rotation
+        align.exitProgress = Math.min(1, align.exitProgress + delta * 0.6); // Slower exit
+        const ease = align.exitProgress * align.exitProgress * (3 - 2 * align.exitProgress); // Smoothstep
 
-        // Target alignment: all rings flat (rotation 0 on their tilt axes)
-        // But keep spinning on Y axis together
-        const sharedSpin = time * 0.15;
+        // Blend from aligned position back to gyroscope motion
+        // Target rotations for "normal" state - just continue from current with slight offset
+        const gyroTime = time * 0.15;
 
         if (coronaGroupRef.current) {
-          coronaGroupRef.current.rotation.x = align.ring1BaseRot.x * (1 - ease);
+          const targetX = align.ring1BaseRot.x + (time - align.holdTime) * 0.18;
+          const targetZ = align.ring1BaseRot.z + (time - align.holdTime) * 0.06;
+          coronaGroupRef.current.rotation.x = align.ring1BaseRot.x + (targetX - align.ring1BaseRot.x) * ease;
+          coronaGroupRef.current.rotation.z = align.ring1BaseRot.z + (targetZ - align.ring1BaseRot.z) * ease;
+          coronaGroupRef.current.rotation.y = align.ring1BaseRot.y + (gyroTime - align.ring1BaseRot.y) * ease;
+        }
+        if (corona2GroupRef.current) {
+          const targetX = Math.PI / 3; // Return to base tilt
+          const targetZ = align.ring2BaseRot.z - (time - align.holdTime) * 0.15;
+          corona2GroupRef.current.rotation.x = align.ring2BaseRot.x + (targetX - align.ring2BaseRot.x) * ease;
+          corona2GroupRef.current.rotation.z = align.ring2BaseRot.z + (targetZ - align.ring2BaseRot.z) * ease;
+          corona2GroupRef.current.rotation.y = align.ring2BaseRot.y + (gyroTime - align.ring2BaseRot.y) * ease;
+        }
+        if (corona3GroupRef.current) {
+          const targetZ = Math.PI / 3; // Return to base tilt
+          const targetX = align.ring3BaseRot.x - (time - align.holdTime) * 0.09;
+          corona3GroupRef.current.rotation.z = align.ring3BaseRot.z + (targetZ - align.ring3BaseRot.z) * ease;
+          corona3GroupRef.current.rotation.x = align.ring3BaseRot.x + (targetX - align.ring3BaseRot.x) * ease;
+          corona3GroupRef.current.rotation.y = align.ring3BaseRot.y + (gyroTime - align.ring3BaseRot.y) * ease;
+        }
+
+        if (align.exitProgress >= 1) {
+          // Exit complete
+          align.isAligning = false;
+          align.isExiting = false;
+          align.alignProgress = 0;
+          align.exitProgress = 0;
+          align.nextAlignTime = 15 + Math.random() * 25;
+        }
+      } else if (align.alignProgress < 1) {
+        // Ease into alignment - smooth acceleration then deceleration
+        align.alignProgress = Math.min(1, align.alignProgress + delta * 0.5); // Slower for smoother motion
+        // Smoothstep easing for very smooth transition
+        const ease = align.alignProgress * align.alignProgress * (3 - 2 * align.alignProgress);
+
+        // Target: rings aligned flat, facing the camera, spinning together
+        const sharedSpin = align.targetRot.y + time * 0.1;
+        const facingTilt = align.targetRot.x;
+
+        if (coronaGroupRef.current) {
+          coronaGroupRef.current.rotation.x = align.ring1BaseRot.x * (1 - ease) + facingTilt * ease;
           coronaGroupRef.current.rotation.z = align.ring1BaseRot.z * (1 - ease);
-          coronaGroupRef.current.rotation.y = sharedSpin;
+          coronaGroupRef.current.rotation.y = align.ring1BaseRot.y * (1 - ease) + sharedSpin * ease;
         }
 
         if (corona2GroupRef.current) {
-          // Blend from tilted to flat
-          const baseTiltX = Math.PI / 3;
-
-          corona2GroupRef.current.rotation.x = baseTiltX * (1 - ease);
+          corona2GroupRef.current.rotation.x = align.ring2BaseRot.x * (1 - ease) + facingTilt * ease;
           corona2GroupRef.current.rotation.z = align.ring2BaseRot.z * (1 - ease);
-          corona2GroupRef.current.rotation.y = sharedSpin;
+          corona2GroupRef.current.rotation.y = align.ring2BaseRot.y * (1 - ease) + sharedSpin * ease;
         }
 
         if (corona3GroupRef.current) {
-          // Blend from tilted to flat
-          const baseTiltZ = Math.PI / 3;
-
-          corona3GroupRef.current.rotation.z = baseTiltZ * (1 - ease);
-          corona3GroupRef.current.rotation.x = align.ring3BaseRot.x * (1 - ease);
-          corona3GroupRef.current.rotation.y = sharedSpin;
+          corona3GroupRef.current.rotation.x = align.ring3BaseRot.x * (1 - ease) + facingTilt * ease;
+          corona3GroupRef.current.rotation.z = align.ring3BaseRot.z * (1 - ease);
+          corona3GroupRef.current.rotation.y = align.ring3BaseRot.y * (1 - ease) + sharedSpin * ease;
         }
       } else {
-        // Hold alignment briefly (0.8-1.5 seconds)
+        // Fully aligned - hold position
         align.holdTime += delta;
-        const sharedSpin = time * 0.15;
 
-        // Keep spinning together while aligned
+        // Keep spinning together while aligned, facing camera
+        const sharedSpin = align.targetRot.y + time * 0.1;
+        const facingTilt = align.targetRot.x;
+
         if (coronaGroupRef.current) {
+          coronaGroupRef.current.rotation.x = facingTilt;
+          coronaGroupRef.current.rotation.z = 0;
           coronaGroupRef.current.rotation.y = sharedSpin;
         }
-
         if (corona2GroupRef.current) {
+          corona2GroupRef.current.rotation.x = facingTilt;
+          corona2GroupRef.current.rotation.z = 0;
           corona2GroupRef.current.rotation.y = sharedSpin;
         }
-
         if (corona3GroupRef.current) {
+          corona3GroupRef.current.rotation.x = facingTilt;
+          corona3GroupRef.current.rotation.z = 0;
           corona3GroupRef.current.rotation.y = sharedSpin;
         }
 
-        if (align.holdTime > 0.8 + Math.random() * 0.7) {
-          // End alignment, schedule next one
-          align.isAligning = false;
-          align.alignProgress = 0;
-          align.nextAlignTime = 15 + Math.random() * 25; // Next alignment in 15-40 seconds
+        // Call completion callback once when first fully aligned
+        if (align.triggeredExternally && onAlignmentComplete) {
+          console.log('✨ Alignment complete, calling onAlignmentComplete');
+          onAlignmentComplete();
+          align.triggeredExternally = false;
+        }
+
+        // If not keepAligned, exit after hold time (natural alignment)
+        if (!keepAligned && align.holdTime > 0.8 + Math.random() * 0.7) {
+          align.isExiting = true;
+          align.exitProgress = 0;
+
+          // Store current aligned positions
+          if (coronaGroupRef.current) {
+            align.ring1BaseRot.x = coronaGroupRef.current.rotation.x;
+            align.ring1BaseRot.y = coronaGroupRef.current.rotation.y;
+            align.ring1BaseRot.z = coronaGroupRef.current.rotation.z;
+          }
+          if (corona2GroupRef.current) {
+            align.ring2BaseRot.x = corona2GroupRef.current.rotation.x;
+            align.ring2BaseRot.y = corona2GroupRef.current.rotation.y;
+            align.ring2BaseRot.z = corona2GroupRef.current.rotation.z;
+          }
+          if (corona3GroupRef.current) {
+            align.ring3BaseRot.x = corona3GroupRef.current.rotation.x;
+            align.ring3BaseRot.y = corona3GroupRef.current.rotation.y;
+            align.ring3BaseRot.z = corona3GroupRef.current.rotation.z;
+          }
         }
       }
     } else {

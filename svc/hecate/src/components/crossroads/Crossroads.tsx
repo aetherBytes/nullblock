@@ -13,6 +13,8 @@ interface CrossroadsProps {
   showMarketplace?: boolean;
   resetToLanding?: boolean;
   animationPhase?: AnimationPhase;
+  onEnterCrossroads?: () => void;
+  pendingTransition?: boolean;
 }
 
 type View = 'landing' | 'marketplace' | 'service-detail' | 'my-services';
@@ -23,9 +25,13 @@ const Crossroads: React.FC<CrossroadsProps> = ({
   showMarketplace,
   resetToLanding,
   animationPhase = 'complete',
+  onEnterCrossroads,
+  pendingTransition = false,
 }) => {
   const [currentView, setCurrentView] = useState<View>('landing');
   const [selectedService, setSelectedService] = useState<ServiceListing | null>(null);
+  const [showMarketplaceFadeIn, setShowMarketplaceFadeIn] = useState<boolean>(false);
+  const previousView = React.useRef<View>('landing');
 
   // Watch publicKey changes - switch to marketplace when connected, landing when disconnected
   React.useEffect(() => {
@@ -40,11 +46,23 @@ const Crossroads: React.FC<CrossroadsProps> = ({
   }, [publicKey]);
 
   // Watch showMarketplace prop - show marketplace when CROSSROADS button is clicked
+  // This is triggered after orb alignment completes
   React.useEffect(() => {
     if (showMarketplace) {
+      // If we're coming from landing, trigger the fade-in animation
+      if (previousView.current === 'landing') {
+        setShowMarketplaceFadeIn(true);
+        // Clear the fade-in class after animation completes
+        setTimeout(() => setShowMarketplaceFadeIn(false), 1000);
+      }
       setCurrentView('marketplace');
     }
   }, [showMarketplace]);
+
+  // Track view changes
+  React.useEffect(() => {
+    previousView.current = currentView;
+  }, [currentView]);
 
   // Watch resetToLanding prop - reset to landing when NULLBLOCK logo is clicked
   React.useEffect(() => {
@@ -73,17 +91,26 @@ const Crossroads: React.FC<CrossroadsProps> = ({
               onConnectWallet();
             }}
             onNavigateCrossroads={() => {
-              setCurrentView('marketplace');
+              console.log('🔮 onNavigateCrossroads called, onEnterCrossroads:', !!onEnterCrossroads);
+              if (onEnterCrossroads) {
+                onEnterCrossroads();
+              } else {
+                console.log('⚠️ No onEnterCrossroads handler, falling back to direct view change');
+                setCurrentView('marketplace');
+              }
             }}
             animationPhase={animationPhase}
+            pendingTransition={pendingTransition}
           />
         );
 
       case 'marketplace':
         return (
-          <MarketplaceBrowser
-            onServiceClick={handleServiceClick}
-          />
+          <div className={showMarketplaceFadeIn ? styles.marketplaceFadeIn : ''}>
+            <MarketplaceBrowser
+              onServiceClick={handleServiceClick}
+            />
+          </div>
         );
 
       case 'service-detail':
