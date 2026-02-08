@@ -225,14 +225,14 @@ const CockpitDash: React.FC<CockpitDashProps> = ({
               <React.Fragment key={i}>
                 <line
                   x1={l.x1} y1={l.y1} x2={l.x2} y2={l.y2}
-                  stroke="rgba(154, 123, 255, 0.12)"
-                  strokeWidth="8"
+                  stroke="rgba(154, 123, 255, 0.06)"
+                  strokeWidth="6"
                   filter="url(#connGlow)"
                 />
                 <line
                   x1={l.x1} y1={l.y1} x2={l.x2} y2={l.y2}
-                  stroke="rgba(154, 123, 255, 0.5)"
-                  strokeWidth="1.5"
+                  stroke="rgba(154, 123, 255, 0.3)"
+                  strokeWidth="1"
                 />
               </React.Fragment>
             ))}
@@ -361,6 +361,9 @@ const CockpitDash: React.FC<CockpitDashProps> = ({
           </div>
         </PipBoyScreen>
       </div>
+
+      {/* Cockpit floor — beneath MFD panels */}
+      <div className={styles.cockpitFloor} />
 
       {/* Footer strip */}
       <div className={styles.footer}>
