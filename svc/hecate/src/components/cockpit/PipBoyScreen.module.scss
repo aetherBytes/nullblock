@@ -1,0 +1,349 @@
+$pip-blue: #7b8cff;
+$pip-purple: #b967ff;
+$pip-glow: #9a7bff;
+$pip-screen: rgba(6, 4, 18, 0.92);
+$pip-bezel: rgba(18, 14, 28, 0.85);
+$pip-bezel-edge: rgba(100, 80, 160, 0.15);
+$pip-text: rgba(160, 170, 255, 0.9);
+$pip-text-dim: rgba(140, 150, 220, 0.5);
+$pip-accent: rgba(185, 103, 255, 0.7);
+
+.pipboy {
+  perspective: 800px;
+  min-width: 0;
+  min-height: 0;
+}
+
+.bezel {
+  background: $pip-bezel;
+  border: 2px solid $pip-bezel-edge;
+  border-radius: 10px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  transform: rotateX(8deg);
+  transform-origin: bottom center;
+  box-shadow:
+    0 -2px 20px rgba($pip-purple, 0.06),
+    0 4px 20px rgba(0, 0, 0, 0.5),
+    inset 0 1px 0 rgba(255, 255, 255, 0.04),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.4);
+  position: relative;
+}
+
+.powerLed {
+  position: absolute;
+  top: 8px;
+  right: 10px;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: $pip-purple;
+  box-shadow: 0 0 6px rgba($pip-purple, 0.6), 0 0 12px rgba($pip-purple, 0.3);
+  animation: ledPulse 3s ease-in-out infinite;
+  z-index: 4;
+}
+
+@keyframes ledPulse {
+  0%, 100% { opacity: 0.6; box-shadow: 0 0 4px rgba($pip-purple, 0.4); }
+  50% { opacity: 1; box-shadow: 0 0 8px rgba($pip-purple, 0.8), 0 0 16px rgba($pip-purple, 0.3); }
+}
+
+.bezelTop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 4px 8px;
+  background: rgba(0, 0, 0, 0.35);
+  border-bottom: 1px solid rgba($pip-glow, 0.08);
+  flex-shrink: 0;
+}
+
+.tabs {
+  display: flex;
+  gap: 0;
+}
+
+.tab {
+  padding: 3px 8px;
+  background: transparent;
+  border: 1px solid rgba($pip-glow, 0.06);
+  border-bottom: none;
+  border-radius: 3px 3px 0 0;
+  cursor: pointer;
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 7px;
+  font-weight: 600;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: $pip-text-dim;
+  transition: all 0.2s ease;
+  margin-right: -1px;
+
+  &:hover {
+    color: $pip-text;
+    background: rgba($pip-glow, 0.04);
+  }
+}
+
+.tabActive {
+  color: $pip-glow;
+  background: rgba($pip-glow, 0.06);
+  border-color: rgba($pip-glow, 0.15);
+  text-shadow: 0 0 8px rgba($pip-glow, 0.4);
+  box-shadow: inset 0 1px 0 rgba($pip-glow, 0.08);
+
+  &::after {
+    content: '';
+    position: absolute;
+    bottom: -1px;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: $pip-screen;
+  }
+}
+
+.bezelLabel {
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 6px;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  color: rgba($pip-purple, 0.2);
+  user-select: none;
+}
+
+.crtFrame {
+  flex: 1;
+  margin: 3px 4px;
+  border-radius: 6px;
+  overflow: hidden;
+  position: relative;
+  min-height: 0;
+  box-shadow:
+    inset 0 0 30px rgba(0, 0, 0, 0.7),
+    inset 0 0 60px rgba($pip-purple, 0.03),
+    0 0 1px rgba($pip-glow, 0.1);
+}
+
+.crtScreen {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  background: $pip-screen;
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.screenContent {
+  position: relative;
+  z-index: 2;
+  height: 100%;
+  overflow: auto;
+
+  &::-webkit-scrollbar {
+    width: 3px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: rgba($pip-glow, 0.2);
+    border-radius: 1px;
+
+    &:hover {
+      background: rgba($pip-glow, 0.35);
+    }
+  }
+}
+
+.scanLines {
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    rgba($pip-blue, 0.015) 2px,
+    rgba($pip-blue, 0.015) 3px
+  );
+  pointer-events: none;
+  z-index: 3;
+  animation: scanDrift 8s linear infinite;
+}
+
+@keyframes scanDrift {
+  0% { background-position: 0 0; }
+  100% { background-position: 0 100px; }
+}
+
+.screenGlow {
+  position: absolute;
+  inset: 0;
+  border-radius: 6px;
+  pointer-events: none;
+  z-index: 4;
+  box-shadow:
+    inset 0 0 40px rgba($pip-purple, 0.04),
+    inset 0 0 80px rgba($pip-blue, 0.02);
+  background: radial-gradient(
+    ellipse 80% 70% at 50% 50%,
+    rgba($pip-glow, 0.015) 0%,
+    transparent 70%
+  );
+}
+
+.flicker {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 5;
+  animation: screenFlicker 0.15s infinite;
+  opacity: 0;
+}
+
+@keyframes screenFlicker {
+  0% { opacity: 0; }
+  5% { opacity: 0.01; background: rgba($pip-blue, 0.02); }
+  10% { opacity: 0; }
+  100% { opacity: 0; }
+}
+
+// Alert strip at the bottom of the screen area
+.alertStrip {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 8px;
+  background: rgba(0, 0, 0, 0.4);
+  border-top: 1px solid rgba($pip-glow, 0.06);
+  flex-shrink: 0;
+  overflow: hidden;
+  min-height: 18px;
+}
+
+.alertIndicator {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+}
+
+.alertDot {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  flex-shrink: 0;
+
+  &.info {
+    background: rgba($pip-blue, 0.7);
+    box-shadow: 0 0 4px rgba($pip-blue, 0.4);
+  }
+
+  &.warn {
+    background: rgba(255, 180, 0, 0.7);
+    box-shadow: 0 0 4px rgba(255, 180, 0, 0.4);
+    animation: alertPulse 2s ease-in-out infinite;
+  }
+
+  &.critical {
+    background: rgba(255, 60, 60, 0.8);
+    box-shadow: 0 0 4px rgba(255, 60, 60, 0.5);
+    animation: alertPulse 1s ease-in-out infinite;
+  }
+}
+
+@keyframes alertPulse {
+  0%, 100% { opacity: 0.5; }
+  50% { opacity: 1; }
+}
+
+.alertTicker {
+  flex: 1;
+  overflow: hidden;
+  position: relative;
+  height: 12px;
+}
+
+.alertText {
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 8px;
+  letter-spacing: 1px;
+  color: $pip-text-dim;
+  text-transform: uppercase;
+  white-space: nowrap;
+  position: absolute;
+  top: 0;
+  left: 0;
+  animation: tickerScroll 12s linear infinite;
+  text-shadow: 0 0 6px rgba($pip-glow, 0.15);
+
+  &::after {
+    content: '\00a0\00a0\00a0\2014\00a0\00a0\00a0';
+  }
+}
+
+@keyframes tickerScroll {
+  0% { transform: translateX(100%); }
+  100% { transform: translateX(-100%); }
+}
+
+.bezelBottom {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 3px 8px 4px;
+  background: rgba(0, 0, 0, 0.3);
+  border-top: 1px solid rgba($pip-glow, 0.04);
+  flex-shrink: 0;
+}
+
+.knob {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 35%,
+    rgba($pip-bezel-edge, 0.4),
+    rgba(0, 0, 0, 0.5)
+  );
+  border: 1px solid rgba($pip-bezel-edge, 0.2);
+  box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.05);
+}
+
+.screws {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.screw {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: rgba($pip-bezel-edge, 0.15);
+  box-shadow: inset 0 0.5px 0 rgba(255, 255, 255, 0.06);
+}
+
+@media (max-width: 768px) {
+  .bezel {
+    transform: rotateX(4deg);
+    border-radius: 8px;
+  }
+
+  .tab {
+    font-size: 6px;
+    padding: 2px 6px;
+    letter-spacing: 1px;
+  }
+
+  .crtFrame {
+    margin: 2px 3px;
+    border-radius: 4px;
+  }
+
+  .alertText {
+    font-size: 7px;
+  }
+}

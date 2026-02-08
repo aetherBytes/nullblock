@@ -25,24 +25,22 @@ const HecateHologram: React.FC<HecateHologramProps> = ({
     <div className={styles.hologram}>
       <div className={styles.projectionBase} />
       <div className={styles.panel}>
-        <div className={styles.sigilContainer}>
+        <div className={styles.avatarZone}>
           <div className={`${styles.sigil} ${styles[agentState]}`}>
             <div className={styles.ring1} />
             <div className={styles.ring2} />
+            <div className={styles.ring3} />
             <div className={styles.core} />
           </div>
+          <div className={styles.entityLabel}>{agentName.toUpperCase()}</div>
+          <div className={`${styles.stateTag} ${styles[`state_${agentState}`]}`}>
+            {agentState.toUpperCase()}
+          </div>
         </div>
+
+        <div className={styles.divider} />
+
         <div className={styles.readouts}>
-          <div className={styles.readoutRow}>
-            <span className={styles.label}>ENTITY</span>
-            <span className={styles.value}>{agentName.toUpperCase()}</span>
-          </div>
-          <div className={styles.readoutRow}>
-            <span className={styles.label}>STATE</span>
-            <span className={`${styles.stateValue} ${styles[`state_${agentState}`]}`}>
-              {agentState.toUpperCase()}
-            </span>
-          </div>
           <div className={styles.readoutRow}>
             <span className={styles.label}>MODEL</span>
             <span className={styles.value}>{formatModel(currentModel)}</span>

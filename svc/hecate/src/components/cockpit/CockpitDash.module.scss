@@ -9,6 +9,9 @@ $red-val: rgba(255, 60, 60, 0.85);
 $hull: rgba(8, 10, 16, 0.5);
 $frame-edge: rgba(0, 212, 255, 0.12);
 $frame-thick: 3px;
+$pip-glow: #9a7bff;
+$pip-text-dim: rgba(140, 150, 220, 0.5);
+$purple: #b967ff;
 
 // =========================================
 // ROOT CONTAINER
@@ -215,7 +218,7 @@ $frame-thick: 3px;
 // SIDE PANELS
 // =========================================
 
-.leftPanel, .rightPanel {
+.rightPanel {
   position: absolute;
   top: 50%;
   transform: translateY(-50%);
@@ -227,15 +230,6 @@ $frame-thick: 3px;
 
   @media (max-width: 768px) {
     display: none;
-  }
-}
-
-.leftPanel {
-  left: 16px;
-  transform: translateY(-50%) perspective(600px) rotateY(5deg);
-
-  @media (max-width: 1024px) {
-    left: 8px;
   }
 }
 
@@ -365,29 +359,71 @@ $frame-thick: 3px;
   right: 0;
   display: flex;
   align-items: stretch;
-  gap: 8px;
-  padding: 0 12px;
-  height: clamp(140px, 22vh, 220px);
+  gap: 2px;
+  padding: 0 4px;
+  height: clamp(200px, 30vh, 320px);
   z-index: 4;
   perspective: 800px;
 
   @media (max-width: 1024px) {
-    height: clamp(120px, 18vh, 180px);
-    padding: 0 8px;
+    height: clamp(160px, 26vh, 260px);
+    padding: 0 4px;
   }
 
   @media (max-width: 768px) {
-    height: clamp(100px, 15vh, 150px);
-    gap: 4px;
-    padding: 0 4px;
+    height: clamp(130px, 20vh, 200px);
+    gap: 2px;
+    padding: 0 2px;
   }
 }
 
 .strutLeft, .strutRight {
-  width: 2px;
+  width: 1px;
   flex-shrink: 0;
   background: linear-gradient(180deg, transparent, $glow-line 30%, $glow-line 70%, transparent);
-  opacity: 0.4;
+  opacity: 0.3;
+
+  @media (max-width: 768px) {
+    display: none;
+  }
+}
+
+// Left offset = mfdRow padding (12px) + strutLeft (2px) + gap (8px)
+$mfd-left-offset: 22px;
+$mfd-left-offset-md: 18px;
+
+.hecateColumn {
+  position: absolute;
+  left: $mfd-left-offset;
+  top: 60px;
+  bottom: calc(28px + clamp(200px, 30vh, 320px) - 2px);
+  width: calc((100vw - #{$mfd-left-offset} - 4px - 2px - 2px - 2px * 2) / 3);
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  pointer-events: auto;
+  z-index: 4;
+  transform: perspective(800px) rotateY(14deg) rotateX(-1.5deg);
+  transform-origin: left center;
+
+  &::after {
+    content: '';
+    position: absolute;
+    bottom: -1px;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, rgba($glow, 0.2), rgba($glow, 0.08), transparent);
+    pointer-events: none;
+  }
+
+  @media (max-width: 1024px) {
+    left: $mfd-left-offset-md;
+    top: 50px;
+    bottom: calc(28px + clamp(160px, 26vh, 260px) - 2px);
+    width: calc((100vw - #{$mfd-left-offset-md} - 4px - 2px - 2px - 2px * 2) / 3);
+    transform: perspective(800px) rotateY(10deg) rotateX(-1deg);
+  }
 
   @media (max-width: 768px) {
     display: none;
@@ -400,11 +436,132 @@ $frame-thick: 3px;
   pointer-events: auto;
 }
 
+.mfdCenter {
+  transform: perspective(800px) rotateX(3deg);
+  transform-origin: bottom center;
+}
+
+.mfdLeft {
+  flex: 1.5;
+  min-height: 0;
+  position: relative;
+  transform: perspective(800px) rotateY(6deg) rotateX(-0.5deg);
+  transform-origin: left top;
+  transform-style: preserve-3d;
+  margin-left: -1.5px;
+
+  &::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: -2px;
+    width: 2px;
+    height: calc(100% + 2px);
+    background: linear-gradient(
+      180deg,
+      rgba($glow, 0.2) 0%,
+      rgba($glow, 0.1) 40%,
+      rgba($glow, 0.04) 100%
+    );
+    pointer-events: none;
+    z-index: 5;
+  }
+}
+
+.mfdRight {
+  flex: 1.5;
+  min-height: 0;
+  position: relative;
+  transform: perspective(800px) rotateY(-6deg) rotateX(-0.5deg);
+  transform-origin: right top;
+  transform-style: preserve-3d;
+  margin-right: -1.5px;
+
+  &::before {
+    content: '';
+    position: absolute;
+    right: 0;
+    top: -2px;
+    width: 2px;
+    height: calc(100% + 2px);
+    background: linear-gradient(
+      180deg,
+      rgba($glow, 0.2) 0%,
+      rgba($glow, 0.1) 40%,
+      rgba($glow, 0.04) 100%
+    );
+    pointer-events: none;
+    z-index: 5;
+  }
+}
+
 // MFD Chat wrap
 .mfdChatWrap {
   height: 100%;
   display: flex;
   flex-direction: column;
+}
+
+.mfdStatusWrap {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 8px;
+}
+
+.statusLinks {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.statusLink {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  background: rgba(0, 0, 0, 0.25);
+  border: 1px solid rgba($pip-glow, 0.08);
+  border-radius: 3px;
+  text-decoration: none;
+  cursor: pointer;
+  transition: all 0.25s ease;
+
+  span {
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 9px;
+    font-weight: 600;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: $pip-text-dim;
+    transition: color 0.25s ease;
+  }
+
+  &:hover {
+    background: rgba($pip-glow, 0.06);
+    border-color: rgba($pip-glow, 0.2);
+
+    span {
+      color: rgba($pip-glow, 0.9);
+      text-shadow: 0 0 8px rgba($pip-glow, 0.3);
+    }
+
+    .statusLinkDot {
+      background: rgba($pip-glow, 0.8);
+      box-shadow: 0 0 6px rgba($pip-glow, 0.5);
+    }
+  }
+}
+
+.statusLinkDot {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  background: rgba($pip-glow, 0.4);
+  box-shadow: 0 0 3px rgba($pip-glow, 0.2);
+  transition: all 0.25s ease;
 }
 
 .mfdPlaceholder {
@@ -428,6 +585,43 @@ $frame-thick: 3px;
   font-size: 8px !important;
   color: rgba($glow, 0.15) !important;
   letter-spacing: 1px !important;
+}
+
+.pipboyPlaceholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  gap: 6px;
+
+  span {
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 9px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: $pip-text-dim;
+    text-shadow: 0 0 8px rgba($pip-glow, 0.2);
+  }
+}
+
+.pipboyPrompt {
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 14px;
+  color: rgba($pip-glow, 0.5);
+  text-shadow: 0 0 10px rgba($pip-glow, 0.3);
+  animation: promptBlink 1.2s step-end infinite;
+}
+
+@keyframes promptBlink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+
+.pipboyPlaceholderSub {
+  font-size: 7px !important;
+  color: rgba($pip-glow, 0.25) !important;
+  letter-spacing: 1.5px !important;
 }
 
 // =========================================
@@ -701,8 +895,6 @@ $frame-thick: 3px;
 // =========================================
 // ACTION PANEL — pre-login cockpit buttons
 // =========================================
-
-$purple: #b967ff;
 
 .actionPanel {
   display: flex;

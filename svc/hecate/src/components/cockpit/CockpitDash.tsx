@@ -1,5 +1,6 @@
 import React from 'react';
 import MFDScreen from './MFDScreen';
+import PipBoyScreen from './PipBoyScreen';
 import HecateHologram from './HecateHologram';
 import styles from './CockpitDash.module.scss';
 
@@ -33,8 +34,8 @@ const CockpitDash: React.FC<CockpitDashProps> = ({
   onConnectWallet,
   onEnterCrossroads,
   pendingCrossroadsTransition = false,
-  autopilot = true,
-  onToggleAutopilot,
+  autopilot: _autopilot = true,
+  onToggleAutopilot: _onToggleAutopilot,
 }) => {
   const showActions = !isLoggedIn && (loginAnimationPhase === 'navbar' || loginAnimationPhase === 'complete');
   return (
@@ -59,33 +60,6 @@ const CockpitDash: React.FC<CockpitDashProps> = ({
         <div className={styles.ringInner} />
         <div className={styles.ringCore} />
         <div className={styles.reticleCross} />
-      </div>
-
-      {/* Left panel — SYS/NAV/COMMS/HULL */}
-      <div className={styles.leftPanel}>
-        <div className={styles.sidePanelInner}>
-          <div className={styles.hudRow}>
-            <span className={styles.hudLabel}>SYS</span>
-            <span className={styles.hudValGreen}>NOMINAL</span>
-          </div>
-          <div className={styles.hudRow}>
-            <span className={styles.hudLabel}>NAV</span>
-            <span className={styles.hudValGreen}>ONLINE</span>
-          </div>
-          <div className={styles.hudRow}>
-            <span className={styles.hudLabel}>COMMS</span>
-            <span className={styles.hudValGreen}>ACTIVE</span>
-          </div>
-          <div className={styles.hudRow}>
-            <span className={styles.hudLabel}>HULL</span>
-            <span className={styles.hudValCyan}>100%</span>
-          </div>
-        </div>
-        <div className={styles.ticks}>
-          {[...Array(11)].map((_, i) => (
-            <div key={i} className={`${styles.tick} ${i === 5 ? styles.tickLong : ''}`} />
-          ))}
-        </div>
       </div>
 
       {/* Right panel — SECTOR/RANGE/RATE/DRIFT */}
@@ -115,28 +89,31 @@ const CockpitDash: React.FC<CockpitDashProps> = ({
         </div>
       </div>
 
-      {/* Hecate hologram — floating in viewport */}
-      <HecateHologram
-        agentState={agentState}
-        agentName={agentName}
-        currentModel={currentModel}
-        healthStatus={agentHealthStatus}
-        sessionMessageCount={sessionMessageCount}
-      />
+      {/* Hecate left-wall HUD panel */}
+      <div className={styles.hecateColumn}>
+        <HecateHologram
+          agentState={agentState}
+          agentName={agentName}
+          currentModel={currentModel}
+          healthStatus={agentHealthStatus}
+          sessionMessageCount={sessionMessageCount}
+        />
+      </div>
 
-      {/* MFD row */}
+      {/* MFD row — 3 pane cockpit */}
       <div className={styles.mfdRow}>
         <div className={styles.strutLeft} />
-        <MFDScreen title="COMMS" statusColor="cyan" className={styles.mfdLeft}>
+        <PipBoyScreen className={styles.mfdLeft} isLoggedIn={isLoggedIn}>
           <div className={styles.mfdChatWrap}>
             {chatMFD || (
-              <div className={styles.mfdPlaceholder}>
+              <div className={styles.pipboyPlaceholder}>
+                <div className={styles.pipboyPrompt}>&gt;_</div>
                 <span>HECATE COMMS</span>
-                <span className={styles.mfdPlaceholderSub}>Awaiting connection...</span>
+                <span className={styles.pipboyPlaceholderSub}>Awaiting connection...</span>
               </div>
             )}
           </div>
-        </MFDScreen>
+        </PipBoyScreen>
         <MFDScreen
           title={showActions ? 'COMMAND' : 'INSTRUMENTS'}
           statusColor={showActions ? 'cyan' : 'green'}
@@ -223,38 +200,30 @@ const CockpitDash: React.FC<CockpitDashProps> = ({
             </>
           )}
         </MFDScreen>
-        <MFDScreen title="STATUS" statusColor="green" className={styles.mfdRight}>
-          <div className={styles.statusList}>
-            <div className={styles.statusRow}>
-              <div className={`${styles.sDot} ${styles.sGreen}`} />
-              <span>ENGN.01</span>
+        <PipBoyScreen className={styles.mfdRight} isLoggedIn={isLoggedIn} tabs={['STATUS', 'SYS', 'NAV']}>
+          <div className={styles.mfdStatusWrap}>
+            <div className={styles.statusLinks}>
+              <a
+                href="https://aetherbytes.github.io/nullblock-sdk/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className={styles.statusLink}
+              >
+                <div className={styles.statusLinkDot} />
+                <span>DOCS</span>
+              </a>
+              <a
+                href="https://x.com/Nullblock_io"
+                target="_blank"
+                rel="noopener noreferrer"
+                className={styles.statusLink}
+              >
+                <div className={styles.statusLinkDot} />
+                <span>FOLLOW</span>
+              </a>
             </div>
-            <div className={styles.statusRow}>
-              <div className={`${styles.sDot} ${styles.sGreen}`} />
-              <span>ENGN.02</span>
-            </div>
-            <div className={styles.statusRow}>
-              <div className={`${styles.sDot} ${styles.sAmber}`} />
-              <span>AUX.PWR</span>
-            </div>
-            <div className={styles.statusRow}>
-              <div className={`${styles.sDot} ${styles.sGreen}`} />
-              <span>LIFE.SUP</span>
-            </div>
-            <div className={styles.statusDivider} />
-            <button
-              className={`${styles.autopilotToggle} ${autopilot ? styles.autopilotOn : styles.autopilotOff}`}
-              onClick={onToggleAutopilot}
-              type="button"
-            >
-              <div className={`${styles.sDot} ${autopilot ? styles.sGreen : styles.sAmber}`} />
-              <span className={styles.autopilotLabel}>AUTO.PLT</span>
-              <span className={styles.autopilotState}>
-                {autopilot ? 'ENGAGED' : 'MANUAL'}
-              </span>
-            </button>
           </div>
-        </MFDScreen>
+        </PipBoyScreen>
         <div className={styles.strutRight} />
       </div>
 
