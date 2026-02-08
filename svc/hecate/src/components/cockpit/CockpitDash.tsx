@@ -51,16 +51,25 @@ const CockpitDash: React.FC<CockpitDashProps> = ({
     gx1: number; gy1: number;
     gx2: number; gy2: number;
   };
+  type WindshieldFill = {
+    points: string;
+    midX: number;
+    topY: number;
+    bottomY: number;
+    topW: number;
+    bottomW: number;
+  };
   type ConnectorData = {
     w: number; h: number;
     lines: Array<{x1: number; y1: number; x2: number; y2: number}>;
     backLines: Array<{x1: number; y1: number; x2: number; y2: number}>;
     panels: PanelFill[];
     backings: BackingFill[];
+    windshields: WindshieldFill[];
   };
 
   const mfdRowRef = useRef<HTMLDivElement>(null);
-  const [svgData, setSvgData] = useState<ConnectorData>({ w: 0, h: 0, lines: [], backLines: [], panels: [], backings: [] });
+  const [svgData, setSvgData] = useState<ConnectorData>({ w: 0, h: 0, lines: [], backLines: [], panels: [], backings: [], windshields: [] });
 
   const measureConnectors = useCallback(() => {
     const row = mfdRowRef.current;
@@ -163,7 +172,60 @@ const CockpitDash: React.FC<CockpitDashProps> = ({
       backLines.push({ x1: bCBL.x, y1: bCBL.y, x2: bCBR.x, y2: bCBR.y });
     }
 
-    setSvgData({ w: rowRect.width, h: rowRect.height, lines, backLines, panels, backings });
+    const windshields: ConnectorData['windshields'] = [];
+    const wsHeight = 390;
+    const wsTopRatio = 0.25;
+    let leftWsInnerTop: Point | null = null;
+    let rightWsInnerTop: Point | null = null;
+
+    if (leftTR && centerTL) {
+      const midX = (leftTR.x + centerTL.x) / 2;
+      const midBottomY = (leftTR.y + centerTL.y) / 2;
+      const bottomW = centerTL.x - leftTR.x;
+      const topW = bottomW * wsTopRatio;
+      const topY = midBottomY - wsHeight;
+      const tl = { x: midX - topW / 2, y: topY };
+      const tr = { x: midX + topW / 2, y: topY };
+      leftWsInnerTop = tr;
+      windshields.push({
+        points: `${leftTR.x},${leftTR.y} ${centerTL.x},${centerTL.y} ${tr.x},${tr.y} ${tl.x},${tl.y}`,
+        midX, topY, bottomY: midBottomY, topW: topW, bottomW,
+      });
+      backLines.push({ x1: leftTR.x, y1: leftTR.y, x2: tl.x, y2: tl.y });
+      backLines.push({ x1: centerTL.x, y1: centerTL.y, x2: tr.x, y2: tr.y });
+      backLines.push({ x1: tl.x, y1: tl.y, x2: tr.x, y2: tr.y });
+    }
+    if (centerTR && rightTL) {
+      const midX = (centerTR.x + rightTL.x) / 2;
+      const midBottomY = (centerTR.y + rightTL.y) / 2;
+      const bottomW = rightTL.x - centerTR.x;
+      const topW = bottomW * wsTopRatio;
+      const topY = midBottomY - wsHeight;
+      const tl = { x: midX - topW / 2, y: topY };
+      const tr = { x: midX + topW / 2, y: topY };
+      rightWsInnerTop = tl;
+      windshields.push({
+        points: `${centerTR.x},${centerTR.y} ${rightTL.x},${rightTL.y} ${tr.x},${tr.y} ${tl.x},${tl.y}`,
+        midX, topY, bottomY: midBottomY, topW: topW, bottomW,
+      });
+      backLines.push({ x1: centerTR.x, y1: centerTR.y, x2: tl.x, y2: tl.y });
+      backLines.push({ x1: rightTL.x, y1: rightTL.y, x2: tr.x, y2: tr.y });
+      backLines.push({ x1: tl.x, y1: tl.y, x2: tr.x, y2: tr.y });
+    }
+    if (centerTL && centerTR && leftWsInnerTop && rightWsInnerTop) {
+      const midX = (leftWsInnerTop.x + rightWsInnerTop.x) / 2;
+      const topY = leftWsInnerTop.y;
+      const bottomY = (centerTL.y + centerTR.y) / 2;
+      const cTopW = rightWsInnerTop.x - leftWsInnerTop.x;
+      const cBottomW = centerTR.x - centerTL.x;
+      windshields.push({
+        points: `${centerTL.x},${centerTL.y} ${centerTR.x},${centerTR.y} ${rightWsInnerTop.x},${rightWsInnerTop.y} ${leftWsInnerTop.x},${leftWsInnerTop.y}`,
+        midX, topY, bottomY, topW: cTopW, bottomW: cBottomW,
+      });
+      backLines.push({ x1: leftWsInnerTop.x, y1: leftWsInnerTop.y, x2: rightWsInnerTop.x, y2: rightWsInnerTop.y });
+    }
+
+    setSvgData({ w: rowRect.width, h: rowRect.height, lines, backLines, panels, backings, windshields });
   }, []);
 
   useEffect(() => {
@@ -279,7 +341,38 @@ const CockpitDash: React.FC<CockpitDashProps> = ({
                   <stop offset="100%" stopColor="rgb(2, 2, 6)" stopOpacity="0.95" />
                 </linearGradient>
               ))}
+              {svgData.windshields.map((ws, i) => {
+                const cy = (ws.topY + ws.bottomY) / 2;
+                const avgHalfW = (ws.topW + ws.bottomW) / 4;
+                const halfH = (ws.bottomY - ws.topY) / 2;
+                const rx = avgHalfW * 0.45;
+                const ry = halfH * 0.4;
+                return (
+                  <radialGradient
+                    key={`wsgrad-${i}`}
+                    id={`wsGrad${i}`}
+                    gradientUnits="userSpaceOnUse"
+                    cx={ws.midX} cy={cy}
+                    rx={rx} ry={ry}
+                  >
+                    <stop offset="0%" stopColor="rgb(200, 200, 220)" stopOpacity="0" />
+                    <stop offset="30%" stopColor="rgb(180, 180, 210)" stopOpacity="0.04" />
+                    <stop offset="55%" stopColor="rgb(160, 160, 200)" stopOpacity="0.12" />
+                    <stop offset="72%" stopColor="rgb(140, 140, 180)" stopOpacity="0.22" />
+                    <stop offset="85%" stopColor="rgb(120, 120, 170)" stopOpacity="0.35" />
+                    <stop offset="100%" stopColor="rgb(100, 100, 160)" stopOpacity="0.5" />
+                  </radialGradient>
+                );
+              })}
             </defs>
+            {svgData.windshields.map((ws, i) => (
+              <polygon
+                key={`ws-${i}`}
+                points={ws.points}
+                fill={`url(#wsGrad${i})`}
+                stroke="none"
+              />
+            ))}
             {svgData.backings.map((b, i) => (
               <polygon
                 key={`backing-${i}`}
@@ -301,7 +394,7 @@ const CockpitDash: React.FC<CockpitDashProps> = ({
                 key={`bl-${i}`}
                 x1={l.x1} y1={l.y1} x2={l.x2} y2={l.y2}
                 stroke="rgba(154, 123, 255, 0.15)"
-                strokeWidth="0.5"
+                strokeWidth="0.6"
               />
             ))}
             {svgData.lines.map((l, i) => (
