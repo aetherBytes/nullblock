@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import type { MemCacheSection } from '../memcache';
 import NullblockLogo from './NullblockLogo';
 import styles from './VoidOverlay.module.scss';
@@ -17,30 +17,44 @@ interface VoidOverlayProps {
   onMemcacheSectionChange?: (section: MemCacheSection) => void;
 }
 
+type PageInfo = {
+  title: string;
+  subtitle: string;
+};
+
+const PAGE_INFO: Record<string, PageInfo> = {
+  crossroads: {
+    title: 'Picks and shovels for the new age.',
+    subtitle: 'Agents are the new users. Own the tools that own the future.',
+  },
+  memcache: {
+    title: 'MemCache',
+    subtitle: 'Memory, context, and operational intelligence.',
+  },
+  canvas: {
+    title: 'Canvas',
+    subtitle: 'Open workspace.',
+  },
+  void: {
+    title: 'Picks and shovels for the new age.',
+    subtitle: 'Agents are the new users. Own the tools that own the future.',
+  },
+};
+
 const VoidOverlay: React.FC<VoidOverlayProps> = ({
   onResetToVoid,
-  showWelcome = false,
-  onDismissWelcome,
+  activeTab,
 }) => {
-  const [welcomeVisible, setWelcomeVisible] = useState(showWelcome);
-  const [welcomeFading, setWelcomeFading] = useState(false);
-
-  useEffect(() => {
-    setWelcomeVisible(showWelcome);
-  }, [showWelcome]);
-
-  const handleDismissWelcome = () => {
-    setWelcomeFading(true);
-    setTimeout(() => {
-      setWelcomeVisible(false);
-      setWelcomeFading(false);
-      onDismissWelcome?.();
-    }, 500);
-  };
+  const pageInfo = PAGE_INFO[activeTab || 'void'] || PAGE_INFO.void;
 
   return (
     <>
       <div className={styles.navbarBorder} />
+
+      <div className={styles.pageTitleContainer} key={activeTab || 'void'}>
+        <h1 className={styles.pageTitle}>{pageInfo.title}</h1>
+        <p className={styles.pageSubtitle}>{pageInfo.subtitle}</p>
+      </div>
 
       <div className={styles.logoContainer}>
         <NullblockLogo
@@ -50,29 +64,7 @@ const VoidOverlay: React.FC<VoidOverlayProps> = ({
           onClick={onResetToVoid}
           title="Return to Void"
         />
-        <div className={styles.nullblockTextLogo} onClick={onResetToVoid} title="Return to Void">
-          NULLBLOCK
-        </div>
       </div>
-
-      {welcomeVisible && (
-        <div
-          className={`${styles.welcomeOverlay} ${welcomeFading ? styles.fading : ''}`}
-          onClick={handleDismissWelcome}
-          role="button"
-          tabIndex={0}
-          onKeyDown={(e) => e.key === 'Enter' && handleDismissWelcome()}
-          aria-label="Dismiss welcome message"
-        >
-          <div className={styles.welcomeContent}>
-            <p className={styles.welcomeText}>You have awakened.</p>
-            <p className={styles.welcomeHint}>Touch the lights or speak.</p>
-            <div className={styles.welcomeDismiss}>
-              <span>Click anywhere to begin</span>
-            </div>
-          </div>
-        </div>
-      )}
     </>
   );
 };

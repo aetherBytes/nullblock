@@ -5,8 +5,6 @@ $green: #00ff88;
 $green-val: rgba(0, 255, 136, 0.85);
 $cyan-val: rgba(0, 212, 255, 0.75);
 $amber-val: rgba(255, 180, 0, 0.85);
-$red-val: rgba(255, 60, 60, 0.85);
-$hull: rgba(8, 10, 16, 0.5);
 $frame-edge: rgba(0, 212, 255, 0.12);
 $frame-thick: 3px;
 $pip-glow: #9a7bff;
@@ -153,202 +151,6 @@ $purple: #b967ff;
 }
 
 // =========================================
-// CENTER RETICLE
-// =========================================
-
-.reticle {
-  position: absolute;
-  top: 42%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  width: 280px;
-  height: 280px;
-  pointer-events: none;
-  z-index: 1;
-
-  @media (max-width: 1024px) {
-    width: 200px;
-    height: 200px;
-  }
-
-  @media (max-width: 768px) {
-    width: 150px;
-    height: 150px;
-  }
-}
-
-.ringOuter {
-  position: absolute;
-  inset: 0;
-  border-radius: 50%;
-  border: 1px solid rgba(0, 212, 255, 0.1);
-  box-shadow: 0 0 20px rgba(0, 212, 255, 0.02);
-}
-
-.ringInner {
-  position: absolute;
-  inset: 20%;
-  border-radius: 50%;
-  border: 1px solid rgba(0, 212, 255, 0.08);
-}
-
-.ringCore {
-  position: absolute;
-  inset: 44%;
-  border-radius: 50%;
-  border: 1px solid rgba(0, 212, 255, 0.15);
-  background: rgba(0, 212, 255, 0.02);
-}
-
-.reticleCross {
-  position: absolute;
-  inset: 0;
-  background:
-    linear-gradient(0deg,
-      transparent 0%, transparent 46%,
-      rgba(0, 212, 255, 0.06) 49%, rgba(0, 212, 255, 0.06) 51%,
-      transparent 54%, transparent 100%),
-    linear-gradient(90deg,
-      transparent 0%, transparent 46%,
-      rgba(0, 212, 255, 0.06) 49%, rgba(0, 212, 255, 0.06) 51%,
-      transparent 54%, transparent 100%);
-}
-
-// =========================================
-// SIDE PANELS
-// =========================================
-
-.rightPanel {
-  position: absolute;
-  top: 50%;
-  transform: translateY(-50%);
-  z-index: 2;
-  pointer-events: none;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-
-  @media (max-width: 768px) {
-    display: none;
-  }
-}
-
-.rightPanel {
-  right: 16px;
-  flex-direction: row-reverse;
-  transform: translateY(-50%) perspective(600px) rotateY(-5deg);
-
-  @media (max-width: 1024px) {
-    right: 8px;
-  }
-}
-
-.sidePanelInner {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  padding: 10px 14px;
-  background: rgba(0, 8, 16, 0.35);
-  border: 1px solid rgba(0, 212, 255, 0.06);
-  border-radius: 4px;
-  backdrop-filter: blur(4px);
-}
-
-.hudRow {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.hudLabel {
-  font-family: 'Courier New', Courier, monospace;
-  font-size: 10px;
-  font-weight: 400;
-  letter-spacing: 2px;
-  text-transform: uppercase;
-  color: rgba(255, 255, 255, 0.35);
-  min-width: 54px;
-
-  @media (max-width: 1024px) {
-    font-size: 8px;
-    min-width: 40px;
-    letter-spacing: 1px;
-  }
-}
-
-.hudValGreen {
-  font-family: 'Courier New', Courier, monospace;
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 1.5px;
-  color: $green-val;
-  text-shadow: 0 0 8px rgba(0, 255, 136, 0.15);
-
-  @media (max-width: 1024px) {
-    font-size: 9px;
-  }
-}
-
-.hudValCyan {
-  font-family: 'Courier New', Courier, monospace;
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 1.5px;
-  color: $cyan-val;
-  text-shadow: 0 0 8px rgba(0, 212, 255, 0.12);
-
-  @media (max-width: 1024px) {
-    font-size: 9px;
-  }
-}
-
-.hudValAmber {
-  font-family: 'Courier New', Courier, monospace;
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 1.5px;
-  color: $amber-val;
-  text-shadow: 0 0 8px rgba(255, 180, 0, 0.12);
-
-  @media (max-width: 1024px) {
-    font-size: 9px;
-  }
-}
-
-// Tick marks
-.ticks {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  align-items: flex-end;
-
-  @media (max-width: 1024px) {
-    gap: 8px;
-  }
-}
-
-.rightPanel .ticks {
-  align-items: flex-start;
-}
-
-.tick {
-  width: 16px;
-  height: 1px;
-  background: rgba(0, 212, 255, 0.15);
-
-  &.tickLong {
-    width: 28px;
-    background: rgba(0, 212, 255, 0.25);
-    box-shadow: 0 0 4px rgba(0, 212, 255, 0.06);
-  }
-
-  @media (max-width: 1024px) {
-    width: 10px;
-    &.tickLong { width: 18px; }
-  }
-}
-
-// =========================================
 // MFD ROW — bottom instruments
 // =========================================
 
@@ -378,50 +180,17 @@ $purple: #b967ff;
   }
 }
 
-.strutLeft, .strutRight {
-  display: none;
-}
 
-// Left offset = mfdRow padding (4px)
-$mfd-left-offset: 4px;
-$mfd-left-offset-md: 4px;
 
-.hecateColumn {
+.connectorSvg {
   position: absolute;
-  left: $mfd-left-offset;
-  top: 60px;
-  bottom: calc(28px + clamp(200px, 30vh, 320px) - 2px);
-  width: calc((100vw - #{$mfd-left-offset} * 2) * 1.5 / 4);
-  display: flex;
-  flex-direction: column;
-  gap: 0;
-  pointer-events: auto;
-  z-index: 4;
-  transform: perspective(800px) rotateY(14deg) rotateX(-1.5deg);
-  transform-origin: left center;
-
-  &::after {
-    content: '';
-    position: absolute;
-    bottom: -1px;
-    left: 0;
-    right: 0;
-    height: 2px;
-    background: linear-gradient(90deg, rgba($glow, 0.2), rgba($glow, 0.08), transparent);
-    pointer-events: none;
-  }
-
-  @media (max-width: 1024px) {
-    left: $mfd-left-offset-md;
-    top: 50px;
-    bottom: calc(28px + clamp(160px, 26vh, 260px) - 2px);
-    width: calc((100vw - #{$mfd-left-offset-md} * 2) * 1.5 / 4);
-    transform: perspective(800px) rotateY(10deg) rotateX(-1deg);
-  }
-
-  @media (max-width: 768px) {
-    display: none;
-  }
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 2;
+  pointer-events: none;
+  overflow: visible;
 }
 
 .mfdLeft, .mfdCenter, .mfdRight {
@@ -450,26 +219,6 @@ $mfd-left-offset-md: 4px;
     transform: perspective(800px) rotateX(1.5deg);
   }
 
-  &::before,
-  &::after {
-    content: '';
-    position: absolute;
-    top: 0;
-    bottom: 0;
-    width: 1px;
-    background: linear-gradient(180deg, transparent, rgba($glow, 0.15) 30%, rgba($glow, 0.15) 70%, transparent);
-    box-shadow: 0 0 4px rgba($glow, 0.08);
-    pointer-events: none;
-    z-index: 5;
-  }
-
-  &::before {
-    left: 0;
-  }
-
-  &::after {
-    right: 0;
-  }
 }
 
 .mfdLeft {
@@ -493,22 +242,6 @@ $mfd-left-offset-md: 4px;
     display: none;
   }
 
-  &::before {
-    content: '';
-    position: absolute;
-    left: 0;
-    top: -2px;
-    width: 2px;
-    height: calc(100% + 2px);
-    background: linear-gradient(
-      180deg,
-      rgba($glow, 0.2) 0%,
-      rgba($glow, 0.1) 40%,
-      rgba($glow, 0.04) 100%
-    );
-    pointer-events: none;
-    z-index: 5;
-  }
 }
 
 .mfdRight {
@@ -532,22 +265,6 @@ $mfd-left-offset-md: 4px;
     display: none;
   }
 
-  &::before {
-    content: '';
-    position: absolute;
-    right: 0;
-    top: -2px;
-    width: 2px;
-    height: calc(100% + 2px);
-    background: linear-gradient(
-      180deg,
-      rgba($glow, 0.2) 0%,
-      rgba($glow, 0.1) 40%,
-      rgba($glow, 0.04) 100%
-    );
-    pointer-events: none;
-    z-index: 5;
-  }
 }
 
 .mfdLeft > :first-child {
@@ -627,29 +344,6 @@ $mfd-left-offset-md: 4px;
   background: rgba($pip-glow, 0.4);
   box-shadow: 0 0 3px rgba($pip-glow, 0.2);
   transition: all 0.25s ease;
-}
-
-.mfdPlaceholder {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  height: 100%;
-  gap: 4px;
-
-  span {
-    font-family: 'Courier New', Courier, monospace;
-    font-size: 9px;
-    letter-spacing: 2px;
-    text-transform: uppercase;
-    color: rgba($glow, 0.25);
-  }
-}
-
-.mfdPlaceholderSub {
-  font-size: 8px !important;
-  color: rgba($glow, 0.15) !important;
-  letter-spacing: 1px !important;
 }
 
 .pipboyPlaceholder {
@@ -813,54 +507,6 @@ $mfd-left-offset-md: 4px;
   font-weight: 700;
   letter-spacing: 1px;
   color: $cyan-val;
-}
-
-// =========================================
-// STATUS LIST (Right MFD)
-// =========================================
-
-.statusList {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  padding: 8px 10px;
-}
-
-.statusRow {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-
-  span {
-    font-family: 'Courier New', Courier, monospace;
-    font-size: 9px;
-    letter-spacing: 1.5px;
-    text-transform: uppercase;
-    color: rgba(255, 255, 255, 0.3);
-  }
-}
-
-.sDot {
-  width: 5px;
-  height: 5px;
-  border-radius: 50%;
-  flex-shrink: 0;
-
-  &.sGreen {
-    background: rgba($green, 0.7);
-    box-shadow: 0 0 4px rgba($green, 0.3);
-  }
-
-  &.sAmber {
-    background: rgba(255, 180, 0, 0.7);
-    box-shadow: 0 0 4px rgba(255, 180, 0, 0.3);
-    animation: dotPulse 3s ease-in-out infinite;
-  }
-}
-
-@keyframes dotPulse {
-  0%, 100% { opacity: 0.6; }
-  50% { opacity: 1; }
 }
 
 // =========================================
@@ -1255,79 +901,6 @@ $mfd-left-offset-md: 4px;
   height: 1px;
   margin: 4px 12px;
   background: linear-gradient(90deg, transparent, rgba($glow, 0.08), transparent);
-}
-
-// =========================================
-// AUTOPILOT TOGGLE
-// =========================================
-
-.statusDivider {
-  height: 1px;
-  margin: 4px 0;
-  background: linear-gradient(90deg, transparent, rgba($glow, 0.1), transparent);
-}
-
-.autopilotToggle {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  width: 100%;
-  padding: 6px 4px;
-  background: rgba(0, 8, 16, 0.4);
-  border: 1px solid rgba($glow, 0.06);
-  border-radius: 2px;
-  cursor: pointer;
-  transition: all 0.25s ease;
-  pointer-events: auto;
-
-  &:hover {
-    background: rgba(0, 12, 24, 0.6);
-    border-color: rgba($glow, 0.15);
-    box-shadow: 0 0 10px rgba($glow, 0.06);
-
-    .autopilotLabel {
-      color: rgba(255, 255, 255, 0.5);
-    }
-  }
-
-  &:active {
-    transform: scale(0.97);
-  }
-}
-
-.autopilotOn {
-  .autopilotState {
-    color: $green-val;
-    text-shadow: 0 0 6px rgba($green, 0.2);
-  }
-}
-
-.autopilotOff {
-  .autopilotState {
-    color: $amber-val;
-    text-shadow: 0 0 6px rgba(255, 180, 0, 0.2);
-    animation: actionPulse 2s ease-in-out infinite;
-  }
-}
-
-.autopilotLabel {
-  font-family: 'Courier New', Courier, monospace;
-  font-size: 9px;
-  letter-spacing: 1.5px;
-  text-transform: uppercase;
-  color: rgba(255, 255, 255, 0.3);
-  flex: 1;
-  text-align: left;
-  transition: color 0.25s ease;
-}
-
-.autopilotState {
-  font-family: 'Courier New', Courier, monospace;
-  font-size: 8px;
-  font-weight: 700;
-  letter-spacing: 1px;
-  text-transform: uppercase;
-  flex-shrink: 0;
 }
 
 // =========================================

@@ -1,7 +1,7 @@
-import React from 'react';
+import React, { useRef, useEffect, useState, useCallback } from 'react';
 import MFDScreen from './MFDScreen';
 import PipBoyScreen from './PipBoyScreen';
-import HecateHologram from './HecateHologram';
+// import HecateHologram from './HecateHologram';
 import styles from './CockpitDash.module.scss';
 
 interface CockpitDashProps {
@@ -24,11 +24,11 @@ interface CockpitDashProps {
 const CockpitDash: React.FC<CockpitDashProps> = ({
   visible,
   chatMFD,
-  agentState = 'idle',
-  agentName = 'hecate',
-  currentModel = '',
-  agentHealthStatus = 'unknown',
-  sessionMessageCount = 0,
+  agentState: _agentState = 'idle',
+  agentName: _agentName = 'hecate',
+  currentModel: _currentModel = '',
+  agentHealthStatus: _agentHealthStatus = 'unknown',
+  sessionMessageCount: _sessionMessageCount = 0,
   isLoggedIn = false,
   loginAnimationPhase = 'idle',
   onConnectWallet,
@@ -38,6 +38,58 @@ const CockpitDash: React.FC<CockpitDashProps> = ({
   onToggleAutopilot: _onToggleAutopilot,
 }) => {
   const showActions = !isLoggedIn && (loginAnimationPhase === 'navbar' || loginAnimationPhase === 'complete');
+
+  const mfdRowRef = useRef<HTMLDivElement>(null);
+  const [svgData, setSvgData] = useState<{
+    w: number; h: number;
+    lines: Array<{x1: number; y1: number; x2: number; y2: number}>;
+  }>({ w: 0, h: 0, lines: [] });
+
+  const measureConnectors = useCallback(() => {
+    const row = mfdRowRef.current;
+    if (!row) return;
+    const rowRect = row.getBoundingClientRect();
+
+    const corner = (panelCls: string, top: boolean, left: boolean) => {
+      const panel = row.getElementsByClassName(panelCls)[0] as HTMLElement | undefined;
+      const bezel = panel?.firstElementChild as HTMLElement | undefined;
+      if (!bezel) return null;
+      const prev = bezel.style.position;
+      if (!prev) bezel.style.position = 'relative';
+      const m = document.createElement('div');
+      m.style.cssText = `position:absolute;width:0;height:0;pointer-events:none;${top ? 'top:0' : 'bottom:0'};${left ? 'left:0' : 'right:0'}`;
+      bezel.appendChild(m);
+      const r = m.getBoundingClientRect();
+      bezel.removeChild(m);
+      if (!prev) bezel.style.position = '';
+      return { x: r.left - rowRect.left, y: r.top - rowRect.top };
+    };
+
+    const leftTR = corner(styles.mfdLeft, true, false);
+    const leftBR = corner(styles.mfdLeft, false, false);
+    const centerTL = corner(styles.mfdCenter, true, true);
+    const centerTR = corner(styles.mfdCenter, true, false);
+    const centerBL = corner(styles.mfdCenter, false, true);
+    const centerBR = corner(styles.mfdCenter, false, false);
+    const rightTL = corner(styles.mfdRight, true, true);
+    const rightBL = corner(styles.mfdRight, false, true);
+
+    const lines: typeof svgData.lines = [];
+    if (leftTR && centerTL) lines.push({ x1: leftTR.x, y1: leftTR.y, x2: centerTL.x, y2: centerTL.y });
+    if (centerTR && rightTL) lines.push({ x1: centerTR.x, y1: centerTR.y, x2: rightTL.x, y2: rightTL.y });
+    if (leftBR && centerBL) lines.push({ x1: leftBR.x, y1: leftBR.y, x2: centerBL.x, y2: centerBL.y });
+    if (centerBR && rightBL) lines.push({ x1: centerBR.x, y1: centerBR.y, x2: rightBL.x, y2: rightBL.y });
+
+    setSvgData({ w: rowRect.width, h: rowRect.height, lines });
+  }, []);
+
+  useEffect(() => {
+    if (!visible) return;
+    const id = requestAnimationFrame(() => requestAnimationFrame(measureConnectors));
+    window.addEventListener('resize', measureConnectors);
+    return () => { cancelAnimationFrame(id); window.removeEventListener('resize', measureConnectors); };
+  }, [visible, measureConnectors]);
+
   return (
     <div className={`${styles.cockpitDash} ${visible ? styles.visible : ''}`}>
       {/* Frame chrome — pointer-events: none overlay */}
@@ -54,15 +106,16 @@ const CockpitDash: React.FC<CockpitDashProps> = ({
         <div className={styles.vignette} />
       </div>
 
-      {/* Center reticle */}
+      {/* Center reticle — commented out while focusing on bottom 3 MFDs
       <div className={styles.reticle}>
         <div className={styles.ringOuter} />
         <div className={styles.ringInner} />
         <div className={styles.ringCore} />
         <div className={styles.reticleCross} />
       </div>
+      */}
 
-      {/* Right panel — SECTOR/RANGE/RATE/DRIFT */}
+      {/* Right panel — commented out while focusing on bottom 3 MFDs
       <div className={styles.rightPanel}>
         <div className={styles.sidePanelInner}>
           <div className={styles.hudRow}>
@@ -88,8 +141,9 @@ const CockpitDash: React.FC<CockpitDashProps> = ({
           ))}
         </div>
       </div>
+      */}
 
-      {/* Hecate left-wall HUD panel */}
+      {/* Hecate left-wall HUD panel — commented out while focusing on bottom 3 MFDs
       <div className={styles.hecateColumn}>
         <HecateHologram
           agentState={agentState}
@@ -99,10 +153,41 @@ const CockpitDash: React.FC<CockpitDashProps> = ({
           sessionMessageCount={sessionMessageCount}
         />
       </div>
+      */}
 
       {/* MFD row — 3 pane cockpit */}
-      <div className={styles.mfdRow}>
-        <div className={styles.strutLeft} />
+      <div ref={mfdRowRef} className={styles.mfdRow}>
+        {svgData.lines.length > 0 && (
+          <svg
+            className={styles.connectorSvg}
+            viewBox={`0 0 ${svgData.w} ${svgData.h}`}
+          >
+            <defs>
+              <filter id="connGlow">
+                <feGaussianBlur stdDeviation="3" result="b" />
+                <feMerge>
+                  <feMergeNode in="b" />
+                  <feMergeNode in="SourceGraphic" />
+                </feMerge>
+              </filter>
+            </defs>
+            {svgData.lines.map((l, i) => (
+              <React.Fragment key={i}>
+                <line
+                  x1={l.x1} y1={l.y1} x2={l.x2} y2={l.y2}
+                  stroke="rgba(154, 123, 255, 0.12)"
+                  strokeWidth="8"
+                  filter="url(#connGlow)"
+                />
+                <line
+                  x1={l.x1} y1={l.y1} x2={l.x2} y2={l.y2}
+                  stroke="rgba(154, 123, 255, 0.5)"
+                  strokeWidth="1.5"
+                />
+              </React.Fragment>
+            ))}
+          </svg>
+        )}
         <PipBoyScreen className={styles.mfdLeft} isLoggedIn={isLoggedIn}>
           <div className={styles.mfdChatWrap}>
             {chatMFD || (
@@ -225,7 +310,6 @@ const CockpitDash: React.FC<CockpitDashProps> = ({
             </div>
           </div>
         </PipBoyScreen>
-        <div className={styles.strutRight} />
       </div>
 
       {/* Footer strip */}
