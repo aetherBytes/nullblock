@@ -12,10 +12,7 @@ interface CrossroadsLandingProps {
 }
 
 const CrossroadsLanding: React.FC<CrossroadsLandingProps> = ({
-  onConnectWallet,
-  onNavigateCrossroads,
   animationPhase = 'complete',
-  pendingTransition = false,
 }) => {
   // Determine CSS classes based on animation phase
   const getMissionPrimaryClass = () => {
@@ -63,24 +60,6 @@ const CrossroadsLanding: React.FC<CrossroadsLandingProps> = ({
 
       <div className={styles.hero}>
         <div className={styles.initialViewport}>
-          <div className={styles.heroContent}>
-            <div className={`${styles.buttonContainer} ${getCtaClass()}`}>
-              <button className={styles.connectButton} onClick={onConnectWallet}>
-                <span>Connect to Full Interface</span>
-              </button>
-              <button
-                className={`${styles.crossroadsButton} ${pendingTransition ? styles.transitioning : ''}`}
-                onClick={() => {
-                  console.log('🔮 Enter the Crossroads button clicked');
-                  onNavigateCrossroads();
-                }}
-                disabled={pendingTransition}
-              >
-                <span>{pendingTransition ? 'Aligning...' : 'Enter the Crossroads'}</span>
-              </button>
-            </div>
-          </div>
-
           <p className={`${styles.discoverText} ${getCtaClass()}`}>
             Discover agents, tools, and workflows — turn exploration into treasure
           </p>

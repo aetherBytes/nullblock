@@ -1,10 +1,12 @@
-import { OrbitControls, Preload } from '@react-three/drei';
+import { Preload } from '@react-three/drei';
 import { Canvas, useThree, useFrame } from '@react-three/fiber';
 import React, { Suspense, useState, useCallback, useRef, useEffect } from 'react';
 import * as THREE from 'three';
 import styles from './VoidExperience.module.scss';
 import VoidHUD from './VoidHUD';
 import VoidChatHUD from './chat/VoidChatHUD';
+import CockpitControls from './scene/CockpitControls';
+import type { CockpitControlsHandle } from './scene/CockpitControls';
 import VoidScene from './scene/VoidScene';
 
 export interface ClusterData {
@@ -32,6 +34,7 @@ interface VoidExperienceProps {
   triggerAlignment?: boolean;
   onAlignmentComplete?: () => void;
   keepAligned?: boolean;
+  autopilot?: boolean;
 }
 
 // Camera positions for different states
@@ -41,10 +44,10 @@ const LOOK_AT_TARGET = new THREE.Vector3(0, 0, 0);
 
 interface CameraAnimatorProps {
   isLoggedIn: boolean;
-  orbitControlsRef: React.RefObject<any>;
+  cockpitRef: React.RefObject<CockpitControlsHandle | null>;
 }
 
-const CameraAnimator: React.FC<CameraAnimatorProps> = ({ isLoggedIn, orbitControlsRef }) => {
+const CameraAnimator: React.FC<CameraAnimatorProps> = ({ isLoggedIn, cockpitRef }) => {
   const { camera } = useThree();
   const isAnimating = useRef(false);
   const animationProgress = useRef(0);
@@ -63,11 +66,11 @@ const CameraAnimator: React.FC<CameraAnimatorProps> = ({ isLoggedIn, orbitContro
       animationProgress.current = 0;
       isAnimating.current = true;
 
-      if (orbitControlsRef.current) {
-        orbitControlsRef.current.enabled = false;
+      if (cockpitRef.current) {
+        cockpitRef.current.enabled = false;
       }
     }
-  }, [isLoggedIn, camera, orbitControlsRef]);
+  }, [isLoggedIn, camera, cockpitRef]);
 
   const easeInOutQuint = (t: number): number =>
     t < 0.5 ? 16 * t * t * t * t * t : 1 - Math.pow(-2 * t + 2, 5) / 2;
@@ -85,10 +88,9 @@ const CameraAnimator: React.FC<CameraAnimatorProps> = ({ isLoggedIn, orbitContro
 
       camera.position.copy(targetPosition.current);
 
-      if (orbitControlsRef.current) {
-        orbitControlsRef.current.target.copy(LOOK_AT_TARGET);
-        orbitControlsRef.current.enabled = true;
-        orbitControlsRef.current.update();
+      if (cockpitRef.current) {
+        cockpitRef.current.setLookAt(LOOK_AT_TARGET);
+        cockpitRef.current.enabled = true;
       }
 
       return;
@@ -97,11 +99,7 @@ const CameraAnimator: React.FC<CameraAnimatorProps> = ({ isLoggedIn, orbitContro
     const easedProgress = easeInOutQuint(animationProgress.current);
 
     camera.position.lerpVectors(startPosition.current, targetPosition.current, easedProgress);
-
-    if (orbitControlsRef.current) {
-      orbitControlsRef.current.target.copy(LOOK_AT_TARGET);
-      orbitControlsRef.current.update();
-    }
+    camera.lookAt(LOOK_AT_TARGET);
   });
 
   return null;
@@ -118,18 +116,10 @@ const VoidExperience: React.FC<VoidExperienceProps> = ({
   triggerAlignment = false,
   onAlignmentComplete,
   keepAligned = false,
+  autopilot = true,
 }) => {
-  const [isInteracting, setIsInteracting] = useState(false);
   const [glowActive, setGlowActive] = useState(false);
-  const orbitControlsRef = useRef<any>(null);
-
-  const handleInteractionStart = useCallback(() => {
-    setIsInteracting(true);
-  }, []);
-
-  const handleInteractionEnd = useCallback(() => {
-    setIsInteracting(false);
-  }, []);
+  const cockpitRef = useRef<CockpitControlsHandle>(null);
 
   // Chat glow effect - triggered when agent responds
   const handleAgentResponseReceived = useCallback((_messageId: string) => {
@@ -159,23 +149,9 @@ const VoidExperience: React.FC<VoidExperienceProps> = ({
           />
         </Suspense>
 
-        <CameraAnimator isLoggedIn={isLoggedIn} orbitControlsRef={orbitControlsRef} />
+        <CameraAnimator isLoggedIn={isLoggedIn} cockpitRef={cockpitRef} />
 
-        <OrbitControls
-          ref={orbitControlsRef}
-          enableDamping={false}
-          rotateSpeed={0.5}
-          zoomSpeed={0.8}
-          minDistance={4}
-          maxDistance={40}
-          enablePan={false}
-          maxPolarAngle={Math.PI * 0.85}
-          minPolarAngle={Math.PI * 0.15}
-          autoRotate={!isInteracting}
-          autoRotateSpeed={0.05}
-          onStart={handleInteractionStart}
-          onEnd={handleInteractionEnd}
-        />
+        <CockpitControls ref={cockpitRef} autopilot={autopilot} />
 
         <Preload all />
       </Canvas>

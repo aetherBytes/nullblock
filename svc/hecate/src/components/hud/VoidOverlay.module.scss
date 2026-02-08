@@ -5,7 +5,7 @@ $void-silver: #e8e8e8;
 $void-gold: #e6c200;
 $void-purple: #b967ff;
 
-// Full-width navbar border
+// Full-width navbar border — cockpit overhead console
 .navbarBorder {
   position: fixed;
   top: 0;
@@ -14,49 +14,61 @@ $void-purple: #b967ff;
   height: 72px;
   z-index: 10004;
   pointer-events: none;
-  border-bottom: 1px solid transparent;
-  border-image: linear-gradient(90deg,
-    transparent 0%,
-    rgba(99, 102, 241, 0.4) 20%,
-    rgba(139, 92, 246, 0.4) 50%,
-    rgba(236, 72, 153, 0.4) 80%,
-    transparent 100%) 1;
+  background: linear-gradient(180deg,
+    rgba(10, 14, 20, 0.85) 0%,
+    rgba(10, 14, 20, 0.4) 60%,
+    transparent 100%);
+  border-bottom: none;
+
+  &::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 5%;
+    right: 5%;
+    height: 1px;
+    background: linear-gradient(90deg,
+      transparent 0%,
+      rgba($void-blue, 0.12) 20%,
+      rgba($void-blue, 0.2) 50%,
+      rgba($void-blue, 0.12) 80%,
+      transparent 100%);
+  }
 
   @media (max-width: 768px) {
     height: 60px;
   }
 }
 
-// Logo container (top-left)
+// Logo container (top-right)
 .logoContainer {
   position: fixed;
   top: 24px;
-  left: 3rem;
+  right: 24px;
   z-index: 10005;
   display: flex;
   align-items: center;
-  gap: 2.5rem;
+  gap: 1.5rem;
   pointer-events: auto;
 
   @media (max-width: 768px) {
     top: 16px;
-    left: 1rem;
+    right: 16px;
     gap: 0.5rem;
   }
 }
 
 .nullblockTextLogo {
   font-family: 'Courier New', monospace;
-  font-size: 1.2rem;
-  font-weight: bold;
-  letter-spacing: 3px;
-  color: $void-silver;
-  text-shadow:
-    0 0 10px rgba($void-blue, 0.6),
-    0 0 20px rgba($void-blue, 0.3);
-  animation: textLogoGlow 3s ease-in-out infinite;
+  font-size: 10px;
+  font-weight: 400;
+  letter-spacing: 4px;
+  color: rgba($void-silver, 0.35);
+  text-shadow: 0 0 8px rgba($void-blue, 0.2);
+  animation: textLogoGlow 5s ease-in-out infinite;
   cursor: pointer;
   user-select: none;
+  text-transform: uppercase;
 
   @media (max-width: 768px) {
     display: none;
@@ -65,14 +77,10 @@ $void-purple: #b967ff;
 
 @keyframes textLogoGlow {
   0%, 100% {
-    text-shadow:
-      0 0 10px rgba($void-blue, 0.6),
-      0 0 20px rgba($void-blue, 0.3);
+    text-shadow: 0 0 8px rgba($void-blue, 0.2);
   }
   50% {
-    text-shadow:
-      0 0 15px rgba($void-blue, 0.8),
-      0 0 30px rgba($void-blue, 0.5);
+    text-shadow: 0 0 12px rgba($void-blue, 0.35);
   }
 }
 
@@ -132,20 +140,22 @@ $void-purple: #b967ff;
   }
 }
 
-// Sleek void navigation - 2-row grid for perfect column alignment
+// Cockpit control panel — recessed instrument surface
 .voidNav {
   display: grid;
   grid-template-columns: 1fr auto 1fr;
   grid-template-rows: 48px;
   align-items: center;
-  background: rgba(99, 102, 241, 0.08);
+  background: rgba(6, 10, 16, 0.85);
   backdrop-filter: blur(32px);
   -webkit-backdrop-filter: blur(32px);
-  border-left: 1px solid rgba(99, 102, 241, 0.25);
-  border-right: 1px solid rgba(99, 102, 241, 0.25);
+  border: 1px solid rgba($void-blue, 0.1);
+  border-top: none;
   position: relative;
+  box-shadow:
+    inset 0 2px 8px rgba(0, 0, 0, 0.5),
+    0 4px 16px rgba(0, 0, 0, 0.4);
 
-  // Bottom border - extends left to continue navbar gradient
   &::after {
     content: '';
     position: absolute;
@@ -155,17 +165,15 @@ $void-purple: #b967ff;
     height: 1px;
     background: linear-gradient(90deg,
       transparent 0%,
-      rgba(99, 102, 241, 0.4) 30%,
-      rgba(139, 92, 246, 0.4) 60%,
-      rgba(236, 72, 153, 0.4) 85%,
+      rgba($void-blue, 0.15) 30%,
+      rgba($void-blue, 0.25) 60%,
+      rgba($void-blue, 0.15) 85%,
       transparent 100%);
   }
 
-  // When submenu is shown, add second row
   &:has(.submenuItem) {
     grid-template-rows: 48px 48px;
 
-    // Middle border between rows
     &::before {
       content: '';
       position: absolute;
@@ -175,9 +183,9 @@ $void-purple: #b967ff;
       height: 1px;
       background: linear-gradient(90deg,
         transparent 0%,
-        rgba(99, 102, 241, 0.4) 30%,
-        rgba(139, 92, 246, 0.4) 60%,
-        rgba(236, 72, 153, 0.4) 85%,
+        rgba($void-blue, 0.1) 30%,
+        rgba($void-blue, 0.18) 60%,
+        rgba($void-blue, 0.1) 85%,
         transparent 100%);
     }
   }
@@ -192,22 +200,39 @@ $void-purple: #b967ff;
 }
 
 .navItem {
-  background: transparent;
+  background: rgba(4, 8, 14, 0.5);
   border: none;
-  color: rgba(255, 255, 255, 0.8);
-  font-family: 'SF Pro Display', -apple-system, system-ui, sans-serif;
-  font-size: 13px;
-  font-weight: 500;
-  letter-spacing: 0.5px;
-  padding: 0 24px;
+  border-right: 1px solid rgba($void-blue, 0.06);
+  color: rgba(255, 255, 255, 0.45);
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 11px;
+  font-weight: 400;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  padding: 0 24px 0 34px;
   height: 100%;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all 0.15s ease;
   position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
   text-align: center;
+  box-shadow: inset 0 1px 4px rgba(0, 0, 0, 0.35);
+
+  &::before {
+    content: '';
+    position: absolute;
+    left: 14px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: rgba($void-blue, 0.2);
+    box-shadow: 0 0 3px rgba($void-blue, 0.1);
+    transition: all 0.15s ease;
+  }
 
   &::after {
     content: '';
@@ -217,13 +242,20 @@ $void-purple: #b967ff;
     transform: translateX(-50%);
     width: 0;
     height: 2px;
-    background: #8b5cf6;
-    transition: width 0.2s ease;
+    background: $void-blue;
+    transition: width 0.15s ease;
+    box-shadow: 0 0 6px rgba($void-blue, 0.4);
   }
 
   &:hover {
-    color: rgba(255, 255, 255, 1);
-    background: rgba(99, 102, 241, 0.1);
+    color: $void-blue;
+    text-shadow: 0 0 6px rgba($void-blue, 0.4);
+    background: rgba($void-blue, 0.06);
+
+    &::before {
+      background: rgba($void-blue, 0.7);
+      box-shadow: 0 0 6px rgba($void-blue, 0.5), 0 0 12px rgba($void-blue, 0.2);
+    }
 
     &::after {
       width: 80%;
@@ -231,30 +263,37 @@ $void-purple: #b967ff;
   }
 
   &:active {
-    background: rgba(99, 102, 241, 0.15);
-  }
-
-  // Mem Cache (1st button) - pink
-  &:nth-of-type(1)::after {
-    background: #ec4899;
-  }
-
-  // Crossroads (2nd button) - purple
-  &:nth-of-type(2)::after {
-    background: #8b5cf6;
+    background: rgba($void-blue, 0.1);
+    box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.55);
+    transform: translateY(1px);
   }
 
   @media (max-width: 768px) {
-    font-size: 12px;
-    padding: 0 10px;
+    font-size: 10px;
+    padding: 0 10px 0 24px;
+    letter-spacing: 1px;
+
+    &::before {
+      left: 8px;
+      width: 4px;
+      height: 4px;
+    }
   }
 }
 
 .navItemActive {
-  color: rgba(255, 255, 255, 1);
+  color: $void-blue;
+  text-shadow: 0 0 8px rgba($void-blue, 0.5);
+  background: rgba($void-blue, 0.08);
+
+  &::before {
+    background: rgba($void-blue, 0.85);
+    box-shadow: 0 0 6px rgba($void-blue, 0.6), 0 0 14px rgba($void-blue, 0.25);
+  }
 
   &::after {
     width: 80%;
+    box-shadow: 0 0 8px rgba($void-blue, 0.5);
   }
 }
 
@@ -280,12 +319,13 @@ $void-purple: #b967ff;
   display: flex;
   align-items: center;
   height: 48px;
-  margin-top: 49px; // Position below the shared middle border
+  margin-top: 49px;
   align-self: flex-start;
-  background: rgba(99, 102, 241, 0.08);
+  background: rgba(6, 10, 16, 0.85);
   backdrop-filter: blur(32px);
   -webkit-backdrop-filter: blur(32px);
-  border-left: 1px solid rgba(99, 102, 241, 0.25);
+  border-left: 1px solid rgba($void-blue, 0.1);
+  box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.5);
   flex-shrink: 0;
 
   @media (max-width: 768px) {
@@ -295,20 +335,22 @@ $void-purple: #b967ff;
   }
 }
 
-// Submenu items (row 2 of grid)
+// Submenu items (row 2 of grid) — secondary cockpit controls
 .submenuItem {
   grid-row: 2;
-  background: transparent;
+  background: rgba(4, 8, 14, 0.5);
   border: none;
-  color: rgba(255, 255, 255, 0.8);
-  font-family: 'SF Pro Display', -apple-system, system-ui, sans-serif;
-  font-size: 13px;
-  font-weight: 500;
-  letter-spacing: 0.5px;
-  padding: 0 24px;
+  border-right: 1px solid rgba($void-blue, 0.06);
+  color: rgba(255, 255, 255, 0.4);
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 11px;
+  font-weight: 400;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  padding: 0 24px 0 34px;
   height: 100%;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all 0.15s ease;
   position: relative;
   display: flex;
   align-items: center;
@@ -317,8 +359,22 @@ $void-purple: #b967ff;
   white-space: nowrap;
   opacity: 0;
   animation: submenuItemReveal 0.15s ease-out forwards;
+  box-shadow: inset 0 1px 4px rgba(0, 0, 0, 0.35);
 
-  // Bottom underline
+  &::before {
+    content: '';
+    position: absolute;
+    left: 14px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: rgba($void-blue, 0.15);
+    box-shadow: 0 0 2px rgba($void-blue, 0.08);
+    transition: all 0.15s ease;
+  }
+
   &::after {
     content: '';
     position: absolute;
@@ -327,13 +383,20 @@ $void-purple: #b967ff;
     transform: translateX(-50%);
     width: 0;
     height: 2px;
-    background: #8b5cf6;
-    transition: width 0.2s ease;
+    background: $void-blue;
+    transition: width 0.15s ease;
+    box-shadow: 0 0 6px rgba($void-blue, 0.4);
   }
 
   &:hover {
-    color: rgba(255, 255, 255, 1);
-    background: rgba(99, 102, 241, 0.1);
+    color: $void-blue;
+    text-shadow: 0 0 6px rgba($void-blue, 0.4);
+    background: rgba($void-blue, 0.06);
+
+    &::before {
+      background: rgba($void-blue, 0.7);
+      box-shadow: 0 0 6px rgba($void-blue, 0.5), 0 0 12px rgba($void-blue, 0.2);
+    }
 
     &::after {
       width: 80%;
@@ -341,34 +404,40 @@ $void-purple: #b967ff;
   }
 
   &:active {
-    background: rgba(99, 102, 241, 0.15);
+    background: rgba($void-blue, 0.1);
+    box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.55);
+    transform: translateY(1px);
   }
 
-  // Gradient colors matching navbar (pink -> purple -> blue)
-  &:nth-of-type(1)::after { background: #ec4899; }
-  &:nth-of-type(2)::after { background: #8b5cf6; }
-  &:nth-of-type(3)::after { background: #6366f1; }
-
   @media (max-width: 768px) {
-    font-size: 12px;
-    padding: 0 10px;
+    font-size: 10px;
+    padding: 0 10px 0 24px;
+    letter-spacing: 1px;
+
+    &::before {
+      left: 8px;
+      width: 4px;
+      height: 4px;
+    }
   }
 }
 
-// Extra submenu items (Bookmarks, Connections, Earnings, Listings) - auto width
+// Extra submenu items — cockpit auxiliary controls
 .submenuItemExtra {
   flex: 0 0 auto;
-  background: transparent;
+  background: rgba(4, 8, 14, 0.5);
   border: none;
-  color: rgba(255, 255, 255, 0.8);
-  font-family: 'SF Pro Display', -apple-system, system-ui, sans-serif;
-  font-size: 13px;
-  font-weight: 500;
-  letter-spacing: 0.5px;
-  padding: 0 18px;
+  border-right: 1px solid rgba($void-blue, 0.06);
+  color: rgba(255, 255, 255, 0.4);
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 11px;
+  font-weight: 400;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  padding: 0 18px 0 32px;
   height: 100%;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all 0.15s ease;
   position: relative;
   display: flex;
   align-items: center;
@@ -377,9 +446,23 @@ $void-purple: #b967ff;
   white-space: nowrap;
   opacity: 0;
   animation: submenuItemReveal 0.15s ease-out forwards;
-  z-index: 1; // Above the container's ::after
+  z-index: 1;
+  box-shadow: inset 0 1px 4px rgba(0, 0, 0, 0.35);
 
-  // Bottom underline
+  &::before {
+    content: '';
+    position: absolute;
+    left: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: rgba($void-blue, 0.15);
+    box-shadow: 0 0 2px rgba($void-blue, 0.08);
+    transition: all 0.15s ease;
+  }
+
   &::after {
     content: '';
     position: absolute;
@@ -388,12 +471,20 @@ $void-purple: #b967ff;
     transform: translateX(-50%);
     width: 0;
     height: 2px;
-    transition: width 0.2s ease;
+    background: $void-blue;
+    transition: width 0.15s ease;
+    box-shadow: 0 0 6px rgba($void-blue, 0.4);
   }
 
   &:hover {
-    color: rgba(255, 255, 255, 1);
-    background: rgba(99, 102, 241, 0.1);
+    color: $void-blue;
+    text-shadow: 0 0 6px rgba($void-blue, 0.4);
+    background: rgba($void-blue, 0.06);
+
+    &::before {
+      background: rgba($void-blue, 0.7);
+      box-shadow: 0 0 6px rgba($void-blue, 0.5), 0 0 12px rgba($void-blue, 0.2);
+    }
 
     &::after {
       width: 80%;
@@ -401,29 +492,37 @@ $void-purple: #b967ff;
   }
 
   &:active {
-    background: rgba(99, 102, 241, 0.15);
+    background: rgba($void-blue, 0.1);
+    box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.55);
+    transform: translateY(1px);
   }
 
-  // Gradient colors matching the border (pink -> purple -> blue, right to left)
-  &:nth-of-type(1)::after { background: #ec4899; } // Bookmarks - pink
-  &:nth-of-type(2)::after { background: #a855f7; } // Connections - purple
-  &:nth-of-type(3)::after { background: #8b5cf6; } // Earnings - violet
-  &:nth-of-type(4)::after { background: #6366f1; } // Listings - blue
-
   @media (max-width: 768px) {
-    font-size: 12px;
-    padding: 0 10px;
+    font-size: 10px;
+    padding: 0 10px 0 22px;
+    letter-spacing: 1px;
+
+    &::before {
+      left: 6px;
+      width: 4px;
+      height: 4px;
+    }
   }
 }
 
 .submenuItemActive {
-  color: rgba(255, 255, 255, 1);
-  background: rgba(139, 92, 246, 0.15);
-  text-shadow: 0 0 8px rgba(139, 92, 246, 0.5);
+  color: $void-blue;
+  background: rgba($void-blue, 0.08);
+  text-shadow: 0 0 8px rgba($void-blue, 0.5);
+
+  &::before {
+    background: rgba($void-blue, 0.85);
+    box-shadow: 0 0 6px rgba($void-blue, 0.6), 0 0 14px rgba($void-blue, 0.25);
+  }
 
   &::after {
     width: 80%;
-    box-shadow: 0 0 6px currentColor;
+    box-shadow: 0 0 8px rgba($void-blue, 0.5);
   }
 }
 
@@ -453,23 +552,22 @@ $void-purple: #b967ff;
   width: 48px;
   height: 48px;
   border-radius: 0;
-  background: rgba(99, 102, 241, 0.08) !important;
-  border: 1px solid rgba(99, 102, 241, 0.25) !important;
-  border-bottom: none !important;
-  color: rgba(255, 255, 255, 0.8) !important;
+  background: rgba(6, 10, 16, 0.85) !important;
+  border: 1px solid rgba($void-blue, 0.1) !important;
+  border-top: none !important;
+  color: rgba(255, 255, 255, 0.45) !important;
   cursor: pointer;
-  transition: all 0.3s ease;
+  transition: all 0.15s ease;
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 0;
   backdrop-filter: blur(32px);
   -webkit-backdrop-filter: blur(32px);
-  box-shadow: none;
+  box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.45);
   position: relative;
   overflow: hidden;
 
-  // Bottom border - dark blue
   &::after {
     content: '';
     position: absolute;
@@ -477,20 +575,21 @@ $void-purple: #b967ff;
     left: 0;
     right: 0;
     height: 1px;
-    background: rgba(59, 130, 246, 0.5);
+    background: rgba($void-blue, 0.15);
   }
 
-  // Hover underline
   &::before {
     content: '';
     position: absolute;
-    bottom: 0;
+    top: 5px;
     left: 50%;
     transform: translateX(-50%);
-    width: 0;
-    height: 2px;
-    background: #3b82f6;
-    transition: width 0.2s ease;
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: rgba($void-gold, 0.2);
+    box-shadow: 0 0 3px rgba($void-gold, 0.1);
+    transition: all 0.15s ease;
     z-index: 1;
   }
 
@@ -500,21 +599,22 @@ $void-purple: #b967ff;
   }
 
   &:hover {
-    background: rgba(99, 102, 241, 0.1) !important;
-    color: rgba(255, 255, 255, 1) !important;
-    box-shadow: 0 4px 20px rgba(59, 130, 246, 0.15);
+    background: rgba(6, 10, 16, 0.9) !important;
+    color: $void-gold !important;
 
     &::before {
-      width: 80%;
+      background: rgba($void-gold, 0.8);
+      box-shadow: 0 0 6px rgba($void-gold, 0.5), 0 0 14px rgba($void-gold, 0.2);
     }
   }
 
   &:active {
-    transform: scale(0.95);
+    box-shadow: inset 0 3px 10px rgba(0, 0, 0, 0.6);
+    transform: translateY(1px);
   }
 
   &:focus-visible {
-    outline: 2px solid rgba(59, 130, 246, 0.6);
+    outline: 2px solid rgba($void-gold, 0.5);
     outline-offset: 2px;
   }
 
@@ -585,26 +685,43 @@ $void-purple: #b967ff;
   }
 }
 
-// Connect button (shown when not logged in)
+// Connect button — primary cockpit action control
 .connectButton {
   height: 48px;
-  padding: 0 24px;
-  background: rgba(99, 102, 241, 0.08);
-  border: 1px solid rgba(99, 102, 241, 0.25);
-  border-bottom: none;
-  color: rgba(255, 255, 255, 0.9);
-  font-family: 'SF Pro Display', -apple-system, system-ui, sans-serif;
-  font-size: 14px;
-  font-weight: 500;
-  letter-spacing: 0.5px;
+  padding: 0 24px 0 34px;
+  background: rgba(6, 10, 16, 0.85);
+  border: 1px solid rgba($void-green, 0.12);
+  border-top: none;
+  color: rgba(255, 255, 255, 0.5);
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 11px;
+  font-weight: 400;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
   cursor: pointer;
-  transition: all 0.3s ease;
+  transition: all 0.15s ease;
   backdrop-filter: blur(32px);
   -webkit-backdrop-filter: blur(32px);
   position: relative;
   overflow: hidden;
+  box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.45);
 
-  // Bottom border - dark blue
+  &::before {
+    content: '';
+    position: absolute;
+    left: 14px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: rgba($void-green, 0.3);
+    box-shadow: 0 0 4px rgba($void-green, 0.15);
+    transition: all 0.15s ease;
+    animation: connPulse 2.5s ease-in-out infinite;
+    z-index: 1;
+  }
+
   &::after {
     content: '';
     position: absolute;
@@ -612,41 +729,42 @@ $void-purple: #b967ff;
     left: 0;
     right: 0;
     height: 1px;
-    background: rgba(59, 130, 246, 0.5);
-  }
-
-  // Hover underline
-  &::before {
-    content: '';
-    position: absolute;
-    bottom: 0;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 0;
-    height: 2px;
-    background: #3b82f6;
-    transition: width 0.2s ease;
-    z-index: 1;
+    background: rgba($void-green, 0.15);
   }
 
   &:hover {
-    background: rgba(99, 102, 241, 0.15);
-    color: rgba(255, 255, 255, 1);
+    background: rgba(6, 10, 16, 0.9);
+    color: $void-green;
+    text-shadow: 0 0 6px rgba($void-green, 0.4);
+    border-color: rgba($void-green, 0.2);
 
     &::before {
-      width: 80%;
+      background: rgba($void-green, 0.85);
+      box-shadow: 0 0 8px rgba($void-green, 0.6), 0 0 16px rgba($void-green, 0.25);
     }
   }
 
   &:active {
-    transform: scale(0.98);
+    box-shadow: inset 0 3px 10px rgba(0, 0, 0, 0.6);
+    transform: translateY(1px);
   }
 
   @media (max-width: 768px) {
     height: 44px;
-    padding: 0 16px;
-    font-size: 13px;
+    padding: 0 16px 0 28px;
+    font-size: 10px;
+
+    &::before {
+      left: 10px;
+      width: 5px;
+      height: 5px;
+    }
   }
+}
+
+@keyframes connPulse {
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 1; }
 }
 
 // Welcome overlay

@@ -39,6 +39,7 @@ interface VoidChatHUDProps {
   getImagesForMessage?: (messageId: string) => ImageData[];
   showHistory?: boolean;
   hasOverlappingPanels?: boolean;
+  embedded?: boolean;
 }
 
 // Energy state for transmission animation
@@ -81,6 +82,7 @@ const VoidChatHUD: React.FC<VoidChatHUDProps> = ({
   getImagesForMessage,
   showHistory: externalShowHistory,
   hasOverlappingPanels = false,
+  embedded = false,
 }) => {
   // Format model name for display (extract short name from full path)
   const formatModelName = (model: string | null): string => {
@@ -786,8 +788,11 @@ Connect wallet to unlock memories and tools.`;
     setHasUnreadMessages(false);
   }, [hasOverlappingPanels]);
 
+  // Embedded mode: always expanded, no collapse toggle, render inline
+  const effectiveCollapsed = embedded ? false : isCollapsed;
+
   // Two states only: collapsed (toggle button) or fully open (history + input)
-  const chatContent = isCollapsed ? (
+  const chatContent = effectiveCollapsed ? (
     <div className={`${styles.voidChatContainer} ${styles.collapsed}`}>
       <div className={styles.voidInputBar}>
         <div className={styles.inputContainer}>
@@ -820,17 +825,19 @@ Connect wallet to unlock memories and tools.`;
       </div>
     </div>
   ) : (
-    <div className={styles.voidChatContainer}>
+    <div className={`${styles.voidChatContainer} ${embedded ? styles.embedded : ''}`}>
       <div className={styles.voidInputBar}>
         <div
-          className={`${styles.historyPopup} ${hasOverlappingPanels ? styles.elevated : ''} ${isResizing ? styles.resizing : ''}`}
-          style={{ width: panelWidth }}
+          className={`${styles.historyPopup} ${hasOverlappingPanels ? styles.elevated : ''} ${isResizing ? styles.resizing : ''} ${embedded ? styles.embeddedPopup : ''}`}
+          style={embedded ? undefined : { width: panelWidth }}
         >
-          <div
-            className={styles.resizeHandle}
-            onMouseDown={handleResizeStart}
-            title="Drag to resize"
-          />
+          {!embedded && (
+            <div
+              className={styles.resizeHandle}
+              onMouseDown={handleResizeStart}
+              title="Drag to resize"
+            />
+          )}
           <div className={styles.historyHeader}>
             <div className={styles.historyTitleContainer}>
               <span
@@ -911,22 +918,24 @@ Connect wallet to unlock memories and tools.`;
                   </button>
                 </>
               )}
-              <button
-                className={styles.historyClose}
-                onClick={() => setIsCollapsed(true)}
-                aria-label="Close chat"
-              >
-                <svg
-                  width="16"
-                  height="16"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
+              {!embedded && (
+                <button
+                  className={styles.historyClose}
+                  onClick={() => setIsCollapsed(true)}
+                  aria-label="Close chat"
                 >
-                  <path d="M18 6L6 18M6 6l12 12" />
-                </svg>
-              </button>
+                  <svg
+                    width="16"
+                    height="16"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                  >
+                    <path d="M18 6L6 18M6 6l12 12" />
+                  </svg>
+                </button>
+              )}
             </div>
           </div>
           <div className={styles.historyContent} ref={historyRef}>
@@ -978,25 +987,27 @@ Connect wallet to unlock memories and tools.`;
             <div
               className={`${styles.inputContainer} ${energyState === 'charging' ? styles.charging : ''} ${energyState === 'firing' ? styles.firing : ''} ${energyState === 'processing' ? styles.processing : ''} ${glowActive ? styles.receiving : ''}`}
             >
-              <button
-                type="button"
-                className={styles.collapseToggle}
-                onClick={() => setIsCollapsed(true)}
-                aria-label="Collapse chat"
-              >
-                <svg
-                  width="16"
-                  height="16"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
+              {!embedded && (
+                <button
+                  type="button"
+                  className={styles.collapseToggle}
+                  onClick={() => setIsCollapsed(true)}
+                  aria-label="Collapse chat"
                 >
-                  <polyline points="9 18 15 12 9 6" />
-                </svg>
-              </button>
+                  <svg
+                    width="16"
+                    height="16"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <polyline points="9 18 15 12 9 6" />
+                  </svg>
+                </button>
+              )}
               {showCommandDropdown && (
                 <CommandDropdown
                   commands={filteredCommands}
@@ -1038,6 +1049,11 @@ Connect wallet to unlock memories and tools.`;
       </div>
     </div>
   );
+
+  // Embedded mode: render directly in parent, no portal
+  if (embedded) {
+    return chatContent;
+  }
 
   // Render via portal to escape VoidExperience's stacking context (z-index: 1)
   // This allows the chat to appear above HUD content (z-index: 1002)

@@ -1,19 +1,7 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { useWalletTools } from '../../common/hooks/useWalletTools';
-import { NULLBLOCK_SERVICE_COWS } from '../../constants/nullblock';
+import React, { useState, useEffect } from 'react';
 import type { MemCacheSection } from '../memcache';
 import NullblockLogo from './NullblockLogo';
 import styles from './VoidOverlay.module.scss';
-
-const DEV_SHOW_ALL_COW_TABS = true;
-
-const BASE_MEMCACHE_ITEMS: { id: MemCacheSection; icon: string; label: string }[] = [
-  { id: 'engrams', icon: '◈', label: 'Engrams' },
-  { id: 'stash', icon: '⬡', label: 'Stash' },
-  { id: 'agents', icon: '◉', label: 'Agents' },
-  { id: 'consensus', icon: '⚖', label: 'Consensus' },
-  { id: 'model', icon: '◎', label: 'Model' },
-];
 
 interface VoidOverlayProps {
   onOpenSynapse: () => void;
@@ -30,64 +18,16 @@ interface VoidOverlayProps {
 }
 
 const VoidOverlay: React.FC<VoidOverlayProps> = ({
-  onOpenSynapse,
-  onTabSelect,
-  onDisconnect,
-  onConnectWallet,
   onResetToVoid,
   showWelcome = false,
   onDismissWelcome,
-  publicKey,
-  activeTab,
-  memcacheSection = 'engrams',
-  onMemcacheSectionChange,
 }) => {
   const [welcomeVisible, setWelcomeVisible] = useState(showWelcome);
   const [welcomeFading, setWelcomeFading] = useState(false);
-  const [settingsOpen, setSettingsOpen] = useState(false);
-  const settingsRef = useRef<HTMLDivElement>(null);
-  const memcacheRef = useRef<HTMLDivElement>(null);
-
-  const { unlockedTabs } = useWalletTools(publicKey || null, { autoFetch: true });
-
-  const MEMCACHE_ITEMS = useMemo(() => {
-    const items = [...BASE_MEMCACHE_ITEMS];
-    const insertIndex = 3;
-
-    NULLBLOCK_SERVICE_COWS.forEach((cow) => {
-      const isUnlocked = unlockedTabs.includes(cow.id) || DEV_SHOW_ALL_COW_TABS;
-
-      if (isUnlocked) {
-        items.splice(insertIndex, 0, {
-          id: cow.id as MemCacheSection,
-          icon: cow.menuIcon,
-          label: cow.name,
-        });
-      }
-    });
-
-    return items;
-  }, [unlockedTabs]);
 
   useEffect(() => {
     setWelcomeVisible(showWelcome);
   }, [showWelcome]);
-
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (settingsRef.current && !settingsRef.current.contains(event.target as Node)) {
-        setSettingsOpen(false);
-      }
-    };
-
-    if (settingsOpen) {
-      document.addEventListener('mousedown', handleClickOutside);
-
-      return () => {
-        document.removeEventListener('mousedown', handleClickOutside);
-      };
-    }
-  }, [settingsOpen]);
 
   const handleDismissWelcome = () => {
     setWelcomeFading(true);
@@ -98,22 +38,10 @@ const VoidOverlay: React.FC<VoidOverlayProps> = ({
     }, 500);
   };
 
-  const handleSettingsClick = () => {
-    setSettingsOpen(false);
-    onOpenSynapse();
-  };
-
-  const handleDisconnectClick = () => {
-    setSettingsOpen(false);
-    onDisconnect();
-  };
-
   return (
     <>
-      {/* Full-width navbar border */}
       <div className={styles.navbarBorder} />
 
-      {/* Top-left: Logo and branding */}
       <div className={styles.logoContainer}>
         <NullblockLogo
           state="base"
@@ -127,115 +55,6 @@ const VoidOverlay: React.FC<VoidOverlayProps> = ({
         </div>
       </div>
 
-      {/* Top-right container: Nav + Settings */}
-      <div className={styles.topRightContainer}>
-        {/* Navigation menu - only show when logged in */}
-        {publicKey && (
-          <div className={styles.navWrapper} ref={memcacheRef}>
-            {/* Extra submenu items - only visible when memcache active */}
-            {activeTab === 'memcache' && (
-              <div className={styles.submenuExtra}>
-                {MEMCACHE_ITEMS.slice(2)
-                  .reverse()
-                  .map((item, index) => (
-                    <React.Fragment key={item.id}>
-                      <button
-                        className={`${styles.submenuItemExtra} ${memcacheSection === item.id ? styles.submenuItemActive : ''}`}
-                        onClick={() => onMemcacheSectionChange?.(item.id)}
-                        style={{ animationDelay: `${(MEMCACHE_ITEMS.length - 2 - index) * 0.03}s` }}
-                      >
-                        {item.label}
-                      </button>
-                      {index < MEMCACHE_ITEMS.length - 3 && <span className={styles.navDivider} />}
-                    </React.Fragment>
-                  ))}
-                <span className={styles.navDivider} />
-              </div>
-            )}
-
-            {/* Main nav grid - shared by navbar and submenu */}
-            <nav className={styles.voidNav}>
-              {/* Row 1: Main nav buttons */}
-              <button
-                className={`${styles.navItem} ${activeTab === 'memcache' ? styles.navItemActive : ''}`}
-                onClick={() => onTabSelect('memcache')}
-              >
-                Mem Cache
-              </button>
-              <span className={styles.navDivider} />
-              <button
-                className={`${styles.navItem} ${activeTab === 'crossroads' ? styles.navItemActive : ''}`}
-                onClick={() => onTabSelect('crossroads')}
-              >
-                Crossroads
-              </button>
-
-              {/* Row 2: Submenu buttons (same grid columns) */}
-              {activeTab === 'memcache' && (
-                <>
-                  {MEMCACHE_ITEMS.slice(0, 2).map((item, index) => (
-                    <React.Fragment key={item.id}>
-                      <button
-                        className={`${styles.submenuItem} ${memcacheSection === item.id ? styles.submenuItemActive : ''}`}
-                        onClick={() => onMemcacheSectionChange?.(item.id)}
-                        style={{ animationDelay: `${index * 0.03}s` }}
-                      >
-                        {item.label}
-                      </button>
-                      {index < 1 && <span className={styles.submenuDivider} />}
-                    </React.Fragment>
-                  ))}
-                </>
-              )}
-            </nav>
-          </div>
-        )}
-
-        {/* Settings Menu or Connect Button */}
-        {publicKey ? (
-          <div className={styles.settingsContainer} ref={settingsRef}>
-            <button
-              className={styles.settingsButton}
-              onClick={() => setSettingsOpen(!settingsOpen)}
-              title="Settings"
-              aria-label="Open settings menu"
-            >
-              <svg
-                width="24"
-                height="24"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="1.5"
-              >
-                <circle cx="12" cy="12" r="3" />
-                <path d="M12 2v4M12 18v4M2 12h4M18 12h4" />
-                <path d="M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83" />
-              </svg>
-            </button>
-
-            {settingsOpen && (
-              <div className={styles.settingsDropdown}>
-                <button className={styles.settingsItem} onClick={handleSettingsClick}>
-                  <span className={styles.settingsIcon}>⚙️</span>
-                  <span>Settings</span>
-                </button>
-                <div className={styles.settingsDivider} />
-                <button className={styles.settingsItem} onClick={handleDisconnectClick}>
-                  <span className={styles.settingsIcon}>🔌</span>
-                  <span>Disconnect</span>
-                </button>
-              </div>
-            )}
-          </div>
-        ) : (
-          <button className={styles.connectButton} onClick={onConnectWallet} title="Connect Wallet">
-            Connect
-          </button>
-        )}
-      </div>
-
-      {/* First-time Welcome Overlay */}
       {welcomeVisible && (
         <div
           className={`${styles.welcomeOverlay} ${welcomeFading ? styles.fading : ''}`}

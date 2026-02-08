@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { agentService } from '../../common/services/agent-service';
+import CockpitDash from '../../components/cockpit/CockpitDash';
 import HUD from '../../components/hud/hud';
 import { VoidExperience } from '../../components/void-experience';
 import type { WalletInfo } from '../../wallet-adapters';
@@ -79,6 +80,7 @@ const Home: React.FC = () => {
   // Crossroads orb ring alignment state
   const [triggerOrbAlignment, setTriggerOrbAlignment] = useState<boolean>(false);
   const [pendingCrossroadsTransition, setPendingCrossroadsTransition] = useState<boolean>(false);
+  const [autopilot, setAutopilot] = useState<boolean>(true);
 
   // Login animation state
   const [loginAnimationPhase, setLoginAnimationPhase] = useState<LoginAnimationPhase>(
@@ -537,6 +539,18 @@ const Home: React.FC = () => {
         triggerAlignment={triggerOrbAlignment}
         onAlignmentComplete={handleAlignmentComplete}
         keepAligned={activeHudTab === 'crossroads'}
+        autopilot={autopilot}
+      />
+
+      <CockpitDash
+        visible={currentAnimationPhase === 'complete'}
+        isLoggedIn={isReturningUser && currentAnimationPhase === 'complete'}
+        loginAnimationPhase={currentAnimationPhase}
+        onConnectWallet={() => handleConnectWallet()}
+        onEnterCrossroads={handleEnterCrossroads}
+        pendingCrossroadsTransition={pendingCrossroadsTransition}
+        autopilot={autopilot}
+        onToggleAutopilot={() => setAutopilot(prev => !prev)}
       />
 
       <div className={`${styles.scene} ${showHUD ? styles.hudActive : ''}`} />
