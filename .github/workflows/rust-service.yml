@@ -1,5 +1,5 @@
 name: Rust Service CI/CD
-
+# shared reusable workflow for all Rust services
 on:
   workflow_call:
     inputs:
