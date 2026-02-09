@@ -71,6 +71,10 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
+      - name: Lowercase owner
+        id: owner
+        run: echo "name=$(echo '${{ github.repository_owner }}' | tr '[:upper:]' '[:lower:]')" >> $GITHUB_OUTPUT
+
       - name: Build and push
         uses: docker/build-push-action@v5
         with:
@@ -78,8 +82,8 @@ jobs:
           file: ${{ inputs.service-path }}/Dockerfile
           push: true
           tags: |
-            ghcr.io/${{ github.repository_owner }}/nullblock/${{ inputs.service-name }}:${{ github.sha }}
-            ghcr.io/${{ github.repository_owner }}/nullblock/${{ inputs.service-name }}:latest
+            ghcr.io/${{ steps.owner.outputs.name }}/nullblock/${{ inputs.service-name }}:${{ github.sha }}
+            ghcr.io/${{ steps.owner.outputs.name }}/nullblock/${{ inputs.service-name }}:latest
           cache-from: type=gha,scope=${{ inputs.service-name }}
           cache-to: type=gha,mode=max,scope=${{ inputs.service-name }}
 
@@ -96,7 +100,7 @@ jobs:
         with:
           task-definition: .github/task-definitions/${{ inputs.service-name }}.json
           container-name: ${{ inputs.service-name }}
-          image: ghcr.io/${{ github.repository_owner }}/nullblock/${{ inputs.service-name }}:${{ github.sha }}
+          image: ghcr.io/${{ steps.owner.outputs.name }}/nullblock/${{ inputs.service-name }}:${{ github.sha }}
 
       - name: Deploy to ECS
         uses: aws-actions/amazon-ecs-deploy-task-definition@v1
