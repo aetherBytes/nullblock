@@ -64,6 +64,10 @@ resource "aws_ecs_service" "erebus" {
   }
 
   depends_on = [aws_lb_listener.https]
+
+  lifecycle {
+    ignore_changes = [task_definition]
+  }
 }
 
 resource "aws_ecs_task_definition" "agents" {
@@ -124,6 +128,10 @@ resource "aws_ecs_service" "agents" {
     capacity_provider = aws_ecs_capacity_provider.ec2.name
     weight            = 1
   }
+
+  lifecycle {
+    ignore_changes = [task_definition]
+  }
 }
 
 resource "aws_ecs_task_definition" "engrams" {
@@ -178,6 +186,10 @@ resource "aws_ecs_service" "engrams" {
   capacity_provider_strategy {
     capacity_provider = aws_ecs_capacity_provider.ec2.name
     weight            = 1
+  }
+
+  lifecycle {
+    ignore_changes = [task_definition]
   }
 }
 
@@ -234,6 +246,10 @@ resource "aws_ecs_service" "protocols" {
   capacity_provider_strategy {
     capacity_provider = aws_ecs_capacity_provider.ec2.name
     weight            = 1
+  }
+
+  lifecycle {
+    ignore_changes = [task_definition]
   }
 }
 
@@ -292,6 +308,10 @@ resource "aws_ecs_service" "arb_farm" {
   capacity_provider_strategy {
     capacity_provider = aws_ecs_capacity_provider.ec2.name
     weight            = 1
+  }
+
+  lifecycle {
+    ignore_changes = [task_definition]
   }
 }
 
@@ -354,4 +374,8 @@ resource "aws_ecs_service" "hecate" {
   }
 
   depends_on = [aws_lb_listener.https]
+
+  lifecycle {
+    ignore_changes = [task_definition]
+  }
 }
