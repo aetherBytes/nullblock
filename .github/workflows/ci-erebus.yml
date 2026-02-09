@@ -5,11 +5,15 @@ on:
     paths:
       - 'svc/erebus/**'
       - 'lib/nullblock-mcp-client/**'
+      - '.github/workflows/rust-service.yml'
+      - '.github/task-definitions/erebus.json'
   push:
     branches: [main]
     paths:
       - 'svc/erebus/**'
       - 'lib/nullblock-mcp-client/**'
+      - '.github/workflows/rust-service.yml'
+      - '.github/task-definitions/erebus.json'
 
 jobs:
   ci:

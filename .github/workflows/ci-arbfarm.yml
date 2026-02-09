@@ -5,11 +5,15 @@ on:
     paths:
       - 'svc/arb-farm/**'
       - 'lib/**'
+      - '.github/workflows/rust-service.yml'
+      - '.github/task-definitions/arb-farm.json'
   push:
     branches: [main]
     paths:
       - 'svc/arb-farm/**'
       - 'lib/**'
+      - '.github/workflows/rust-service.yml'
+      - '.github/task-definitions/arb-farm.json'
 
 jobs:
   ci:

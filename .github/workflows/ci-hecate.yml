@@ -4,10 +4,14 @@ on:
   pull_request:
     paths:
       - 'svc/hecate/**'
+      - '.github/workflows/ci-hecate.yml'
+      - '.github/task-definitions/hecate.json'
   push:
     branches: [main]
     paths:
       - 'svc/hecate/**'
+      - '.github/workflows/ci-hecate.yml'
+      - '.github/task-definitions/hecate.json'
 
 jobs:
   check:

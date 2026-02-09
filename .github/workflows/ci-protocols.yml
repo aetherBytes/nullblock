@@ -5,11 +5,15 @@ on:
     paths:
       - 'svc/nullblock-protocols/**'
       - 'lib/**'
+      - '.github/workflows/rust-service.yml'
+      - '.github/task-definitions/nullblock-protocols.json'
   push:
     branches: [main]
     paths:
       - 'svc/nullblock-protocols/**'
       - 'lib/**'
+      - '.github/workflows/rust-service.yml'
+      - '.github/task-definitions/nullblock-protocols.json'
 
 jobs:
   ci:

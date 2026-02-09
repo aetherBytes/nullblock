@@ -5,11 +5,15 @@ on:
     paths:
       - 'svc/nullblock-engrams/**'
       - 'lib/**'
+      - '.github/workflows/rust-service.yml'
+      - '.github/task-definitions/nullblock-engrams.json'
   push:
     branches: [main]
     paths:
       - 'svc/nullblock-engrams/**'
       - 'lib/**'
+      - '.github/workflows/rust-service.yml'
+      - '.github/task-definitions/nullblock-engrams.json'
 
 jobs:
   ci:
