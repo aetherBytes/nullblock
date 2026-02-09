@@ -5,7 +5,7 @@ COPY svc/nullblock-engrams/Cargo.toml svc/nullblock-engrams/Cargo.toml
 RUN mkdir -p svc/nullblock-engrams/src && echo 'fn main() {}' > svc/nullblock-engrams/src/main.rs
 RUN cd svc/nullblock-engrams && cargo build --release 2>/dev/null || true
 COPY svc/nullblock-engrams/src svc/nullblock-engrams/src
-RUN cd svc/nullblock-engrams && cargo build --release
+RUN touch svc/nullblock-engrams/src/main.rs && cd svc/nullblock-engrams && cargo build --release
 
 FROM debian:bookworm-slim
 RUN apt-get update && apt-get install -y ca-certificates curl postgresql-client && rm -rf /var/lib/apt/lists/*

@@ -56,7 +56,13 @@ resource "aws_launch_template" "ecs" {
     echo "ECS_CLUSTER=DevCluster" >> /etc/ecs/ecs.config
     echo "ECS_ENABLE_CONTAINER_METADATA=true" >> /etc/ecs/ecs.config
 
-    yum install -y aws-cli jq docker-compose || true
+    yum install -y aws-cli jq || true
+
+    # Install docker compose v2 plugin
+    mkdir -p /usr/local/lib/docker/cli-plugins
+    curl -SL https://github.com/docker/compose/releases/download/v2.24.5/docker-compose-linux-x86_64 \
+      -o /usr/local/lib/docker/cli-plugins/docker-compose
+    chmod +x /usr/local/lib/docker/cli-plugins/docker-compose
 
     mkdir -p /data/postgres-erebus /data/postgres-agents /data/redis
 
@@ -65,13 +71,11 @@ resource "aws_launch_template" "ecs" {
       --region ${var.aws_region} \
       --query 'SecretString' --output text | jq -r '.DB_PASSWORD')
 
-    export DB_PASSWORD
-
     cat > /opt/docker-compose.prod.yml << 'COMPOSE'
-    ${file("${path.module}/../../infra/docker-compose.prod.yml")}
-    COMPOSE
+${file("${path.module}/../../infra/docker-compose.prod.yml")}
+COMPOSE
 
-    cd /opt && DB_PASSWORD=$DB_PASSWORD docker-compose -f docker-compose.prod.yml up -d
+    cd /opt && DB_PASSWORD=$DB_PASSWORD docker compose -f docker-compose.prod.yml up -d
     EOF
   )
 

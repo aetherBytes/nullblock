@@ -6,7 +6,7 @@ COPY svc/arb-farm/Cargo.toml svc/arb-farm/Cargo.toml
 RUN mkdir -p svc/arb-farm/src && echo 'fn main() {}' > svc/arb-farm/src/main.rs
 RUN cd svc/arb-farm && cargo build --release 2>/dev/null || true
 COPY svc/arb-farm/src svc/arb-farm/src
-RUN cd svc/arb-farm && cargo build --release
+RUN touch svc/arb-farm/src/main.rs && cd svc/arb-farm && cargo build --release
 
 FROM debian:bookworm-slim
 RUN apt-get update && apt-get install -y ca-certificates curl postgresql-client && rm -rf /var/lib/apt/lists/*

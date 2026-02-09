@@ -7,7 +7,7 @@ COPY svc/erebus/Cargo.lock svc/erebus/Cargo.lock
 RUN mkdir -p svc/erebus/src && echo 'fn main() {}' > svc/erebus/src/main.rs
 RUN cd svc/erebus && cargo build --release 2>/dev/null || true
 COPY svc/erebus/src svc/erebus/src
-RUN cd svc/erebus && cargo build --release --bin erebus --bin seed-agent-keys
+RUN touch svc/erebus/src/main.rs && cd svc/erebus && cargo build --release --bin erebus --bin seed-agent-keys
 
 FROM debian:bookworm-slim
 RUN apt-get update && apt-get install -y ca-certificates curl postgresql-client && rm -rf /var/lib/apt/lists/*

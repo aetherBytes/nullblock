@@ -6,7 +6,7 @@ COPY svc/nullblock-protocols/Cargo.toml svc/nullblock-protocols/Cargo.toml
 RUN mkdir -p svc/nullblock-protocols/src && echo 'fn main() {}' > svc/nullblock-protocols/src/main.rs
 RUN cd svc/nullblock-protocols && cargo build --release 2>/dev/null || true
 COPY svc/nullblock-protocols/src svc/nullblock-protocols/src
-RUN cd svc/nullblock-protocols && cargo build --release
+RUN touch svc/nullblock-protocols/src/main.rs && cd svc/nullblock-protocols && cargo build --release
 
 FROM debian:bookworm-slim
 RUN apt-get update && apt-get install -y ca-certificates curl && rm -rf /var/lib/apt/lists/*

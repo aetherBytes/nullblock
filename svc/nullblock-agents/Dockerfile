@@ -6,7 +6,7 @@ COPY svc/nullblock-agents/Cargo.toml svc/nullblock-agents/Cargo.toml
 RUN mkdir -p svc/nullblock-agents/src && echo 'fn main() {}' > svc/nullblock-agents/src/main.rs
 RUN cd svc/nullblock-agents && cargo build --release 2>/dev/null || true
 COPY svc/nullblock-agents/src svc/nullblock-agents/src
-RUN cd svc/nullblock-agents && cargo build --release
+RUN touch svc/nullblock-agents/src/main.rs && cd svc/nullblock-agents && cargo build --release
 
 FROM debian:bookworm-slim
 RUN apt-get update && apt-get install -y ca-certificates curl postgresql-client && rm -rf /var/lib/apt/lists/*
