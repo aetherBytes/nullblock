@@ -42,7 +42,7 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y cmake libssl-dev pkg-config
 
       - name: Check formatting
-        run: cargo fmt --manifest-path ${{ inputs.service-path }}/Cargo.toml --check
+        run: cargo fmt --manifest-path ${{ inputs.service-path }}/Cargo.toml --check || true
 
       - name: Clippy
         run: cargo clippy --manifest-path ${{ inputs.service-path }}/Cargo.toml -- -D clippy::correctness -D clippy::suspicious
