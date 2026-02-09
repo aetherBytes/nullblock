@@ -84,11 +84,12 @@ const CockpitDash: React.FC<CockpitDashProps> = ({
     panels: PanelFill[];
     backings: BackingFill[];
     windshields: WindshieldFill[];
+    sideGlass: WindshieldFill[];
   };
 
   const mfdRowRef = useRef<HTMLDivElement>(null);
   const mfdRowTopRef = useRef<HTMLDivElement>(null);
-  const [svgData, setSvgData] = useState<ConnectorData>({ w: 0, h: 0, lines: [], backLines: [], panels: [], backings: [], windshields: [] });
+  const [svgData, setSvgData] = useState<ConnectorData>({ w: 0, h: 0, lines: [], backLines: [], panels: [], backings: [], windshields: [], sideGlass: [] });
   const [topSvgData, setTopSvgData] = useState<{ w: number; h: number; lines: ConnectorData['lines']; backLines: ConnectorData['backLines']; panels: PanelFill[]; backings: BackingFill[] }>({ w: 0, h: 0, lines: [], backLines: [], panels: [], backings: [] });
 
   const measureConnectors = useCallback(() => {
@@ -195,29 +196,33 @@ const CockpitDash: React.FC<CockpitDashProps> = ({
     const windshields: ConnectorData['windshields'] = [];
     const topRow = mfdRowTopRef.current;
     let topLeftBR: Point | null = null;
+    let topLeftBL: Point | null = null;
     let topCenterBL: Point | null = null;
     let topCenterBR: Point | null = null;
     let topRightBL: Point | null = null;
+    let topRightBR: Point | null = null;
 
     if (topRow) {
-      const tc = (panelCls: string, left: boolean): Point | null => {
+      const tc = (panelCls: string, top: boolean, left: boolean): Point | null => {
         const panel = topRow.getElementsByClassName(panelCls)[0] as HTMLElement | undefined;
         const bezel = panel?.firstElementChild as HTMLElement | undefined;
         if (!bezel) return null;
         const prev = bezel.style.position;
         if (!prev) bezel.style.position = 'relative';
         const m = document.createElement('div');
-        m.style.cssText = `position:absolute;width:0;height:0;pointer-events:none;bottom:0;${left ? 'left:0' : 'right:0'}`;
+        m.style.cssText = `position:absolute;width:0;height:0;pointer-events:none;${top ? 'top:0' : 'bottom:0'};${left ? 'left:0' : 'right:0'}`;
         bezel.appendChild(m);
         const r = m.getBoundingClientRect();
         bezel.removeChild(m);
         if (!prev) bezel.style.position = '';
         return { x: r.left - rowRect.left, y: r.top - rowRect.top };
       };
-      topLeftBR = tc(styles.mfdTopLeft, false);
-      topCenterBL = tc(styles.mfdTopCenter, true);
-      topCenterBR = tc(styles.mfdTopCenter, false);
-      topRightBL = tc(styles.mfdTopRight, true);
+      topLeftBL = tc(styles.mfdTopLeft, false, true);
+      topLeftBR = tc(styles.mfdTopLeft, false, false);
+      topCenterBL = tc(styles.mfdTopCenter, false, true);
+      topCenterBR = tc(styles.mfdTopCenter, false, false);
+      topRightBL = tc(styles.mfdTopRight, false, true);
+      topRightBR = tc(styles.mfdTopRight, false, false);
     }
 
     if (leftTR && centerTL && topLeftBR && topCenterBL) {
@@ -258,7 +263,47 @@ const CockpitDash: React.FC<CockpitDashProps> = ({
       });
     }
 
-    setSvgData({ w: rowRect.width, h: rowRect.height, lines, backLines, panels, backings, windshields });
+    const sideGlass: WindshieldFill[] = [];
+    if (topLeftBL && topLeftBR && leftTR && leftTL) {
+      const midTopY = (topLeftBL.y + topLeftBR.y) / 2;
+      const midBottomY = (leftTL.y + leftTR.y) / 2;
+      const topW = topLeftBR.x - topLeftBL.x;
+      const bottomW = leftTR.x - leftTL.x;
+      const midX = (topLeftBL.x + topLeftBR.x + leftTL.x + leftTR.x) / 4;
+      sideGlass.push({
+        points: `${topLeftBL.x},${topLeftBL.y} ${topLeftBR.x},${topLeftBR.y} ${leftTR.x},${leftTR.y} ${leftTL.x},${leftTL.y}`,
+        midX, topY: midTopY, bottomY: midBottomY, topW, bottomW,
+      });
+      const bSgTL = { x: topLeftBL.x - 35, y: topLeftBL.y + 20 };
+      const bSgBL = { x: leftTL.x - 20, y: leftTL.y + 12 };
+      const sgMidY = (topLeftBL.y + leftTL.y + bSgTL.y + bSgBL.y) / 4;
+      backings.push({
+        points: `${topLeftBL.x},${topLeftBL.y} ${bSgTL.x},${bSgTL.y} ${bSgBL.x},${bSgBL.y} ${leftTL.x},${leftTL.y}`,
+        gx1: Math.max(topLeftBL.x, leftTL.x), gy1: sgMidY,
+        gx2: Math.min(bSgTL.x, bSgBL.x), gy2: sgMidY,
+      });
+    }
+    if (topRightBL && topRightBR && rightTL && rightTR) {
+      const midTopY = (topRightBL.y + topRightBR.y) / 2;
+      const midBottomY = (rightTL.y + rightTR.y) / 2;
+      const topW = topRightBR.x - topRightBL.x;
+      const bottomW = rightTR.x - rightTL.x;
+      const midX = (topRightBL.x + topRightBR.x + rightTL.x + rightTR.x) / 4;
+      sideGlass.push({
+        points: `${topRightBL.x},${topRightBL.y} ${topRightBR.x},${topRightBR.y} ${rightTR.x},${rightTR.y} ${rightTL.x},${rightTL.y}`,
+        midX, topY: midTopY, bottomY: midBottomY, topW, bottomW,
+      });
+      const bSgTR = { x: topRightBR.x + 35, y: topRightBR.y + 20 };
+      const bSgBR = { x: rightTR.x + 20, y: rightTR.y + 12 };
+      const sgMidY = (topRightBR.y + rightTR.y + bSgTR.y + bSgBR.y) / 4;
+      backings.push({
+        points: `${topRightBR.x},${topRightBR.y} ${bSgTR.x},${bSgTR.y} ${bSgBR.x},${bSgBR.y} ${rightTR.x},${rightTR.y}`,
+        gx1: Math.min(topRightBR.x, rightTR.x), gy1: sgMidY,
+        gx2: Math.max(bSgTR.x, bSgBR.x), gy2: sgMidY,
+      });
+    }
+
+    setSvgData({ w: rowRect.width, h: rowRect.height, lines, backLines, panels, backings, windshields, sideGlass });
   }, []);
 
   const updateVisorSkew = useCallback(() => {
@@ -575,7 +620,38 @@ const CockpitDash: React.FC<CockpitDashProps> = ({
                   </radialGradient>
                 );
               })}
+              {svgData.sideGlass.map((sg, i) => {
+                const cy = (sg.topY + sg.bottomY) / 2;
+                const avgHalfW = (sg.topW + sg.bottomW) / 4;
+                const halfH = (sg.bottomY - sg.topY) / 2;
+                const rx = avgHalfW * 0.45;
+                const ry = halfH * 0.4;
+                return (
+                  <radialGradient
+                    key={`sggrad-${i}`}
+                    id={`sgGrad${i}`}
+                    gradientUnits="userSpaceOnUse"
+                    cx={sg.midX} cy={cy}
+                    rx={rx} ry={ry}
+                  >
+                    <stop offset="0%" stopColor="rgb(200, 200, 220)" stopOpacity="0" />
+                    <stop offset="40%" stopColor="rgb(180, 180, 210)" stopOpacity="0.02" />
+                    <stop offset="65%" stopColor="rgb(160, 160, 200)" stopOpacity="0.05" />
+                    <stop offset="80%" stopColor="rgb(140, 140, 180)" stopOpacity="0.1" />
+                    <stop offset="92%" stopColor="rgb(120, 120, 170)" stopOpacity="0.16" />
+                    <stop offset="100%" stopColor="rgb(100, 100, 160)" stopOpacity="0.22" />
+                  </radialGradient>
+                );
+              })}
             </defs>
+            {svgData.sideGlass.map((sg, i) => (
+              <polygon
+                key={`sg-${i}`}
+                points={sg.points}
+                fill={`url(#sgGrad${i})`}
+                stroke="none"
+              />
+            ))}
             {svgData.windshields.map((ws, i) => (
               <polygon
                 key={`ws-${i}`}
