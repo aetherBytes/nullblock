@@ -1,6 +1,7 @@
 name: CI - Protocols
 
 on:
+  workflow_dispatch:
   pull_request:
     paths:
       - 'svc/nullblock-protocols/**'

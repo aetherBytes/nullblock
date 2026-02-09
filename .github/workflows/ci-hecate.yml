@@ -1,6 +1,7 @@
 name: CI - Hecate
 
 on:
+  workflow_dispatch:
   pull_request:
     paths:
       - 'svc/hecate/**'

@@ -1,6 +1,7 @@
 name: CI - ArbFarm
 
 on:
+  workflow_dispatch:
   pull_request:
     paths:
       - 'svc/arb-farm/**'
