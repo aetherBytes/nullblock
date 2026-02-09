@@ -45,6 +45,14 @@ resource "aws_security_group" "ecs_instances" {
   }
 
   ingress {
+    description     = "ALB to Hecate"
+    from_port       = 5173
+    to_port         = 5173
+    protocol        = "tcp"
+    security_groups = [aws_security_group.alb.id]
+  }
+
+  ingress {
     description = "SSH from admin"
     from_port   = 22
     to_port     = 22

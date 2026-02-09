@@ -22,6 +22,6 @@ RUN npm install --production
 COPY --from=builder /app/build ./build
 COPY --from=builder /app/node_modules/@lomray/vite-ssr-boost ./node_modules/@lomray/vite-ssr-boost
 
-EXPOSE 5173
+EXPOSE 3000
 
-CMD ["npm", "run", "start:ssr"]
+CMD ["npm", "run", "start:ssr", "--", "--host"]

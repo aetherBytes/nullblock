@@ -308,12 +308,12 @@ resource "aws_ecs_task_definition" "hecate" {
     name      = "hecate"
     image     = "ghcr.io/aetherbytes/nullblock/hecate:latest"
     essential = true
-    portMappings = [{ containerPort = 5173, hostPort = 5173, protocol = "tcp" }]
+    portMappings = [{ containerPort = 3000, hostPort = 5173, protocol = "tcp" }]
     repositoryCredentials = {
       credentialsParameter = data.aws_secretsmanager_secret.ghcr_token.arn
     }
     healthCheck = {
-      command     = ["CMD-SHELL", "curl -f http://localhost:5173/ || exit 1"]
+      command     = ["CMD-SHELL", "curl -f http://localhost:3000/ || exit 1"]
       interval    = 30
       timeout     = 5
       retries     = 3
@@ -346,4 +346,12 @@ resource "aws_ecs_service" "hecate" {
     capacity_provider = aws_ecs_capacity_provider.ec2.name
     weight            = 1
   }
+
+  load_balancer {
+    target_group_arn = aws_lb_target_group.hecate.arn
+    container_name   = "hecate"
+    container_port   = 3000
+  }
+
+  depends_on = [aws_lb_listener.https]
 }

@@ -13,7 +13,7 @@
       "essential": true,
       "portMappings": [
         {
-          "containerPort": 5173,
+          "containerPort": 3000,
           "hostPort": 5173,
           "protocol": "tcp"
         }
@@ -22,7 +22,7 @@
         "credentialsParameter": "arn:aws:secretsmanager:us-west-2:058264371750:secret:nullblock/ghcr-token-UmAOoh"
       },
       "healthCheck": {
-        "command": ["CMD-SHELL", "curl -f http://localhost:5173/ || exit 1"],
+        "command": ["CMD-SHELL", "curl -f http://localhost:3000/ || exit 1"],
         "interval": 30,
         "timeout": 5,
         "retries": 3,

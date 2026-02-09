@@ -57,6 +57,22 @@ resource "aws_acm_certificate_validation" "nullblock" {
   validation_record_fqdns = [for record in aws_route53_record.cert_validation : record.fqdn]
 }
 
+resource "aws_lb_target_group" "hecate" {
+  name     = "nullblock-hecate-tg"
+  port     = 5173
+  protocol = "HTTP"
+  vpc_id   = aws_vpc.main.id
+
+  health_check {
+    path                = "/"
+    healthy_threshold   = 2
+    unhealthy_threshold = 3
+    timeout             = 5
+    interval            = 30
+    matcher             = "200-399"
+  }
+}
+
 resource "aws_lb_listener" "https" {
   load_balancer_arn = aws_lb.main.arn
   port              = 443
@@ -66,7 +82,39 @@ resource "aws_lb_listener" "https" {
 
   default_action {
     type             = "forward"
+    target_group_arn = aws_lb_target_group.hecate.arn
+  }
+}
+
+resource "aws_lb_listener_rule" "api_to_erebus" {
+  listener_arn = aws_lb_listener.https.arn
+  priority     = 100
+
+  action {
+    type             = "forward"
     target_group_arn = aws_lb_target_group.erebus.arn
+  }
+
+  condition {
+    path_pattern {
+      values = ["/api/*", "/mcp/*", "/a2a/*", "/health", "/webhooks/*"]
+    }
+  }
+}
+
+resource "aws_lb_listener_rule" "v1_to_erebus" {
+  listener_arn = aws_lb_listener.https.arn
+  priority     = 101
+
+  action {
+    type             = "forward"
+    target_group_arn = aws_lb_target_group.erebus.arn
+  }
+
+  condition {
+    path_pattern {
+      values = ["/v1/*"]
+    }
   }
 }
 
