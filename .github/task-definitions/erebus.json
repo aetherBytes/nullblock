@@ -4,8 +4,8 @@
   "networkMode": "bridge",
   "memory": "512",
   "cpu": "256",
-  "executionRoleArn": "arn:aws:iam::058264371750:role/ECSTaskDefinitionRole",
-  "taskRoleArn": "arn:aws:iam::058264371750:role/ECSTaskDefinitionRole",
+  "executionRoleArn": "arn:aws:iam::058264371750:role/nullblock-ecs-task-execution",
+  "taskRoleArn": "arn:aws:iam::058264371750:role/nullblock-ecs-task-role",
   "containerDefinitions": [
     {
       "name": "erebus",
@@ -19,7 +19,7 @@
         }
       ],
       "repositoryCredentials": {
-        "credentialsParameter": "arn:aws:secretsmanager:us-east-1:058264371750:secret:github-docker-token-g5Hrtm"
+        "credentialsParameter": "arn:aws:secretsmanager:us-west-2:058264371750:secret:nullblock/ghcr-token-UmAOoh"
       },
       "healthCheck": {
         "command": ["CMD-SHELL", "curl -f http://localhost:3000/health || exit 1"],
@@ -32,12 +32,23 @@
         "logDriver": "awslogs",
         "options": {
           "awslogs-group": "/ecs/nullblock/erebus",
-          "awslogs-region": "us-east-1",
+          "awslogs-region": "us-west-2",
           "awslogs-stream-prefix": "ecs"
         }
       },
-      "environment": [],
-      "secrets": [],
+      "environment": [
+        {"name": "RUST_LOG", "value": "info"},
+        {"name": "HOST", "value": "0.0.0.0"},
+        {"name": "PORT", "value": "3000"},
+        {"name": "AGENTS_SERVICE_URL", "value": "http://172.17.0.1:9003"},
+        {"name": "ENGRAMS_SERVICE_URL", "value": "http://172.17.0.1:9004"},
+        {"name": "PROTOCOLS_SERVICE_URL", "value": "http://172.17.0.1:8001"},
+        {"name": "ARBFARM_SERVICE_URL", "value": "http://172.17.0.1:9007"}
+      ],
+      "secrets": [
+        {"name": "DATABASE_URL", "valueFrom": "arn:aws:secretsmanager:us-west-2:058264371750:secret:nullblock/prod-5afB92:DB_URL_EREBUS::"},
+        {"name": "ENCRYPTION_MASTER_KEY", "valueFrom": "arn:aws:secretsmanager:us-west-2:058264371750:secret:nullblock/prod-5afB92:ENCRYPTION_MASTER_KEY::"}
+      ],
       "mountPoints": [],
       "volumesFrom": []
     }

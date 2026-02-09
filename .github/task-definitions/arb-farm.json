@@ -4,8 +4,8 @@
   "networkMode": "bridge",
   "memory": "1024",
   "cpu": "512",
-  "executionRoleArn": "arn:aws:iam::058264371750:role/ECSTaskDefinitionRole",
-  "taskRoleArn": "arn:aws:iam::058264371750:role/ECSTaskDefinitionRole",
+  "executionRoleArn": "arn:aws:iam::058264371750:role/nullblock-ecs-task-execution",
+  "taskRoleArn": "arn:aws:iam::058264371750:role/nullblock-ecs-task-role",
   "containerDefinitions": [
     {
       "name": "arb-farm",
@@ -19,7 +19,7 @@
         }
       ],
       "repositoryCredentials": {
-        "credentialsParameter": "arn:aws:secretsmanager:us-east-1:058264371750:secret:github-docker-token-g5Hrtm"
+        "credentialsParameter": "arn:aws:secretsmanager:us-west-2:058264371750:secret:nullblock/ghcr-token-UmAOoh"
       },
       "healthCheck": {
         "command": ["CMD-SHELL", "curl -f http://localhost:9007/health || exit 1"],
@@ -32,12 +32,21 @@
         "logDriver": "awslogs",
         "options": {
           "awslogs-group": "/ecs/nullblock/arb-farm",
-          "awslogs-region": "us-east-1",
+          "awslogs-region": "us-west-2",
           "awslogs-stream-prefix": "ecs"
         }
       },
-      "environment": [],
-      "secrets": [],
+      "environment": [
+        {"name": "RUST_LOG", "value": "info"},
+        {"name": "HOST", "value": "0.0.0.0"},
+        {"name": "PORT", "value": "9007"},
+        {"name": "ENGRAMS_SERVICE_URL", "value": "http://172.17.0.1:9004"}
+      ],
+      "secrets": [
+        {"name": "DATABASE_URL", "valueFrom": "arn:aws:secretsmanager:us-west-2:058264371750:secret:nullblock/prod-5afB92:DB_URL_AGENTS::"},
+        {"name": "OPENROUTER_KEY_HECATE", "valueFrom": "arn:aws:secretsmanager:us-west-2:058264371750:secret:nullblock/prod-5afB92:OPENROUTER_KEY_HECATE::"},
+        {"name": "ENCRYPTION_MASTER_KEY", "valueFrom": "arn:aws:secretsmanager:us-west-2:058264371750:secret:nullblock/prod-5afB92:ENCRYPTION_MASTER_KEY::"}
+      ],
       "mountPoints": [],
       "volumesFrom": []
     }

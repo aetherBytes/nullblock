@@ -1,18 +1,23 @@
+FROM node:18.13.0-alpine AS builder
+
+WORKDIR /app
+
+COPY package.json package-lock.json ./
+RUN npm ci
+
+COPY . .
+RUN npm run build
+
 FROM node:18.13.0-alpine
 
 WORKDIR /app
 
-# Copy package files first for better caching
-COPY package.json package-lock.json ./
+COPY --from=builder /app/package.json /app/package-lock.json ./
+RUN npm ci --omit=dev
 
-# Install dependencies
-RUN npm ci
+COPY --from=builder /app/build ./build
+COPY --from=builder /app/node_modules/@lomray/vite-ssr-boost ./node_modules/@lomray/vite-ssr-boost
 
-# Copy source code
-COPY . .
-
-# Expose development port
 EXPOSE 5173
 
-# Start development server
-CMD ["npm", "run", "develop"]
+CMD ["npm", "run", "start:ssr"]

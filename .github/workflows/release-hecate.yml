@@ -71,6 +71,7 @@ jobs:
       service: hecate
       cluster: DevCluster
       task-container-name: hecate
+      task-definition: .github/task-definitions/hecate.json
       service-path: svc/hecate
     secrets:
       AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}

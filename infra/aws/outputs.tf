@@ -22,3 +22,13 @@ output "ecs_cluster_name" {
   description = "ECS cluster name"
   value       = aws_ecs_cluster.main.name
 }
+
+output "route53_nameservers" {
+  description = "Route53 nameservers — set these in GoDaddy DNS"
+  value       = aws_route53_zone.nullblock.name_servers
+}
+
+output "task_execution_role_arn" {
+  description = "ECS task execution role ARN"
+  value       = aws_iam_role.ecs_task_execution.arn
+}

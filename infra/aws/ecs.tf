@@ -56,15 +56,22 @@ resource "aws_launch_template" "ecs" {
     echo "ECS_CLUSTER=DevCluster" >> /etc/ecs/ecs.config
     echo "ECS_ENABLE_CONTAINER_METADATA=true" >> /etc/ecs/ecs.config
 
-    yum install -y docker-compose || true
+    yum install -y aws-cli jq docker-compose || true
 
     mkdir -p /data/postgres-erebus /data/postgres-agents /data/redis
+
+    DB_PASSWORD=$(aws secretsmanager get-secret-value \
+      --secret-id nullblock/prod \
+      --region ${var.aws_region} \
+      --query 'SecretString' --output text | jq -r '.DB_PASSWORD')
+
+    export DB_PASSWORD
 
     cat > /opt/docker-compose.prod.yml << 'COMPOSE'
     ${file("${path.module}/../../infra/docker-compose.prod.yml")}
     COMPOSE
 
-    cd /opt && docker-compose -f docker-compose.prod.yml up -d
+    cd /opt && DB_PASSWORD=$DB_PASSWORD docker-compose -f docker-compose.prod.yml up -d
     EOF
   )
 
@@ -116,4 +123,36 @@ resource "aws_ecs_cluster_capacity_providers" "main" {
     capacity_provider = aws_ecs_capacity_provider.ec2.name
     weight            = 1
   }
+}
+
+resource "aws_iam_role_policy" "ecs_instance_secrets" {
+  name = "nullblock-ecs-instance-secrets"
+  role = aws_iam_role.ecs_instance.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect = "Allow"
+      Action = [
+        "secretsmanager:GetSecretValue"
+      ]
+      Resource = [
+        data.aws_secretsmanager_secret.prod.arn
+      ]
+    }]
+  })
+}
+
+resource "aws_cloudwatch_log_group" "ecs" {
+  for_each = toset([
+    "/ecs/nullblock/erebus",
+    "/ecs/nullblock/agents",
+    "/ecs/nullblock/engrams",
+    "/ecs/nullblock/protocols",
+    "/ecs/nullblock/arb-farm",
+    "/ecs/nullblock/hecate",
+  ])
+
+  name              = each.key
+  retention_in_days = 30
 }

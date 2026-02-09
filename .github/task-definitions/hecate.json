@@ -1,20 +1,20 @@
 {
-  "family": "nullblock-protocols",
+  "family": "hecate",
   "requiresCompatibilities": ["EC2"],
   "networkMode": "bridge",
-  "memory": "256",
-  "cpu": "128",
+  "memory": "512",
+  "cpu": "256",
   "executionRoleArn": "arn:aws:iam::058264371750:role/nullblock-ecs-task-execution",
   "taskRoleArn": "arn:aws:iam::058264371750:role/nullblock-ecs-task-role",
   "containerDefinitions": [
     {
-      "name": "nullblock-protocols",
-      "image": "ghcr.io/aetherbytes/nullblock/nullblock-protocols:latest",
+      "name": "hecate",
+      "image": "ghcr.io/aetherbytes/nullblock/hecate:latest",
       "essential": true,
       "portMappings": [
         {
-          "containerPort": 8001,
-          "hostPort": 8001,
+          "containerPort": 5173,
+          "hostPort": 5173,
           "protocol": "tcp"
         }
       ],
@@ -22,7 +22,7 @@
         "credentialsParameter": "arn:aws:secretsmanager:us-west-2:058264371750:secret:nullblock/ghcr-token-UmAOoh"
       },
       "healthCheck": {
-        "command": ["CMD-SHELL", "curl -f http://localhost:8001/health || exit 1"],
+        "command": ["CMD-SHELL", "curl -f http://localhost:5173/ || exit 1"],
         "interval": 30,
         "timeout": 5,
         "retries": 3,
@@ -31,18 +31,15 @@
       "logConfiguration": {
         "logDriver": "awslogs",
         "options": {
-          "awslogs-group": "/ecs/nullblock/protocols",
+          "awslogs-group": "/ecs/nullblock/hecate",
           "awslogs-region": "us-west-2",
           "awslogs-stream-prefix": "ecs"
         }
       },
       "environment": [
-        {"name": "RUST_LOG", "value": "info"},
-        {"name": "HOST", "value": "0.0.0.0"},
-        {"name": "PORT", "value": "8001"},
-        {"name": "AGENTS_SERVICE_URL", "value": "http://172.17.0.1:9003"},
-        {"name": "ENGRAMS_SERVICE_URL", "value": "http://172.17.0.1:9004"},
-        {"name": "ARBFARM_SERVICE_URL", "value": "http://172.17.0.1:9007"}
+        {"name": "VITE_API_URL", "value": "https://nullblock.io"},
+        {"name": "NODE_ENV", "value": "production"},
+        {"name": "PORT", "value": "5173"}
       ],
       "secrets": [],
       "mountPoints": [],
