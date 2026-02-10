@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { agentService } from '../../common/services/agent-service';
+import CockpitDash from '../../components/cockpit/CockpitDash';
 import HUD from '../../components/hud/hud';
 import { VoidExperience } from '../../components/void-experience';
-import type { WalletInfo } from '../../wallet-adapters';
+import type { WalletInfo as _WalletInfo } from '../../wallet-adapters';
 import { useWalletAdapter, ChainType } from '../../wallet-adapters';
 import styles from './index.module.scss';
 
@@ -42,7 +43,7 @@ const initialSession = checkExistingSession();
 const Home: React.FC = () => {
   // Use the new wallet adapter hook for all wallet operations
   const {
-    isConnecting,
+    isConnecting: _isConnecting,
     error: walletError,
     connectedWallet: _connectedWallet,
     connectedAddress,
@@ -59,9 +60,9 @@ const Home: React.FC = () => {
   const [showHUD, setShowHUD] = useState<boolean>(true);
   const [currentTheme, setCurrentTheme] = useState<'null' | 'light' | 'dark'>('null');
   const [isInitialized, setIsInitialized] = useState<boolean>(false);
-  const [showWalletModal, setShowWalletModal] = useState<boolean>(false);
-  const [connectionError, setConnectionError] = useState<string | null>(null);
-  const [messageType, setMessageType] = useState<'error' | 'info'>('error');
+  const [_showWalletModal, setShowWalletModal] = useState<boolean>(false);
+  const [_connectionError, setConnectionError] = useState<string | null>(null);
+  const [_messageType, setMessageType] = useState<'error' | 'info'>('error');
   const lastConnectionAttempt = React.useRef<number>(0);
   const [hudInitialTab, setHudInitialTab] = useState<
     'crossroads' | 'memcache' | 'tasks' | 'agents' | 'logs' | 'canvas' | null
@@ -79,6 +80,7 @@ const Home: React.FC = () => {
   // Crossroads orb ring alignment state
   const [triggerOrbAlignment, setTriggerOrbAlignment] = useState<boolean>(false);
   const [pendingCrossroadsTransition, setPendingCrossroadsTransition] = useState<boolean>(false);
+  const [autopilot, setAutopilot] = useState<boolean>(true);
 
   // Login animation state
   const [loginAnimationPhase, setLoginAnimationPhase] = useState<LoginAnimationPhase>(
@@ -319,12 +321,14 @@ const Home: React.FC = () => {
 
     lastConnectionAttempt.current = now;
 
-    // If no wallet specified, show selection modal
     if (!walletId) {
-      console.log('No walletId specified, showing selection modal');
-      setShowWalletModal(true);
-
-      return;
+      const installed = getInstalledWallets();
+      if (installed.length > 0) {
+        walletId = installed[0].id;
+      } else {
+        setInfoMessage('No wallet detected. Install a wallet extension and refresh.');
+        return;
+      }
     }
 
     clearMessage();
@@ -467,45 +471,6 @@ const Home: React.FC = () => {
 
   const hideOverlay = isInitialized && currentAnimationPhase !== 'black';
 
-  // Get wallet icon (fallback to emoji for known wallets)
-  const getWalletIcon = (wallet: WalletInfo): React.ReactNode => {
-    if (wallet.icon && !wallet.icon.startsWith('http')) {
-      return wallet.icon;
-    }
-
-    // Fallback icons
-    switch (wallet.id) {
-      case 'phantom':
-        return '👻';
-      case 'metamask':
-        return '🦊';
-      case 'bitget':
-        return (
-          <img
-            src="/wallets/bitget_logo.png"
-            alt="Bitget"
-            style={{ width: '2.5rem', height: '2.5rem', objectFit: 'contain' }}
-          />
-        );
-      default:
-        return '👛';
-    }
-  };
-
-  // Get chain description for wallet
-  const getChainDescription = (wallet: WalletInfo) => {
-    const chains = wallet.supportedChains;
-
-    if (chains.includes(ChainType.EVM) && chains.includes(ChainType.SOLANA)) {
-      return 'EVM & Solana';
-    } else if (chains.includes(ChainType.EVM)) {
-      return 'Ethereum & EVM';
-    } else if (chains.includes(ChainType.SOLANA)) {
-      return 'Solana';
-    }
-
-    return 'Multi-chain';
-  };
 
   return (
     <div
@@ -537,6 +502,19 @@ const Home: React.FC = () => {
         triggerAlignment={triggerOrbAlignment}
         onAlignmentComplete={handleAlignmentComplete}
         keepAligned={activeHudTab === 'crossroads'}
+        autopilot={autopilot}
+      />
+
+      <CockpitDash
+        visible={true}
+        isLoggedIn={isReturningUser && currentAnimationPhase === 'complete'}
+        loginAnimationPhase={currentAnimationPhase}
+        onConnectWallet={() => handleConnectWallet()}
+        onEnterCrossroads={handleEnterCrossroads}
+        pendingCrossroadsTransition={pendingCrossroadsTransition}
+        autopilot={autopilot}
+        onToggleAutopilot={() => setAutopilot(prev => !prev)}
+        activeTab={activeHudTab === 'crossroads' || activeHudTab === 'memcache' ? activeHudTab : null}
       />
 
       <div className={`${styles.scene} ${showHUD ? styles.hudActive : ''}`} />
@@ -571,92 +549,6 @@ const Home: React.FC = () => {
           />
         )}
 
-      {/* Wallet Selection Modal - Now Dynamic */}
-      {showWalletModal && (
-        <div className={styles.modalOverlay} onClick={() => setShowWalletModal(false)}>
-          <div className={styles.walletModal} onClick={(e) => e.stopPropagation()}>
-            <div className={styles.modalHeader}>
-              <h2>🔐 Connect Wallet</h2>
-              <button className={styles.closeButton} onClick={() => setShowWalletModal(false)}>
-                ×
-              </button>
-            </div>
-
-            <div className={styles.modalContent}>
-              <p>Choose a Web3 wallet to connect to Nullblock:</p>
-
-              <div className={styles.walletOptions}>
-                {/* Installed wallets - show first */}
-                {getInstalledWallets().map((adapter) => (
-                  <button
-                    key={adapter.id}
-                    className={styles.walletButton}
-                    onClick={() => handleConnectWallet(adapter.id)}
-                    disabled={isConnecting}
-                  >
-                    <div className={styles.walletIcon}>{getWalletIcon(adapter.info)}</div>
-                    <div className={styles.walletInfo}>
-                      <div className={styles.walletName}>{adapter.info.name}</div>
-                      <div className={styles.walletDescription}>
-                        {getChainDescription(adapter.info)}
-                      </div>
-                    </div>
-                    {isConnecting && <div className={styles.connecting}>Connecting...</div>}
-                  </button>
-                ))}
-
-                {/* Not installed wallets - show with install prompt */}
-                {getAllWalletsInfo()
-                  .filter((info) => !getInstalledWallets().some((w) => w.id === info.id))
-                  .map((wallet) => (
-                    <button
-                      key={wallet.id}
-                      className={`${styles.walletButton} ${styles.notInstalled}`}
-                      onClick={() => {
-                        if (wallet.installUrl) {
-                          window.open(wallet.installUrl, '_blank');
-                        }
-                      }}
-                      disabled={isConnecting}
-                    >
-                      <div className={styles.walletIcon}>{getWalletIcon(wallet)}</div>
-                      <div className={styles.walletInfo}>
-                        <div className={styles.walletName}>{wallet.name}</div>
-                        <div className={styles.walletDescription}>
-                          {getChainDescription(wallet)} • Click to install
-                        </div>
-                      </div>
-                    </button>
-                  ))}
-              </div>
-
-              {connectionError && (
-                <div className={messageType === 'error' ? styles.errorMessage : styles.infoMessage}>
-                  {connectionError}
-                </div>
-              )}
-
-              <div className={styles.installPrompt}>
-                <p>Don't have a wallet?</p>
-                <div className={styles.installLinks}>
-                  {getAllWalletsInfo()
-                    .filter((w) => w.installUrl)
-                    .map((wallet) => (
-                      <a
-                        key={wallet.id}
-                        href={wallet.installUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                      >
-                        Install {wallet.name}
-                      </a>
-                    ))}
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 };
