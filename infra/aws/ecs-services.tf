@@ -1,16 +1,16 @@
 resource "aws_ecs_task_definition" "erebus" {
-  family                = "erebus"
-  network_mode          = "bridge"
+  family                   = "erebus"
+  network_mode             = "bridge"
   requires_compatibilities = ["EC2"]
-  execution_role_arn    = aws_iam_role.ecs_task_execution.arn
-  task_role_arn         = aws_iam_role.ecs_task.arn
-  cpu                   = "256"
-  memory                = "512"
+  execution_role_arn       = aws_iam_role.ecs_task_execution.arn
+  task_role_arn            = aws_iam_role.ecs_task.arn
+  cpu                      = "256"
+  memory                   = "512"
 
   container_definitions = jsonencode([{
-    name      = "erebus"
-    image     = "ghcr.io/aetherbytes/nullblock/erebus:latest"
-    essential = true
+    name         = "erebus"
+    image        = "ghcr.io/aetherbytes/nullblock/erebus:latest"
+    essential    = true
     portMappings = [{ containerPort = 3000, hostPort = 3000, protocol = "tcp" }]
     repositoryCredentials = {
       credentialsParameter = data.aws_secretsmanager_secret.ghcr_token.arn
@@ -71,18 +71,18 @@ resource "aws_ecs_service" "erebus" {
 }
 
 resource "aws_ecs_task_definition" "agents" {
-  family                = "nullblock-agents"
-  network_mode          = "bridge"
+  family                   = "nullblock-agents"
+  network_mode             = "bridge"
   requires_compatibilities = ["EC2"]
-  execution_role_arn    = aws_iam_role.ecs_task_execution.arn
-  task_role_arn         = aws_iam_role.ecs_task.arn
-  cpu                   = "256"
-  memory                = "512"
+  execution_role_arn       = aws_iam_role.ecs_task_execution.arn
+  task_role_arn            = aws_iam_role.ecs_task.arn
+  cpu                      = "256"
+  memory                   = "512"
 
   container_definitions = jsonencode([{
-    name      = "nullblock-agents"
-    image     = "ghcr.io/aetherbytes/nullblock/nullblock-agents:latest"
-    essential = true
+    name         = "nullblock-agents"
+    image        = "ghcr.io/aetherbytes/nullblock/nullblock-agents:latest"
+    essential    = true
     portMappings = [{ containerPort = 9003, hostPort = 9003, protocol = "tcp" }]
     repositoryCredentials = {
       credentialsParameter = data.aws_secretsmanager_secret.ghcr_token.arn
@@ -106,6 +106,7 @@ resource "aws_ecs_task_definition" "agents" {
       { name = "RUST_LOG", value = "info" },
       { name = "HOST", value = "0.0.0.0" },
       { name = "PORT", value = "9003" },
+      { name = "EREBUS_BASE_URL", value = "http://172.17.0.1:3000" },
       { name = "ENGRAMS_SERVICE_URL", value = "http://172.17.0.1:9004" },
     ]
     secrets = [
@@ -135,18 +136,18 @@ resource "aws_ecs_service" "agents" {
 }
 
 resource "aws_ecs_task_definition" "engrams" {
-  family                = "nullblock-engrams"
-  network_mode          = "bridge"
+  family                   = "nullblock-engrams"
+  network_mode             = "bridge"
   requires_compatibilities = ["EC2"]
-  execution_role_arn    = aws_iam_role.ecs_task_execution.arn
-  task_role_arn         = aws_iam_role.ecs_task.arn
-  cpu                   = "128"
-  memory                = "256"
+  execution_role_arn       = aws_iam_role.ecs_task_execution.arn
+  task_role_arn            = aws_iam_role.ecs_task.arn
+  cpu                      = "128"
+  memory                   = "256"
 
   container_definitions = jsonencode([{
-    name      = "nullblock-engrams"
-    image     = "ghcr.io/aetherbytes/nullblock/nullblock-engrams:latest"
-    essential = true
+    name         = "nullblock-engrams"
+    image        = "ghcr.io/aetherbytes/nullblock/nullblock-engrams:latest"
+    essential    = true
     portMappings = [{ containerPort = 9004, hostPort = 9004, protocol = "tcp" }]
     repositoryCredentials = {
       credentialsParameter = data.aws_secretsmanager_secret.ghcr_token.arn
@@ -194,18 +195,18 @@ resource "aws_ecs_service" "engrams" {
 }
 
 resource "aws_ecs_task_definition" "protocols" {
-  family                = "nullblock-protocols"
-  network_mode          = "bridge"
+  family                   = "nullblock-protocols"
+  network_mode             = "bridge"
   requires_compatibilities = ["EC2"]
-  execution_role_arn    = aws_iam_role.ecs_task_execution.arn
-  task_role_arn         = aws_iam_role.ecs_task.arn
-  cpu                   = "128"
-  memory                = "256"
+  execution_role_arn       = aws_iam_role.ecs_task_execution.arn
+  task_role_arn            = aws_iam_role.ecs_task.arn
+  cpu                      = "128"
+  memory                   = "256"
 
   container_definitions = jsonencode([{
-    name      = "nullblock-protocols"
-    image     = "ghcr.io/aetherbytes/nullblock/nullblock-protocols:latest"
-    essential = true
+    name         = "nullblock-protocols"
+    image        = "ghcr.io/aetherbytes/nullblock/nullblock-protocols:latest"
+    essential    = true
     portMappings = [{ containerPort = 8001, hostPort = 8001, protocol = "tcp" }]
     repositoryCredentials = {
       credentialsParameter = data.aws_secretsmanager_secret.ghcr_token.arn
@@ -254,18 +255,18 @@ resource "aws_ecs_service" "protocols" {
 }
 
 resource "aws_ecs_task_definition" "arb_farm" {
-  family                = "arb-farm"
-  network_mode          = "bridge"
+  family                   = "arb-farm"
+  network_mode             = "bridge"
   requires_compatibilities = ["EC2"]
-  execution_role_arn    = aws_iam_role.ecs_task_execution.arn
-  task_role_arn         = aws_iam_role.ecs_task.arn
-  cpu                   = "512"
-  memory                = "1024"
+  execution_role_arn       = aws_iam_role.ecs_task_execution.arn
+  task_role_arn            = aws_iam_role.ecs_task.arn
+  cpu                      = "512"
+  memory                   = "1024"
 
   container_definitions = jsonencode([{
-    name      = "arb-farm"
-    image     = "ghcr.io/aetherbytes/nullblock/arb-farm:latest"
-    essential = true
+    name         = "arb-farm"
+    image        = "ghcr.io/aetherbytes/nullblock/arb-farm:latest"
+    essential    = true
     portMappings = [{ containerPort = 9007, hostPort = 9007, protocol = "tcp" }]
     repositoryCredentials = {
       credentialsParameter = data.aws_secretsmanager_secret.ghcr_token.arn
@@ -316,18 +317,18 @@ resource "aws_ecs_service" "arb_farm" {
 }
 
 resource "aws_ecs_task_definition" "hecate" {
-  family                = "hecate"
-  network_mode          = "bridge"
+  family                   = "hecate"
+  network_mode             = "bridge"
   requires_compatibilities = ["EC2"]
-  execution_role_arn    = aws_iam_role.ecs_task_execution.arn
-  task_role_arn         = aws_iam_role.ecs_task.arn
-  cpu                   = "256"
-  memory                = "512"
+  execution_role_arn       = aws_iam_role.ecs_task_execution.arn
+  task_role_arn            = aws_iam_role.ecs_task.arn
+  cpu                      = "256"
+  memory                   = "512"
 
   container_definitions = jsonencode([{
-    name      = "hecate"
-    image     = "ghcr.io/aetherbytes/nullblock/hecate:latest"
-    essential = true
+    name         = "hecate"
+    image        = "ghcr.io/aetherbytes/nullblock/hecate:latest"
+    essential    = true
     portMappings = [{ containerPort = 3000, hostPort = 5173, protocol = "tcp" }]
     repositoryCredentials = {
       credentialsParameter = data.aws_secretsmanager_secret.ghcr_token.arn

@@ -54,6 +54,7 @@ impl AppState {
         };
 
         let engrams_base_url = std::env::var("ENGRAMS_BASE_URL")
+            .or_else(|_| std::env::var("ENGRAMS_SERVICE_URL"))
             .unwrap_or_else(|_| "http://localhost:9004".to_string());
         info!("🧠 Connecting to Engrams at {}", engrams_base_url);
         let engrams_client = Arc::new(EngramsClient::new(engrams_base_url));

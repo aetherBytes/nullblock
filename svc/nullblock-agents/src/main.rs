@@ -54,6 +54,7 @@ async fn main() -> anyhow::Result<()> {
 
     // Get port from config or environment
     let port = env::var("AGENTS_PORT")
+        .or_else(|_| env::var("PORT"))
         .unwrap_or_else(|_| config.server.port.to_string())
         .parse::<u16>()
         .unwrap_or(9001);
