@@ -376,8 +376,8 @@ impl ModelRouter {
 
     fn get_fallback_models(&self) -> Option<Vec<String>> {
         Some(vec![
+            "openrouter/free".to_string(),
             "cognitivecomputations/dolphin3.0-mistral-24b:free".to_string(),
-            "cognitivecomputations/dolphin3.0-r1-mistral-24b:free".to_string(),
             "deepseek/deepseek-chat-v3.1:free".to_string(),
             "nvidia/nemotron-nano-9b-v2:free".to_string(),
         ])
@@ -385,6 +385,35 @@ impl ModelRouter {
 
     fn get_static_models(&self) -> Vec<ModelConfig> {
         vec![
+            ModelConfig {
+                name: "openrouter/free".to_string(),
+                display_name: "OpenRouter Free (Auto)".to_string(),
+                icon: "🔀".to_string(),
+                provider: ModelProvider::OpenRouter,
+                tier: ModelTier::Free,
+                capabilities: vec![
+                    ModelCapability::Conversation,
+                    ModelCapability::Reasoning,
+                    ModelCapability::Creative,
+                    ModelCapability::FunctionCalling,
+                ],
+                metrics: crate::models::ModelMetrics {
+                    avg_latency_ms: 800.0,
+                    tokens_per_second: 60.0,
+                    cost_per_1k_tokens: 0.0,
+                    context_window: 200000,
+                    max_output_tokens: 16384,
+                    quality_score: 0.90,
+                    reliability_score: 0.95,
+                },
+                api_endpoint: "https://openrouter.ai/api/v1/chat/completions".to_string(),
+                api_key_env: Some("OPENROUTER_API_KEY".to_string()),
+                description: "Automatically routes to the best available free model on OpenRouter".to_string(),
+                enabled: true,
+                supports_reasoning: false,
+                is_popular: true,
+                created: None,
+            },
             ModelConfig {
                 name: "cognitivecomputations/dolphin3.0-mistral-24b:free".to_string(),
                 display_name: "Dolphin 3.0 Mistral 24B Free".to_string(),

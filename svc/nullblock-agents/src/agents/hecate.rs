@@ -193,7 +193,7 @@ TOOL AWARENESS:
         Self {
             personality: "unified".to_string(),
             running: false,
-            preferred_model: "cognitivecomputations/dolphin3.0-mistral-24b:free".to_string(),
+            preferred_model: "openrouter/free".to_string(),
             current_model: None,
             conversation_history: Arc::new(RwLock::new(Vec::new())),
             llm_factory: None,

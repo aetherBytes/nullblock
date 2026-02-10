@@ -156,7 +156,7 @@ pub async fn chat(
         let agent = state.hecate_agent.read().await;
         if let Some(ref current_model) = agent.current_model {
             // Check if model is free by name pattern (quick check)
-            if !current_model.ends_with(":free") {
+            if !current_model.ends_with(":free") && current_model != "openrouter/free" {
                 // Get llm_factory to do full validation
                 if let Some(ref llm_factory) = agent.llm_factory {
                     let factory = llm_factory.read().await;
@@ -301,14 +301,14 @@ pub async fn available_models(
         get_fallback_models()
     };
 
-    let default_model = "cognitivecomputations/dolphin3.0-mistral-24b:free";
+    let default_model = "openrouter/free";
 
     Ok(Json(json!({
         "models": available_models,
         "current_model": agent.current_model,
         "default_model": default_model,
         "recommended_models": {
-            "free": "cognitivecomputations/dolphin3.0-mistral-24b:free",
+            "free": "openrouter/free",
             "reasoning": "cognitivecomputations/dolphin3.0-r1-mistral-24b:free",
             "premium": "anthropic/claude-sonnet-4",
             "fast": "deepseek/deepseek-chat-v3.1:free",
@@ -1137,7 +1137,7 @@ pub async fn get_model_info(
         agent
             .current_model
             .clone()
-            .unwrap_or_else(|| "cognitivecomputations/dolphin3.0-mistral-24b:free".to_string())
+            .unwrap_or_else(|| "openrouter/free".to_string())
     });
 
     if !agent.is_model_available(&model_name, &api_keys).await {
@@ -1149,6 +1149,11 @@ pub async fn get_model_info(
 
     // Determine display name and info based on model
     let (display_name, icon, description) = match model_name.as_str() {
+        "openrouter/free" => (
+            "OpenRouter Free (Auto)",
+            "🔀",
+            "Automatically routes to the best available free model",
+        ),
         "cognitivecomputations/dolphin3.0-mistral-24b:free" => (
             "Dolphin 3.0 Mistral 24B Free",
             "🐬",
