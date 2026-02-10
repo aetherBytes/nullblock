@@ -22,12 +22,12 @@ const Crossroads: React.FC<CrossroadsProps> = ({
   onConnectWallet: _onConnectWallet,
   showMarketplace,
   resetToLanding,
-  animationPhase = 'complete',
+  animationPhase: _animationPhase = 'complete',
 }) => {
-  const [currentView, setCurrentView] = useState<View>('landing');
+  const [currentView, setCurrentView] = useState<View>('marketplace');
   const [selectedService, setSelectedService] = useState<ServiceListing | null>(null);
   const [showMarketplaceFadeIn, setShowMarketplaceFadeIn] = useState<boolean>(false);
-  const previousView = React.useRef<View>('landing');
+  const previousView = React.useRef<View>('marketplace');
 
   // Watch publicKey changes - switch to marketplace when connected, landing when disconnected
   React.useEffect(() => {
@@ -35,8 +35,8 @@ const Crossroads: React.FC<CrossroadsProps> = ({
       // Wallet connected - switch to marketplace
       setCurrentView('marketplace');
     } else {
-      // Wallet disconnected - reset to landing
-      setCurrentView('landing');
+      // Wallet disconnected - stay on marketplace
+      setCurrentView('marketplace');
       setSelectedService(null);
     }
   }, [publicKey]);
@@ -82,9 +82,7 @@ const Crossroads: React.FC<CrossroadsProps> = ({
     switch (currentView) {
       case 'landing':
         return (
-          <CrossroadsLanding
-            animationPhase={animationPhase}
-          />
+          <CrossroadsLanding />
         );
 
       case 'marketplace':

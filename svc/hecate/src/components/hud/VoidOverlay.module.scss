@@ -767,37 +767,55 @@ $void-purple: #b967ff;
   }
 }
 
-// Bottom community links (pre-login) - inline with bottom tagline
-.communityLinks {
+// Footer bar (pre-login)
+.footerBar {
   position: fixed;
-  bottom: 24px;
-  left: 24px;
+  bottom: 0;
+  left: 0;
+  right: 0;
   z-index: 10005;
   display: flex;
   align-items: center;
-  gap: 0;
+  padding: 12px 24px;
   pointer-events: auto;
+  border-top: 1px solid transparent;
+  border-image: linear-gradient(90deg,
+    transparent 0%,
+    rgba(99, 102, 241, 0.25) 20%,
+    rgba(139, 92, 246, 0.25) 50%,
+    rgba(236, 72, 153, 0.25) 80%,
+    transparent 100%) 1;
 
   @media (max-width: 768px) {
-    bottom: 16px;
-    left: 16px;
+    padding: 10px 16px;
   }
 }
 
-.communityLink {
+.footerLeft {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  flex-shrink: 0;
+}
+
+.footerLink {
   display: inline-flex;
   align-items: center;
   padding: 0 10px;
   background: transparent;
-  color: rgba(255, 255, 255, 0.5);
+  color: rgba(255, 255, 255, 0.45);
   font-family: 'SF Pro Display', -apple-system, system-ui, sans-serif;
-  font-size: 0.8rem;
-  font-weight: 600;
+  font-size: 0.75rem;
+  font-weight: 500;
   letter-spacing: 0.3px;
   text-decoration: none;
   transition: all 0.2s ease;
   position: relative;
   white-space: nowrap;
+
+  &:first-child {
+    padding-left: 0;
+  }
 
   &:not(:last-child)::after {
     content: '·';
@@ -808,7 +826,7 @@ $void-purple: #b967ff;
   }
 
   &:hover {
-    color: rgba(255, 255, 255, 0.85);
+    color: rgba(255, 255, 255, 0.8);
   }
 
   @media (max-width: 768px) {
@@ -818,6 +836,31 @@ $void-purple: #b967ff;
   @media (max-width: 480px) {
     font-size: 0.6rem;
     padding: 0 8px;
+  }
+}
+
+.footerTagline {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 0.75rem;
+  font-weight: 600;
+  background: linear-gradient(135deg,
+    #94a3b8 0%,
+    #a78bfa 50%,
+    #6366f1 100%);
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  white-space: nowrap;
+  pointer-events: none;
+
+  @media (max-width: 768px) {
+    font-size: 0.6rem;
+  }
+
+  @media (max-width: 480px) {
+    display: none;
   }
 }
 

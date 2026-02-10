@@ -246,7 +246,7 @@ const VoidOverlay: React.FC<VoidOverlayProps> = ({
               onClick={onEnterCrossroads}
               disabled={pendingCrossroadsTransition}
             >
-              {pendingCrossroadsTransition ? 'Aligning...' : 'Enter the Crossroads'}
+              {pendingCrossroadsTransition ? 'Aligning...' : 'Crossroads'}
             </button>
             <button className={styles.connectButton} onClick={onConnectWallet} title="Connect Wallet">
               Connect
@@ -255,25 +255,30 @@ const VoidOverlay: React.FC<VoidOverlayProps> = ({
         )}
       </div>
 
-      {/* Bottom-left community links (pre-login only) */}
+      {/* Footer bar (pre-login) */}
       {!publicKey && (
-        <div className={styles.communityLinks}>
-          <a
-            href="https://aetherbytes.github.io/nullblock-sdk/"
-            target="_blank"
-            rel="noopener noreferrer"
-            className={styles.communityLink}
-          >
-            📚 Documentation
-          </a>
-          <a
-            href="https://x.com/Nullblock_io"
-            target="_blank"
-            rel="noopener noreferrer"
-            className={styles.communityLink}
-          >
-            𝕏 Follow Updates
-          </a>
+        <div className={styles.footerBar}>
+          <div className={styles.footerLeft}>
+            <a
+              href="https://aetherbytes.github.io/nullblock-sdk/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className={styles.footerLink}
+            >
+              📚 Documentation
+            </a>
+            <a
+              href="https://x.com/Nullblock_io"
+              target="_blank"
+              rel="noopener noreferrer"
+              className={styles.footerLink}
+            >
+              𝕏 Follow Updates
+            </a>
+          </div>
+          <span className={styles.footerTagline}>
+            Discover agents, tools, and workflows. Own the tools that own the future.
+          </span>
         </div>
       )}
 
