@@ -720,7 +720,7 @@ impl Provider for OpenRouterProvider {
                         if metadata_raw.contains("model not found") {
                             warn!("⚠️ Model {} not found in OpenRouter", config.name);
                             return Err(AppError::ModelNotAvailable(format!(
-                                "Model '{}' is not currently available. Please select a different model such as 'deepseek/deepseek-chat-v3.1:free' or 'cognitivecomputations/dolphin3.0-mistral-24b:free'",
+                                "Model '{}' is no longer available on OpenRouter",
                                 config.name
                             )));
                         }
@@ -733,7 +733,7 @@ impl Provider for OpenRouterProvider {
                             config.name
                         );
                         return Err(AppError::ModelNotAvailable(format!(
-                            "Model '{}' is no longer available. Please use 'deepseek/deepseek-chat-v3.1:free' or 'cognitivecomputations/dolphin3.0-mistral-24b:free' instead",
+                            "Model '{}' is no longer available on OpenRouter",
                             config.name
                         )));
                     }

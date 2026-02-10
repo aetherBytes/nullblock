@@ -171,46 +171,47 @@ impl LLMServiceFactory {
         let mut response_result = self.generate_with_model(request, &model_config).await;
 
         if let Err(AppError::ModelNotAvailable(ref msg)) = response_result {
-            if msg.contains("no longer available") {
-                warn!(
-                    "⚠️ Model {} not available, fetching live free models for fallback",
-                    selected_model
+            warn!(
+                "⚠️ Model {} not available ({}), fetching live free models for fallback",
+                selected_model, msg
+            );
+
+            let mut fallback_models = routing_decision.fallback_models.clone();
+
+            let live_fallbacks = self.get_free_model_fallbacks().await;
+            if !live_fallbacks.is_empty() {
+                info!(
+                    "📡 Using {} live free models as fallbacks",
+                    live_fallbacks.len()
                 );
+                fallback_models = live_fallbacks;
+            }
 
-                let mut fallback_models = routing_decision.fallback_models.clone();
-
-                let live_fallbacks = self.get_free_model_fallbacks().await;
-                if !live_fallbacks.is_empty() {
-                    info!(
-                        "📡 Using {} live free models as fallbacks",
-                        live_fallbacks.len()
-                    );
-                    fallback_models = live_fallbacks;
+            for fallback_model in &fallback_models {
+                if fallback_model == &selected_model {
+                    continue;
                 }
-
-                for fallback_model in &fallback_models {
-                    info!("🔄 Trying fallback model: {}", fallback_model);
-                    let fallback_config = self.create_model_config_for_override(fallback_model);
-                    match self.generate_with_model(request, &fallback_config).await {
-                        Ok(r) => {
-                            if r.content.trim().is_empty() {
-                                warn!("⚠️ Fallback model {} returned empty response, trying next fallback", fallback_model);
-                                continue;
-                            }
-                            info!("✅ Fallback successful with model: {}", fallback_model);
-                            response_result = Ok(r);
-                            break;
-                        }
-                        Err(e) => {
-                            warn!("⚠️ Fallback model {} also failed: {}", fallback_model, e);
+                info!("🔄 Trying fallback model: {}", fallback_model);
+                let fallback_config = self.create_model_config_for_override(fallback_model);
+                match self.generate_with_model(request, &fallback_config).await {
+                    Ok(r) => {
+                        if r.content.trim().is_empty() {
+                            warn!("⚠️ Fallback model {} returned empty response, trying next fallback", fallback_model);
                             continue;
                         }
+                        info!("✅ Fallback successful with model: {}", fallback_model);
+                        response_result = Ok(r);
+                        break;
+                    }
+                    Err(e) => {
+                        warn!("⚠️ Fallback model {} also failed: {}", fallback_model, e);
+                        continue;
                     }
                 }
+            }
 
-                if response_result.is_err() {
-                    warn!("❌ All fallback models failed for request");
-                }
+            if response_result.is_err() {
+                warn!("❌ All fallback models failed for request");
             }
         }
 
@@ -403,11 +404,46 @@ impl LLMServiceFactory {
         let config = self.create_model_config_for_override(model_name);
 
         let adjusted_config = ModelConfig {
-            provider: provider_type,
+            provider: provider_type.clone(),
             ..config
         };
 
-        temp_provider.generate(request, &adjusted_config).await
+        let result = temp_provider.generate(request, &adjusted_config).await;
+
+        if let Err(AppError::ModelNotAvailable(ref msg)) = result {
+            if provider_type == ModelProvider::OpenRouter {
+                warn!(
+                    "⚠️ Model {} not available via agent key ({}), trying fallbacks",
+                    model_name, msg
+                );
+
+                let fallbacks = self.get_free_model_fallbacks().await;
+                for fallback_model in &fallbacks {
+                    if fallback_model == model_name {
+                        continue;
+                    }
+                    info!("🔄 Trying fallback model: {}", fallback_model);
+                    let fallback_config = ModelConfig {
+                        provider: provider_type.clone(),
+                        ..self.create_model_config_for_override(fallback_model)
+                    };
+                    match temp_provider.generate(request, &fallback_config).await {
+                        Ok(r) if !r.content.trim().is_empty() => {
+                            info!("✅ Fallback successful with model: {}", fallback_model);
+                            return Ok(r);
+                        }
+                        Ok(_) => {
+                            warn!("⚠️ Fallback model {} returned empty response", fallback_model);
+                        }
+                        Err(e) => {
+                            warn!("⚠️ Fallback model {} failed: {}", fallback_model, e);
+                        }
+                    }
+                }
+            }
+        }
+
+        result
     }
 
     pub async fn quick_generate(&self, prompt: &str, concise: bool) -> AppResult<String> {

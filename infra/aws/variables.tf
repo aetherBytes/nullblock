@@ -15,8 +15,3 @@ variable "admin_cidr" {
   type        = string
 }
 
-variable "db_password" {
-  description = "Database password for production PostgreSQL"
-  type        = string
-  sensitive   = true
-}
