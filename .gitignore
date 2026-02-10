@@ -83,6 +83,7 @@ content-queue/
 *.terraform.lock.hcl
 *.tfstate
 *.tfstate.backup
+*.tfstate.*.backup
 *.tfstate.lock.info
 
 # Secrets / credentials
