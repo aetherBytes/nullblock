@@ -719,8 +719,6 @@ const HUD: React.FC<HUDProps> = ({
               showMarketplace={showCrossroadsMarketplace}
               resetToLanding={resetCrossroadsToLanding}
               animationPhase={loginAnimationPhase}
-              onEnterCrossroads={onEnterCrossroads}
-              pendingTransition={pendingCrossroadsTransition}
             />
           </div>
           <div
@@ -767,8 +765,6 @@ const HUD: React.FC<HUDProps> = ({
             showMarketplace={showCrossroadsMarketplace}
             resetToLanding={resetCrossroadsToLanding}
             animationPhase={loginAnimationPhase}
-            onEnterCrossroads={onEnterCrossroads}
-            pendingTransition={pendingCrossroadsTransition}
           />
         </div>
         <div
@@ -876,6 +872,8 @@ const HUD: React.FC<HUDProps> = ({
           }
           memcacheSection={memcacheSection}
           onMemcacheSectionChange={setMemcacheSection}
+          onEnterCrossroads={onEnterCrossroads}
+          pendingCrossroadsTransition={pendingCrossroadsTransition}
         />
       )}
       {renderMainContent()}

@@ -196,6 +196,36 @@ $category-model: #ec4899;
   }
 }
 
+.bottomTagline {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 0.8rem;
+  font-weight: 600;
+  background: linear-gradient(135deg,
+    #94a3b8 0%,
+    #a78bfa 50%,
+    #6366f1 100%);
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  text-align: center;
+  white-space: nowrap;
+  z-index: 10;
+  margin: 0;
+
+  @media (max-width: 768px) {
+    font-size: 0.65rem;
+    bottom: 16px;
+  }
+
+  @media (max-width: 480px) {
+    font-size: 0.6rem;
+    white-space: normal;
+    max-width: 80vw;
+  }
+}
 
 .buttonContainer {
   display: flex;

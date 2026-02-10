@@ -17,6 +17,7 @@ interface NullblockLogoProps {
   onClick?: () => void;
   title?: string;
   size?: 'small' | 'medium' | 'large' | 'xlarge';
+  variant?: 'color' | 'white' | 'black';
 }
 
 const NullblockLogo: React.FC<NullblockLogoProps> = ({
@@ -25,8 +26,9 @@ const NullblockLogo: React.FC<NullblockLogoProps> = ({
   onClick,
   title,
   size = 'medium',
+  variant = 'color',
 }) => {
-  const logoSrc = '/nb_logo_circle_color.png';
+  const logoSrc = `/nb_logo_circle_${variant}.png`;
 
   return (
     <div

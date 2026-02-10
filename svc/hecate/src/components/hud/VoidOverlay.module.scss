@@ -48,13 +48,21 @@ $void-purple: #b967ff;
 .nullblockTextLogo {
   font-family: 'Courier New', monospace;
   font-size: 1.2rem;
-  font-weight: bold;
-  letter-spacing: 3px;
-  color: $void-silver;
-  text-shadow:
-    0 0 10px rgba($void-blue, 0.6),
-    0 0 20px rgba($void-blue, 0.3);
-  animation: textLogoGlow 3s ease-in-out infinite;
+  font-weight: 300;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  background: linear-gradient(135deg,
+    #ffffff 0%,
+    #e2e8f0 25%,
+    #a78bfa 50%,
+    #8b5cf6 75%,
+    #6366f1 100%);
+  background-size: 200% 200%;
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: taglineShimmer 14s ease-in-out infinite;
+  filter: drop-shadow(0 0 20px rgba(139, 92, 246, 0.3));
   cursor: pointer;
   user-select: none;
 
@@ -63,16 +71,53 @@ $void-purple: #b967ff;
   }
 }
 
-@keyframes textLogoGlow {
+.navbarDivider {
+  width: 1px;
+  height: 18px;
+  background: rgba(139, 92, 246, 0.4);
+  flex-shrink: 0;
+
+  @media (max-width: 768px) {
+    display: none;
+  }
+}
+
+.navbarTagline {
+  font-family: 'Courier New', monospace;
+  font-size: 1rem;
+  font-weight: 300;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  background: linear-gradient(135deg,
+    #ffffff 0%,
+    #e2e8f0 25%,
+    #a78bfa 50%,
+    #8b5cf6 75%,
+    #6366f1 100%);
+  background-size: 200% 200%;
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: taglineShimmer 14s ease-in-out infinite;
+  filter: drop-shadow(0 0 15px rgba(139, 92, 246, 0.2));
+  user-select: none;
+
+  @media (max-width: 1200px) {
+    font-size: 0.85rem;
+  }
+
+  @media (max-width: 768px) {
+    display: none;
+  }
+}
+
+@keyframes taglineShimmer {
   0%, 100% {
-    text-shadow:
-      0 0 10px rgba($void-blue, 0.6),
-      0 0 20px rgba($void-blue, 0.3);
+    background-position: 0% 50%;
   }
   50% {
-    text-shadow:
-      0 0 15px rgba($void-blue, 0.8),
-      0 0 30px rgba($void-blue, 0.5);
+    background-position: 100% 50%;
   }
 }
 
@@ -585,6 +630,79 @@ $void-purple: #b967ff;
   }
 }
 
+// Crossroads button (shown when not logged in, next to Connect)
+.crossroadsNavButton {
+  height: 48px;
+  padding: 0 24px;
+  background: rgba(99, 102, 241, 0.08);
+  border: 1px solid rgba(99, 102, 241, 0.25);
+  border-bottom: none;
+  border-right: none;
+  color: rgba(255, 255, 255, 0.9);
+  font-family: 'SF Pro Display', -apple-system, system-ui, sans-serif;
+  font-size: 14px;
+  font-weight: 500;
+  letter-spacing: 0.5px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  backdrop-filter: blur(32px);
+  -webkit-backdrop-filter: blur(32px);
+  position: relative;
+  overflow: hidden;
+  white-space: nowrap;
+
+  &::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, rgba(139, 92, 246, 0.5), rgba(99, 102, 241, 0.5));
+  }
+
+  &::before {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 0;
+    height: 2px;
+    background: #8b5cf6;
+    transition: width 0.2s ease;
+    z-index: 1;
+  }
+
+  &:hover:not(:disabled) {
+    background: rgba(139, 92, 246, 0.15);
+    color: rgba(255, 255, 255, 1);
+
+    &::before {
+      width: 80%;
+    }
+  }
+
+  &:active:not(:disabled) {
+    transform: scale(0.98);
+  }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+
+  &.transitioning {
+    color: rgba(139, 92, 246, 0.8);
+  }
+
+  @media (max-width: 768px) {
+    height: 44px;
+    padding: 0 16px;
+    font-size: 13px;
+  }
+}
+
 // Connect button (shown when not logged in)
 .connectButton {
   height: 48px;
@@ -646,6 +764,60 @@ $void-purple: #b967ff;
     height: 44px;
     padding: 0 16px;
     font-size: 13px;
+  }
+}
+
+// Bottom community links (pre-login) - inline with bottom tagline
+.communityLinks {
+  position: fixed;
+  bottom: 24px;
+  left: 24px;
+  z-index: 10005;
+  display: flex;
+  align-items: center;
+  gap: 0;
+  pointer-events: auto;
+
+  @media (max-width: 768px) {
+    bottom: 16px;
+    left: 16px;
+  }
+}
+
+.communityLink {
+  display: inline-flex;
+  align-items: center;
+  padding: 0 10px;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.5);
+  font-family: 'SF Pro Display', -apple-system, system-ui, sans-serif;
+  font-size: 0.8rem;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+  text-decoration: none;
+  transition: all 0.2s ease;
+  position: relative;
+  white-space: nowrap;
+
+  &:not(:last-child)::after {
+    content: '·';
+    position: absolute;
+    right: -2px;
+    color: rgba(255, 255, 255, 0.2);
+    font-weight: 300;
+  }
+
+  &:hover {
+    color: rgba(255, 255, 255, 0.85);
+  }
+
+  @media (max-width: 768px) {
+    font-size: 0.65rem;
+  }
+
+  @media (max-width: 480px) {
+    font-size: 0.6rem;
+    padding: 0 8px;
   }
 }
 

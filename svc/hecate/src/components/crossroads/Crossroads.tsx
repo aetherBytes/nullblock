@@ -13,20 +13,16 @@ interface CrossroadsProps {
   showMarketplace?: boolean;
   resetToLanding?: boolean;
   animationPhase?: AnimationPhase;
-  onEnterCrossroads?: () => void;
-  pendingTransition?: boolean;
 }
 
 type View = 'landing' | 'marketplace' | 'service-detail' | 'my-services';
 
 const Crossroads: React.FC<CrossroadsProps> = ({
   publicKey,
-  onConnectWallet,
+  onConnectWallet: _onConnectWallet,
   showMarketplace,
   resetToLanding,
   animationPhase = 'complete',
-  onEnterCrossroads,
-  pendingTransition = false,
 }) => {
   const [currentView, setCurrentView] = useState<View>('landing');
   const [selectedService, setSelectedService] = useState<ServiceListing | null>(null);
@@ -87,20 +83,7 @@ const Crossroads: React.FC<CrossroadsProps> = ({
       case 'landing':
         return (
           <CrossroadsLanding
-            onConnectWallet={() => {
-              onConnectWallet();
-            }}
-            onNavigateCrossroads={() => {
-              console.log('🔮 onNavigateCrossroads called, onEnterCrossroads:', !!onEnterCrossroads);
-              if (onEnterCrossroads) {
-                onEnterCrossroads();
-              } else {
-                console.log('⚠️ No onEnterCrossroads handler, falling back to direct view change');
-                setCurrentView('marketplace');
-              }
-            }}
             animationPhase={animationPhase}
-            pendingTransition={pendingTransition}
           />
         );
 

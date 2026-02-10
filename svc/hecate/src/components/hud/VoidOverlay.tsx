@@ -27,6 +27,8 @@ interface VoidOverlayProps {
   activeTab?: 'crossroads' | 'memcache' | null;
   memcacheSection?: MemCacheSection;
   onMemcacheSectionChange?: (section: MemCacheSection) => void;
+  onEnterCrossroads?: () => void;
+  pendingCrossroadsTransition?: boolean;
 }
 
 const VoidOverlay: React.FC<VoidOverlayProps> = ({
@@ -41,6 +43,8 @@ const VoidOverlay: React.FC<VoidOverlayProps> = ({
   activeTab,
   memcacheSection = 'engrams',
   onMemcacheSectionChange,
+  onEnterCrossroads,
+  pendingCrossroadsTransition = false,
 }) => {
   const [welcomeVisible, setWelcomeVisible] = useState(showWelcome);
   const [welcomeFading, setWelcomeFading] = useState(false);
@@ -119,12 +123,19 @@ const VoidOverlay: React.FC<VoidOverlayProps> = ({
           state="base"
           theme="dark"
           size="medium"
+          variant="color"
           onClick={onResetToVoid}
           title="Return to Void"
         />
         <div className={styles.nullblockTextLogo} onClick={onResetToVoid} title="Return to Void">
           NULLBLOCK
         </div>
+        {!publicKey && (
+          <>
+            <span className={styles.navbarDivider} />
+            <span className={styles.navbarTagline}>Picks and shovels for the new age.</span>
+          </>
+        )}
       </div>
 
       {/* Top-right container: Nav + Settings */}
@@ -229,11 +240,42 @@ const VoidOverlay: React.FC<VoidOverlayProps> = ({
             )}
           </div>
         ) : (
-          <button className={styles.connectButton} onClick={onConnectWallet} title="Connect Wallet">
-            Connect
-          </button>
+          <>
+            <button
+              className={`${styles.crossroadsNavButton} ${pendingCrossroadsTransition ? styles.transitioning : ''}`}
+              onClick={onEnterCrossroads}
+              disabled={pendingCrossroadsTransition}
+            >
+              {pendingCrossroadsTransition ? 'Aligning...' : 'Enter the Crossroads'}
+            </button>
+            <button className={styles.connectButton} onClick={onConnectWallet} title="Connect Wallet">
+              Connect
+            </button>
+          </>
         )}
       </div>
+
+      {/* Bottom-left community links (pre-login only) */}
+      {!publicKey && (
+        <div className={styles.communityLinks}>
+          <a
+            href="https://aetherbytes.github.io/nullblock-sdk/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className={styles.communityLink}
+          >
+            📚 Documentation
+          </a>
+          <a
+            href="https://x.com/Nullblock_io"
+            target="_blank"
+            rel="noopener noreferrer"
+            className={styles.communityLink}
+          >
+            𝕏 Follow Updates
+          </a>
+        </div>
+      )}
 
       {/* First-time Welcome Overlay */}
       {welcomeVisible && (
