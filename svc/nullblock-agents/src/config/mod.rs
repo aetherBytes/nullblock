@@ -71,6 +71,7 @@ impl Config {
             server: ServerConfig {
                 host: env::var("AGENTS_HOST").unwrap_or_else(|_| "0.0.0.0".to_string()),
                 port: env::var("AGENTS_PORT")
+                    .or_else(|_| env::var("PORT"))
                     .unwrap_or_else(|_| "9001".to_string())
                     .parse()
                     .map_err(|e| ConfigError::Parse(format!("AGENTS_PORT: {}", e)))?,
