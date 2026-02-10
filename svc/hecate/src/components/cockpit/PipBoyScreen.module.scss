@@ -1,12 +1,12 @@
 $pip-blue: #7b8cff;
 $pip-purple: #b967ff;
 $pip-glow: #9a7bff;
-$pip-screen: rgba(6, 4, 18, 0.92);
-$pip-bezel: rgba(18, 14, 28, 0.85);
-$pip-bezel-edge: rgba(100, 80, 160, 0.15);
-$pip-text: rgba(160, 170, 255, 0.9);
-$pip-text-dim: rgba(140, 150, 220, 0.5);
-$pip-accent: rgba(185, 103, 255, 0.7);
+$pip-screen: rgba(8, 6, 22, 0.75);
+$pip-bezel: rgba(14, 10, 28, 0.6);
+$pip-bezel-edge: rgba(120, 100, 180, 0.2);
+$pip-text: rgba(170, 180, 255, 0.95);
+$pip-text-dim: rgba(150, 160, 230, 0.6);
+$pip-accent: rgba(185, 103, 255, 0.8);
 
 .pipboy {
   perspective: 800px;
@@ -16,19 +16,25 @@ $pip-accent: rgba(185, 103, 255, 0.7);
 
 .bezel {
   background: $pip-bezel;
-  border: 2px solid $pip-bezel-edge;
-  border-radius: 10px;
+  border: 1px solid rgba($pip-glow, 0.14);
+  border-radius: 4px;
   overflow: hidden;
   display: flex;
   flex-direction: column;
   height: 100%;
-  transform: rotateX(8deg);
-  transform-origin: bottom center;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   box-shadow:
-    0 -2px 20px rgba($pip-purple, 0.06),
-    0 4px 20px rgba(0, 0, 0, 0.5),
-    inset 0 1px 0 rgba(255, 255, 255, 0.04),
-    inset 0 -1px 0 rgba(0, 0, 0, 0.4);
+    0 0 20px rgba($pip-purple, 0.05),
+    inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  mask-image: linear-gradient(180deg,
+    rgba(0,0,0,1) 0%,
+    rgba(0,0,0,1) 85%,
+    rgba(0,0,0,0.4) 100%);
+  -webkit-mask-image: linear-gradient(180deg,
+    rgba(0,0,0,1) 0%,
+    rgba(0,0,0,1) 85%,
+    rgba(0,0,0,0.4) 100%);
   position: relative;
 }
 
@@ -36,18 +42,26 @@ $pip-accent: rgba(185, 103, 255, 0.7);
   position: absolute;
   top: 8px;
   right: 10px;
-  width: 4px;
-  height: 4px;
+  width: 5px;
+  height: 5px;
   border-radius: 50%;
   background: $pip-purple;
-  box-shadow: 0 0 6px rgba($pip-purple, 0.6), 0 0 12px rgba($pip-purple, 0.3);
+  box-shadow: 0 0 8px rgba($pip-purple, 0.7), 0 0 16px rgba($pip-purple, 0.35);
   animation: ledPulse 3s ease-in-out infinite;
   z-index: 4;
+
+  &::after {
+    content: '';
+    position: absolute;
+    inset: -2px;
+    border-radius: 50%;
+    border: 1px solid rgba($pip-purple, 0.2);
+  }
 }
 
 @keyframes ledPulse {
-  0%, 100% { opacity: 0.6; box-shadow: 0 0 4px rgba($pip-purple, 0.4); }
-  50% { opacity: 1; box-shadow: 0 0 8px rgba($pip-purple, 0.8), 0 0 16px rgba($pip-purple, 0.3); }
+  0%, 100% { opacity: 0.6; box-shadow: 0 0 6px rgba($pip-purple, 0.4); }
+  50% { opacity: 1; box-shadow: 0 0 10px rgba($pip-purple, 0.9), 0 0 20px rgba($pip-purple, 0.4); }
 }
 
 .bezelTop {
@@ -55,7 +69,7 @@ $pip-accent: rgba(185, 103, 255, 0.7);
   align-items: center;
   justify-content: space-between;
   padding: 4px 8px;
-  background: rgba(0, 0, 0, 0.35);
+  background: rgba(0, 0, 0, 0.2);
   border-bottom: 1px solid rgba($pip-glow, 0.08);
   flex-shrink: 0;
 }
@@ -68,7 +82,7 @@ $pip-accent: rgba(185, 103, 255, 0.7);
 .tab {
   padding: 3px 8px;
   background: transparent;
-  border: 1px solid rgba($pip-glow, 0.06);
+  border: 1px solid rgba($pip-glow, 0.1);
   border-bottom: none;
   border-radius: 3px 3px 0 0;
   cursor: pointer;
@@ -83,16 +97,18 @@ $pip-accent: rgba(185, 103, 255, 0.7);
 
   &:hover {
     color: $pip-text;
-    background: rgba($pip-glow, 0.04);
+    background: rgba($pip-glow, 0.06);
   }
 }
 
 .tabActive {
   color: $pip-glow;
-  background: rgba($pip-glow, 0.06);
-  border-color: rgba($pip-glow, 0.15);
-  text-shadow: 0 0 8px rgba($pip-glow, 0.4);
-  box-shadow: inset 0 1px 0 rgba($pip-glow, 0.08);
+  background: rgba($pip-glow, 0.14);
+  border-color: rgba($pip-glow, 0.3);
+  text-shadow: 0 0 12px rgba($pip-glow, 0.6);
+  box-shadow:
+    inset 0 1px 0 rgba($pip-glow, 0.15),
+    0 0 6px rgba($pip-glow, 0.08);
 
   &::after {
     content: '';
@@ -110,21 +126,19 @@ $pip-accent: rgba(185, 103, 255, 0.7);
   font-size: 6px;
   letter-spacing: 3px;
   text-transform: uppercase;
-  color: rgba($pip-purple, 0.2);
+  color: rgba($pip-purple, 0.3);
   user-select: none;
 }
 
 .crtFrame {
   flex: 1;
-  margin: 3px 4px;
-  border-radius: 6px;
+  margin: 2px 3px;
+  border-radius: 3px;
   overflow: hidden;
   position: relative;
   min-height: 0;
   box-shadow:
-    inset 0 0 30px rgba(0, 0, 0, 0.7),
-    inset 0 0 60px rgba($pip-purple, 0.03),
-    0 0 1px rgba($pip-glow, 0.1);
+    inset 0 0 20px rgba(0, 0, 0, 0.4);
 }
 
 .crtScreen {
@@ -132,7 +146,7 @@ $pip-accent: rgba(185, 103, 255, 0.7);
   width: 100%;
   height: 100%;
   background: $pip-screen;
-  border-radius: 6px;
+  border-radius: 3px;
   overflow: hidden;
 }
 
@@ -187,11 +201,11 @@ $pip-accent: rgba(185, 103, 255, 0.7);
   pointer-events: none;
   z-index: 4;
   box-shadow:
-    inset 0 0 40px rgba($pip-purple, 0.04),
-    inset 0 0 80px rgba($pip-blue, 0.02);
+    inset 0 0 40px rgba($pip-purple, 0.06),
+    inset 0 0 80px rgba($pip-blue, 0.03);
   background: radial-gradient(
     ellipse 80% 70% at 50% 50%,
-    rgba($pip-glow, 0.015) 0%,
+    rgba($pip-glow, 0.025) 0%,
     transparent 70%
   );
 }
@@ -218,7 +232,7 @@ $pip-accent: rgba(185, 103, 255, 0.7);
   align-items: center;
   gap: 6px;
   padding: 3px 8px;
-  background: rgba(0, 0, 0, 0.4);
+  background: rgba(0, 0, 0, 0.2);
   border-top: 1px solid rgba($pip-glow, 0.06);
   flex-shrink: 0;
   overflow: hidden;
@@ -295,21 +309,23 @@ $pip-accent: rgba(185, 103, 255, 0.7);
   align-items: center;
   justify-content: space-between;
   padding: 3px 8px 4px;
-  background: rgba(0, 0, 0, 0.3);
+  background: rgba(0, 0, 0, 0.15);
   border-top: 1px solid rgba($pip-glow, 0.04);
   flex-shrink: 0;
 }
 
 .knob {
-  width: 8px;
-  height: 8px;
+  width: 10px;
+  height: 10px;
   border-radius: 50%;
   background: radial-gradient(circle at 35% 35%,
-    rgba($pip-bezel-edge, 0.4),
-    rgba(0, 0, 0, 0.5)
+    rgba($pip-bezel-edge, 0.5),
+    rgba(0, 0, 0, 0.6)
   );
-  border: 1px solid rgba($pip-bezel-edge, 0.2);
-  box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba($pip-bezel-edge, 0.25);
+  box-shadow:
+    inset 0 1px 1px rgba(255, 255, 255, 0.08),
+    0 1px 3px rgba(0, 0, 0, 0.4);
 }
 
 .screws {
@@ -328,8 +344,7 @@ $pip-accent: rgba(185, 103, 255, 0.7);
 
 @media (max-width: 768px) {
   .bezel {
-    transform: rotateX(4deg);
-    border-radius: 8px;
+    border-radius: 3px;
   }
 
   .tab {

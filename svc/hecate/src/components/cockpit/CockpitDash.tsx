@@ -428,18 +428,56 @@ const CockpitDash: React.FC<CockpitDashProps> = ({
 
   return (
     <div className={`${styles.cockpitDash} ${visible ? styles.visible : ''}`}>
-      {/* Frame chrome — pointer-events: none overlay */}
-      <div className={styles.frameChrome}>
-        <div className={styles.frameTop} />
-        <div className={styles.frameBottom} />
-        <div className={styles.frameLeft} />
-        <div className={styles.frameRight} />
-        <div className={styles.strutTL} />
-        <div className={styles.strutTR} />
-        <div className={styles.strutBL} />
-        <div className={styles.strutBR} />
+      {/* Canopy frame — thick structural beams */}
+      <div className={styles.canopyFrame}>
+        <div className={styles.canopyTop} />
+        <div className={styles.canopyBottom} />
+        <div className={styles.canopyLeft} />
+        <div className={styles.canopyRight} />
+        <div className={styles.canopyStrutTL} />
+        <div className={styles.canopyStrutTR} />
+        <div className={styles.canopyStrutBL} />
+        <div className={styles.canopyStrutBR} />
+        <div className={styles.canopyCrossbar} />
         <div className={styles.scanLines} />
+        <div className={styles.scanSweep} />
         <div className={styles.vignette} />
+      </div>
+
+      {/* HUD overlay — projected on windshield */}
+      <div className={styles.hudOverlay}>
+        <div className={styles.reticle}>
+          <div className={styles.ringOuter} />
+          <div className={styles.ringInner} />
+          <div className={styles.ringCore} />
+          <div className={styles.reticleCross} />
+        </div>
+        <div className={styles.hudLeft}>
+          <div className={styles.hudGroup}>
+            <div className={styles.hudRow}><span className={styles.hudLabel}>SYS</span><span className={styles.hudValGreen}>NOMINAL</span></div>
+            <div className={styles.hudRow}><span className={styles.hudLabel}>NAV</span><span className={styles.hudValGreen}>ONLINE</span></div>
+            <div className={styles.hudRow}><span className={styles.hudLabel}>COMMS</span><span className={styles.hudValGreen}>ACTIVE</span></div>
+            <div className={styles.hudRow}><span className={styles.hudLabel}>HULL</span><span className={styles.hudValCyan}>100%</span></div>
+          </div>
+        </div>
+        <div className={styles.hudRight}>
+          <div className={styles.hudGroup}>
+            <div className={styles.hudRow}><span className={styles.hudLabel}>SECTOR</span><span className={styles.hudValGreen}>7G</span></div>
+            <div className={styles.hudRow}><span className={styles.hudLabel}>RANGE</span><span className={styles.hudValCyan}>202.6 m</span></div>
+            <div className={styles.hudRow}><span className={styles.hudLabel}>RATE</span><span className={styles.hudValCyan}>0.038 m/s</span></div>
+            <div className={styles.hudRow}><span className={styles.hudLabel}>DRIFT</span><span className={styles.hudValAmber}>0.2°/s</span></div>
+          </div>
+        </div>
+        <div className={styles.ticksLeft}>
+          {Array.from({ length: 11 }, (_, i) => (
+            <div key={i} className={`${styles.tick} ${i === 5 ? styles.tickLong : ''}`} />
+          ))}
+        </div>
+        <div className={styles.ticksRight}>
+          {Array.from({ length: 11 }, (_, i) => (
+            <div key={i} className={`${styles.tick} ${i === 5 ? styles.tickLong : ''}`} />
+          ))}
+        </div>
       </div>
 
       {/* Top MFD row — overhead panels (inverse of bottom, thinner) */}
@@ -504,7 +542,7 @@ const CockpitDash: React.FC<CockpitDashProps> = ({
               <line
                 key={`tbl-${i}`}
                 x1={l.x1} y1={l.y1} x2={l.x2} y2={l.y2}
-                stroke="rgba(154, 123, 255, 0.15)"
+                stroke="rgba(154, 123, 255, 0.25)"
                 strokeWidth="0.6"
               />
             ))}
@@ -512,26 +550,30 @@ const CockpitDash: React.FC<CockpitDashProps> = ({
               <React.Fragment key={`tl-${i}`}>
                 <line
                   x1={l.x1} y1={l.y1} x2={l.x2} y2={l.y2}
-                  stroke="rgba(154, 123, 255, 0.06)"
+                  stroke="rgba(154, 123, 255, 0.1)"
                   strokeWidth="6"
                   filter="url(#topConnGlow)"
                 />
                 <line
                   x1={l.x1} y1={l.y1} x2={l.x2} y2={l.y2}
-                  stroke="rgba(154, 123, 255, 0.3)"
+                  stroke="rgba(154, 123, 255, 0.45)"
                   strokeWidth="1"
                 />
               </React.Fragment>
             ))}
           </svg>
         )}
-        <PipBoyScreen className={styles.mfdTopLeft} isLoggedIn={isLoggedIn}>
-          <div className={styles.visorTitleWrap} key={activeTab || 'void'}>
-            <div className={styles.visorTitle}>{pageInfo.title}</div>
-            <div className={styles.visorSubtitle}>{pageInfo.subtitle}</div>
-            <div className={styles.visorCursor}>&gt;_</div>
+        <div className={styles.mfdTopLeft}>
+          <div className={styles.visorPanel}>
+            <div className={styles.visorScreen}>
+              <div className={styles.visorTitleWrap} key={activeTab || 'void'}>
+                <div className={styles.visorTitle}>{pageInfo.title}</div>
+                <div className={styles.visorSubtitle}>{pageInfo.subtitle}</div>
+                <div className={styles.visorCursor}>&gt;_</div>
+              </div>
+            </div>
           </div>
-        </PipBoyScreen>
+        </div>
         <MFDScreen
           title="VISOR"
           statusColor="green"
@@ -554,6 +596,11 @@ const CockpitDash: React.FC<CockpitDashProps> = ({
             <span>NB-7741</span>
           </div>
         </PipBoyScreen>
+      </div>
+
+      {/* Instrument console base */}
+      <div className={styles.consoleBase}>
+        <div className={styles.consoleEdgeLight} />
       </div>
 
       {/* MFD row — 3 pane cockpit */}
@@ -612,11 +659,11 @@ const CockpitDash: React.FC<CockpitDashProps> = ({
                     rx={rx} ry={ry}
                   >
                     <stop offset="0%" stopColor="rgb(200, 200, 220)" stopOpacity="0" />
-                    <stop offset="30%" stopColor="rgb(180, 180, 210)" stopOpacity="0.04" />
-                    <stop offset="55%" stopColor="rgb(160, 160, 200)" stopOpacity="0.12" />
-                    <stop offset="72%" stopColor="rgb(140, 140, 180)" stopOpacity="0.22" />
-                    <stop offset="85%" stopColor="rgb(120, 120, 170)" stopOpacity="0.35" />
-                    <stop offset="100%" stopColor="rgb(100, 100, 160)" stopOpacity="0.5" />
+                    <stop offset="30%" stopColor="rgb(180, 180, 210)" stopOpacity="0.02" />
+                    <stop offset="55%" stopColor="rgb(160, 160, 200)" stopOpacity="0.05" />
+                    <stop offset="72%" stopColor="rgb(140, 140, 180)" stopOpacity="0.1" />
+                    <stop offset="85%" stopColor="rgb(120, 120, 170)" stopOpacity="0.16" />
+                    <stop offset="100%" stopColor="rgb(100, 100, 160)" stopOpacity="0.22" />
                   </radialGradient>
                 );
               })}
@@ -635,11 +682,11 @@ const CockpitDash: React.FC<CockpitDashProps> = ({
                     rx={rx} ry={ry}
                   >
                     <stop offset="0%" stopColor="rgb(200, 200, 220)" stopOpacity="0" />
-                    <stop offset="40%" stopColor="rgb(180, 180, 210)" stopOpacity="0.02" />
-                    <stop offset="65%" stopColor="rgb(160, 160, 200)" stopOpacity="0.05" />
-                    <stop offset="80%" stopColor="rgb(140, 140, 180)" stopOpacity="0.1" />
-                    <stop offset="92%" stopColor="rgb(120, 120, 170)" stopOpacity="0.16" />
-                    <stop offset="100%" stopColor="rgb(100, 100, 160)" stopOpacity="0.22" />
+                    <stop offset="40%" stopColor="rgb(180, 180, 210)" stopOpacity="0.01" />
+                    <stop offset="65%" stopColor="rgb(160, 160, 200)" stopOpacity="0.025" />
+                    <stop offset="80%" stopColor="rgb(140, 140, 180)" stopOpacity="0.05" />
+                    <stop offset="92%" stopColor="rgb(120, 120, 170)" stopOpacity="0.08" />
+                    <stop offset="100%" stopColor="rgb(100, 100, 160)" stopOpacity="0.12" />
                   </radialGradient>
                 );
               })}
@@ -680,7 +727,7 @@ const CockpitDash: React.FC<CockpitDashProps> = ({
               <line
                 key={`bl-${i}`}
                 x1={l.x1} y1={l.y1} x2={l.x2} y2={l.y2}
-                stroke="rgba(154, 123, 255, 0.15)"
+                stroke="rgba(154, 123, 255, 0.25)"
                 strokeWidth="0.6"
               />
             ))}
@@ -688,13 +735,13 @@ const CockpitDash: React.FC<CockpitDashProps> = ({
               <React.Fragment key={i}>
                 <line
                   x1={l.x1} y1={l.y1} x2={l.x2} y2={l.y2}
-                  stroke="rgba(154, 123, 255, 0.06)"
+                  stroke="rgba(154, 123, 255, 0.1)"
                   strokeWidth="6"
                   filter="url(#connGlow)"
                 />
                 <line
                   x1={l.x1} y1={l.y1} x2={l.x2} y2={l.y2}
-                  stroke="rgba(154, 123, 255, 0.3)"
+                  stroke="rgba(154, 123, 255, 0.45)"
                   strokeWidth="1"
                 />
               </React.Fragment>
