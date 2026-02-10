@@ -66,6 +66,14 @@ $void-purple: #b967ff;
   cursor: pointer;
   user-select: none;
 
+  @media (min-width: 1600px) {
+    font-size: 1.6rem;
+  }
+
+  @media (min-width: 2000px) {
+    font-size: 1.9rem;
+  }
+
   @media (max-width: 768px) {
     display: none;
   }
@@ -102,6 +110,14 @@ $void-purple: #b967ff;
   animation: taglineShimmer 14s ease-in-out infinite;
   filter: drop-shadow(0 0 15px rgba(139, 92, 246, 0.2));
   user-select: none;
+
+  @media (min-width: 1600px) {
+    font-size: 1.3rem;
+  }
+
+  @media (min-width: 2000px) {
+    font-size: 1.55rem;
+  }
 
   @media (max-width: 1200px) {
     font-size: 0.85rem;
@@ -829,6 +845,14 @@ $void-purple: #b967ff;
     color: rgba(255, 255, 255, 0.8);
   }
 
+  @media (min-width: 1600px) {
+    font-size: 0.95rem;
+  }
+
+  @media (min-width: 2000px) {
+    font-size: 1.1rem;
+  }
+
   @media (max-width: 768px) {
     font-size: 0.65rem;
   }
@@ -854,6 +878,14 @@ $void-purple: #b967ff;
   -webkit-text-fill-color: transparent;
   white-space: nowrap;
   pointer-events: none;
+
+  @media (min-width: 1600px) {
+    font-size: 0.95rem;
+  }
+
+  @media (min-width: 2000px) {
+    font-size: 1.1rem;
+  }
 
   @media (max-width: 768px) {
     font-size: 0.6rem;
