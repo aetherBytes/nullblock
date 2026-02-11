@@ -1,11 +1,22 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import styles from './crossroads.module.scss';
 import CrossroadsLanding from './landing/CrossroadsLanding';
 import MarketplaceBrowser from './marketplace/MarketplaceBrowser';
+import PipBoyBar from './marketplace/PipBoyBar';
+import NexusView from './nexus/NexusView';
 import type { ServiceListing } from './types';
+import type { MCPTool, DiscoveredAgent, DiscoveredProtocol, ToolCategory, CategorySummary } from '../../types/crossroads';
+import {
+  discoverAllMcpTools,
+  discoverAgents,
+  discoverProtocols,
+  searchTools,
+  filterToolsByCategory,
+  getHotTools,
+} from '../../common/services/crossroads-api';
 
-// Animation phase type (matches home/index.tsx)
 type AnimationPhase = 'idle' | 'black' | 'stars' | 'background' | 'navbar' | 'complete';
+type TabType = 'tools' | 'agents' | 'protocols';
 
 interface CrossroadsProps {
   publicKey: string | null;
@@ -15,7 +26,7 @@ interface CrossroadsProps {
   animationPhase?: AnimationPhase;
 }
 
-type View = 'landing' | 'marketplace' | 'service-detail' | 'my-services';
+type View = 'nexus' | 'landing' | 'marketplace' | 'service-detail' | 'my-services';
 
 const Crossroads: React.FC<CrossroadsProps> = ({
   publicKey,
@@ -24,43 +35,105 @@ const Crossroads: React.FC<CrossroadsProps> = ({
   resetToLanding,
   animationPhase: _animationPhase = 'complete',
 }) => {
-  const [currentView, setCurrentView] = useState<View>('marketplace');
+  const [currentView, setCurrentView] = useState<View>('nexus');
   const [selectedService, setSelectedService] = useState<ServiceListing | null>(null);
   const [showMarketplaceFadeIn, setShowMarketplaceFadeIn] = useState<boolean>(false);
-  const previousView = React.useRef<View>('marketplace');
+  const previousView = React.useRef<View>('nexus');
 
-  // Watch publicKey changes - switch to marketplace when connected, landing when disconnected
+  const [activeTab, setActiveTab] = useState<TabType>('tools');
+  const [tools, setTools] = useState<MCPTool[]>([]);
+  const [agents, setAgents] = useState<DiscoveredAgent[]>([]);
+  const [protocols, setProtocols] = useState<DiscoveredProtocol[]>([]);
+  const [categories, setCategories] = useState<CategorySummary[]>([]);
+  const [filteredTools, setFilteredTools] = useState<MCPTool[]>([]);
+  const [hotTools, setHotTools] = useState<MCPTool[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState<ToolCategory | 'All'>('All');
+  const [discoveryTime, setDiscoveryTime] = useState<number>(0);
+
+  const loadTools = useCallback(async () => {
+    try {
+      setLoading(true);
+      const response = await discoverAllMcpTools();
+      setTools(response.tools);
+      setCategories(response.categories);
+      setHotTools(getHotTools(response.tools));
+      setDiscoveryTime(response.discoveryTimeMs);
+    } catch (error) {
+      console.error('Failed to load tools:', error);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const loadAgents = useCallback(async () => {
+    try {
+      setLoading(true);
+      const response = await discoverAgents();
+      setAgents(response.agents);
+    } catch (error) {
+      console.error('Failed to load agents:', error);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const loadProtocols = useCallback(async () => {
+    try {
+      setLoading(true);
+      const response = await discoverProtocols();
+      setProtocols(response.protocols);
+    } catch (error) {
+      console.error('Failed to load protocols:', error);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (activeTab === 'tools') {
+      loadTools();
+    } else if (activeTab === 'agents') {
+      loadAgents();
+    } else if (activeTab === 'protocols') {
+      loadProtocols();
+    }
+  }, [activeTab, loadTools, loadAgents, loadProtocols]);
+
+  useEffect(() => {
+    let filtered = tools;
+    if (selectedCategory !== 'All') {
+      filtered = filterToolsByCategory(filtered, selectedCategory);
+    }
+    if (searchQuery) {
+      filtered = searchTools(filtered, searchQuery);
+    }
+    setFilteredTools(filtered);
+  }, [tools, searchQuery, selectedCategory]);
+
   React.useEffect(() => {
     if (publicKey) {
-      // Wallet connected - switch to marketplace
-      setCurrentView('marketplace');
+      if (currentView === 'landing') setCurrentView('nexus');
     } else {
-      // Wallet disconnected - stay on marketplace
-      setCurrentView('marketplace');
       setSelectedService(null);
     }
   }, [publicKey]);
 
-  // Watch showMarketplace prop - show marketplace when CROSSROADS button is clicked
-  // This is triggered after orb alignment completes
   React.useEffect(() => {
     if (showMarketplace) {
-      // If we're coming from landing, trigger the fade-in animation
       if (previousView.current === 'landing') {
         setShowMarketplaceFadeIn(true);
-        // Clear the fade-in class after animation completes
         setTimeout(() => setShowMarketplaceFadeIn(false), 1000);
       }
       setCurrentView('marketplace');
     }
   }, [showMarketplace]);
 
-  // Track view changes
   React.useEffect(() => {
     previousView.current = currentView;
   }, [currentView]);
 
-  // Watch resetToLanding prop - reset to landing when NULLBLOCK logo is clicked
   React.useEffect(() => {
     if (resetToLanding) {
       setCurrentView('landing');
@@ -68,28 +141,45 @@ const Crossroads: React.FC<CrossroadsProps> = ({
     }
   }, [resetToLanding]);
 
-  const handleServiceClick = (service: unknown) => {
-    setSelectedService(service as ServiceListing);
-    setCurrentView('service-detail');
-  };
-
   const handleBackToMarketplace = () => {
     setSelectedService(null);
     setCurrentView('marketplace');
   };
 
+  const handleViewChange = (view: 'nexus' | 'marketplace') => {
+    setCurrentView(view);
+  };
+
+  const pipboyView = currentView === 'marketplace' || currentView === 'nexus'
+    ? currentView
+    : currentView === 'service-detail' ? 'marketplace' : 'nexus';
+
   const renderView = () => {
     switch (currentView) {
       case 'landing':
+        return <CrossroadsLanding />;
+
+      case 'nexus':
         return (
-          <CrossroadsLanding />
+          <NexusView
+            toolCount={tools.length}
+            agentCount={agents.length}
+            protocolCount={protocols.length}
+          />
         );
 
       case 'marketplace':
         return (
           <div className={showMarketplaceFadeIn ? styles.marketplaceFadeIn : ''}>
             <MarketplaceBrowser
-              onServiceClick={handleServiceClick}
+              activeTab={activeTab}
+              filteredTools={filteredTools}
+              hotTools={hotTools}
+              agents={agents}
+              protocols={protocols}
+              loading={loading}
+              searchQuery={searchQuery}
+              selectedCategory={selectedCategory}
             />
           </div>
         );
@@ -109,7 +199,7 @@ const Crossroads: React.FC<CrossroadsProps> = ({
                 marginBottom: '1.5rem',
               }}
             >
-              ← Back to Marketplace
+              Back to Marketplace
             </button>
             {selectedService && (
               <div
@@ -194,7 +284,33 @@ const Crossroads: React.FC<CrossroadsProps> = ({
     }
   };
 
-  return <div className={styles.crossroadsContainer}>{renderView()}</div>;
+  const showPipBoy = currentView !== 'landing';
+
+  return (
+    <div className={styles.crossroadsContainer}>
+      <div className={styles.crossroadsContent}>
+        {renderView()}
+      </div>
+      {showPipBoy && (
+        <PipBoyBar
+          activeView={pipboyView}
+          onViewChange={handleViewChange}
+          activeTab={activeTab}
+          onTabChange={setActiveTab}
+          searchQuery={searchQuery}
+          onSearchChange={setSearchQuery}
+          categories={categories}
+          selectedCategory={selectedCategory}
+          onCategoryChange={setSelectedCategory}
+          toolCount={tools.length}
+          agentCount={agents.length}
+          protocolCount={protocols.length}
+          discoveryTime={discoveryTime}
+          footerVisible={!publicKey}
+        />
+      )}
+    </div>
+  );
 };
 
 export default Crossroads;

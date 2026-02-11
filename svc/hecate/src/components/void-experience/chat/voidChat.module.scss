@@ -7,8 +7,8 @@ $void-purple: #b967ff;
 
 .voidChatContainer {
   position: fixed;
-  bottom: 20px;
-  right: 20px;
+  top: 80px;
+  right: 24px;
   z-index: 10006;
   display: flex;
   flex-direction: column;
@@ -22,12 +22,14 @@ $void-purple: #b967ff;
 
   @media (max-width: 1024px) {
     width: 50vw;
+    top: 72px;
   }
 
   @media (max-width: 768px) {
     width: calc(100vw - 40px);
     min-width: unset;
     right: 20px;
+    top: 64px;
   }
 
   &.collapsed {
@@ -681,7 +683,7 @@ $void-purple: #b967ff;
 .historyPopup {
   position: fixed;
   top: 80px;
-  right: 20px;
+  right: 24px;
   bottom: 20px;
   width: 40vw;
   min-width: 350px;
@@ -708,8 +710,8 @@ $void-purple: #b967ff;
   }
 
   @media (max-width: 768px) {
-    right: 12px;
     left: 12px;
+    right: 12px;
     width: auto !important; // Override inline style on mobile
     min-width: unset;
     top: 60px;
