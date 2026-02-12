@@ -427,6 +427,11 @@ const Home: React.FC = () => {
 
   // Handle "Enter the Crossroads" button - triggers orb ring alignment
   const handleEnterCrossroads = () => {
+    if (activeHudTab === 'crossroads') {
+      setPendingCrossroadsTransition(false);
+      setTriggerOrbAlignment(false);
+      return;
+    }
     console.log('🔮 Triggering orb alignment for Crossroads transition');
     setPendingCrossroadsTransition(true);
     setTriggerOrbAlignment(true);
