@@ -17,13 +17,6 @@ $category-mcp: #10b981;
 $category-dataset: #06b6d4;
 $category-model: #ec4899;
 
-// HUD Bar Color Tokens (on-theme: indigo/purple/pink)
-$hud-primary: #a78bfa;
-$hud-highlight: #c4b5fd;
-$hud-dim: rgba(139, 92, 246, 0.5);
-$hud-dark: rgba(10, 10, 30, 0.92);
-$hud-border: rgba(139, 92, 246, 0.25);
-
 // Main Container
 .crossroadsContainer {
   width: 100%;
@@ -1638,13 +1631,6 @@ $hud-border: rgba(139, 92, 246, 0.25);
       0 1px 2px rgba(0, 0, 0, 0.5);
     opacity: 0.9;
   }
-}
-
-// Content wrapper (flex child above pip-boy bar)
-.crossroadsContent {
-  flex: 1;
-  overflow: hidden;
-  min-height: 0;
 }
 
 // Marketplace Browser (full-width, no sidebar)
@@ -3648,259 +3634,10 @@ $hud-border: rgba(139, 92, 246, 0.25);
 }
 
 // ==========================================
-// Pip-Boy Bottom Bar
+// Hype View
 // ==========================================
 
-.pipboyBar {
-  position: relative;
-  flex-shrink: 0;
-  background: $hud-dark;
-  border-top: 1px solid transparent;
-  border-image: linear-gradient(90deg,
-    transparent 0%,
-    rgba(99, 102, 241, 0.3) 20%,
-    rgba(139, 92, 246, 0.4) 50%,
-    rgba(236, 72, 153, 0.3) 80%,
-    transparent 100%) 1;
-  padding: 0.5rem 1rem;
-  font-family: 'Share Tech Mono', 'Courier New', monospace;
-  color: $hud-primary;
-  z-index: 50;
-
-  &::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: repeating-linear-gradient(
-      0deg,
-      transparent,
-      transparent 2px,
-      rgba(139, 92, 246, 0.02) 2px,
-      rgba(139, 92, 246, 0.02) 4px
-    );
-    pointer-events: none;
-    z-index: 1;
-  }
-
-  &::after {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: radial-gradient(ellipse at center, transparent 60%, rgba(0, 0, 0, 0.3) 100%);
-    pointer-events: none;
-    z-index: 1;
-  }
-
-  > * {
-    position: relative;
-    z-index: 2;
-  }
-}
-
-.pipboyBarWithFooter {
-  margin-bottom: 40px;
-
-  @media (max-width: 768px) {
-    margin-bottom: 36px;
-  }
-}
-
-.pipboyRow {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 1rem;
-  padding: 0.25rem 0;
-
-  @media (max-width: 768px) {
-    flex-wrap: wrap;
-    gap: 0.5rem;
-  }
-}
-
-.pipboyViewTabs {
-  display: flex;
-  gap: 0.25rem;
-}
-
-.pipboyViewTab {
-  padding: 0.375rem 1rem;
-  background: transparent;
-  border: 1px solid rgba(139, 92, 246, 0.2);
-  border-radius: 2px;
-  color: rgba(148, 163, 184, 0.6);
-  font-family: inherit;
-  font-size: 0.8rem;
-  font-weight: 600;
-  letter-spacing: 0.1em;
-  cursor: pointer;
-  transition: all 0.15s;
-  text-transform: uppercase;
-
-  &:hover {
-    color: $hud-highlight;
-    border-color: rgba(139, 92, 246, 0.4);
-    background: rgba(139, 92, 246, 0.05);
-  }
-
-  &.active {
-    color: $hud-highlight;
-    border-color: $hud-primary;
-    background: rgba(139, 92, 246, 0.12);
-    text-shadow: 0 0 8px rgba(139, 92, 246, 0.5);
-    box-shadow: 0 0 6px rgba(99, 102, 241, 0.2), inset 0 0 6px rgba(139, 92, 246, 0.05);
-  }
-}
-
-.pipboyDiscovery {
-  font-size: 0.7rem;
-  color: rgba(148, 163, 184, 0.4);
-  letter-spacing: 0.05em;
-}
-
-.pipboyAssetTabs {
-  display: flex;
-  gap: 0.25rem;
-}
-
-.pipboyAssetTab {
-  padding: 0.3rem 0.75rem;
-  background: transparent;
-  border: 1px solid rgba(100, 116, 139, 0.2);
-  border-radius: 2px;
-  color: rgba(148, 163, 184, 0.5);
-  font-family: inherit;
-  font-size: 0.75rem;
-  font-weight: 500;
-  letter-spacing: 0.08em;
-  cursor: pointer;
-  transition: all 0.15s;
-  display: flex;
-  align-items: center;
-  gap: 0.4rem;
-
-  &:hover {
-    color: $hud-highlight;
-    border-color: rgba(139, 92, 246, 0.35);
-  }
-
-  &.active {
-    color: $hud-highlight;
-    border-color: rgba(139, 92, 246, 0.5);
-    background: rgba(139, 92, 246, 0.1);
-    text-shadow: 0 0 6px rgba(139, 92, 246, 0.35);
-  }
-
-  @media (max-width: 768px) {
-    padding: 0.25rem 0.5rem;
-    font-size: 0.7rem;
-  }
-}
-
-.pipboyCount {
-  background: rgba(99, 102, 241, 0.2);
-  padding: 0.05rem 0.35rem;
-  border-radius: 2px;
-  font-size: 0.65rem;
-  color: rgba(167, 139, 250, 0.7);
-
-  .active & {
-    background: rgba(139, 92, 246, 0.3);
-    color: $hud-highlight;
-  }
-}
-
-.pipboySearch {
-  flex: 1;
-  max-width: 300px;
-
-  input {
-    width: 100%;
-    padding: 0.3rem 0.6rem;
-    background: rgba(15, 23, 42, 0.6);
-    border: 1px solid rgba(100, 116, 139, 0.25);
-    border-radius: 2px;
-    color: #e2e8f0;
-    font-family: inherit;
-    font-size: 0.75rem;
-    box-sizing: border-box;
-
-    &:focus {
-      outline: none;
-      border-color: rgba(139, 92, 246, 0.5);
-      box-shadow: 0 0 8px rgba(99, 102, 241, 0.15);
-    }
-
-    &::placeholder {
-      color: rgba(148, 163, 184, 0.35);
-    }
-  }
-
-  @media (max-width: 768px) {
-    max-width: none;
-    flex-basis: 100%;
-    order: 3;
-  }
-}
-
-.pipboyCategoryChips {
-  display: flex;
-  gap: 0.25rem;
-  overflow-x: auto;
-  flex: 1;
-  padding-bottom: 2px;
-
-  &::-webkit-scrollbar {
-    height: 3px;
-  }
-
-  &::-webkit-scrollbar-track {
-    background: transparent;
-  }
-
-  &::-webkit-scrollbar-thumb {
-    background: rgba(139, 92, 246, 0.2);
-    border-radius: 2px;
-  }
-}
-
-.pipboyCategoryChip {
-  padding: 0.2rem 0.5rem;
-  background: transparent;
-  border: 1px solid rgba(100, 116, 139, 0.15);
-  border-radius: 2px;
-  color: rgba(148, 163, 184, 0.4);
-  font-family: inherit;
-  font-size: 0.65rem;
-  cursor: pointer;
-  transition: all 0.15s;
-  white-space: nowrap;
-  flex-shrink: 0;
-
-  &:hover {
-    color: rgba(167, 139, 250, 0.8);
-    border-color: rgba(139, 92, 246, 0.3);
-  }
-
-  &.active {
-    color: $hud-highlight;
-    border-color: rgba(139, 92, 246, 0.45);
-    background: rgba(139, 92, 246, 0.1);
-    text-shadow: 0 0 4px rgba(139, 92, 246, 0.3);
-  }
-}
-
-// ==========================================
-// Nexus View
-// ==========================================
-
-.nexusView {
+.hypeView {
   width: 100%;
   height: 100%;
   display: flex;
@@ -3918,16 +3655,16 @@ $hud-border: rgba(139, 92, 246, 0.25);
   }
 }
 
-.nexusContent {
+.hypeContent {
   text-align: center;
   pointer-events: auto;
 }
 
-.nexusTitle {
+.hypeTitle {
   font-family: 'Share Tech Mono', 'Courier New', monospace;
   font-size: 3rem;
   font-weight: 700;
-  color: $hud-highlight;
+  color: #c4b5fd;
   text-shadow: 0 0 20px rgba(139, 92, 246, 0.5), 0 0 40px rgba(99, 102, 241, 0.2);
   letter-spacing: 0.2em;
   margin: 0 0 0.5rem 0;
@@ -3937,7 +3674,7 @@ $hud-border: rgba(139, 92, 246, 0.25);
   }
 }
 
-.nexusSubtitle {
+.hypeSubtitle {
   font-family: 'Share Tech Mono', 'Courier New', monospace;
   font-size: 0.85rem;
   color: rgba(148, 163, 184, 0.45);
@@ -3946,7 +3683,7 @@ $hud-border: rgba(139, 92, 246, 0.25);
   text-transform: lowercase;
 }
 
-.nexusStats {
+.hypeStats {
   display: flex;
   gap: 3rem;
   justify-content: center;
@@ -3957,18 +3694,18 @@ $hud-border: rgba(139, 92, 246, 0.25);
   }
 }
 
-.nexusStat {
+.hypeStat {
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 0.25rem;
 }
 
-.nexusStatValue {
+.hypeStatValue {
   font-family: 'Share Tech Mono', 'Courier New', monospace;
   font-size: 2rem;
   font-weight: 700;
-  color: $hud-highlight;
+  color: #c4b5fd;
   text-shadow: 0 0 12px rgba(139, 92, 246, 0.4);
 
   @media (max-width: 768px) {
@@ -3976,14 +3713,14 @@ $hud-border: rgba(139, 92, 246, 0.25);
   }
 }
 
-.nexusStatLabel {
+.hypeStatLabel {
   font-family: 'Share Tech Mono', 'Courier New', monospace;
   font-size: 0.65rem;
   color: rgba(148, 163, 184, 0.45);
   letter-spacing: 0.15em;
 }
 
-.nexusComingSoon {
+.hypeComingSoon {
   font-family: 'Share Tech Mono', 'Courier New', monospace;
   font-size: 0.75rem;
   color: rgba(148, 163, 184, 0.3);

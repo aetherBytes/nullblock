@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useWalletTools } from '../../common/hooks/useWalletTools';
 import { NULLBLOCK_SERVICE_COWS } from '../../constants/nullblock';
 import type { MemCacheSection } from '../memcache';
+import type { CrossroadsSection } from './hud';
 import NullblockLogo from './NullblockLogo';
 import styles from './VoidOverlay.module.scss';
 
@@ -13,6 +14,13 @@ const BASE_MEMCACHE_ITEMS: { id: MemCacheSection; icon: string; label: string }[
   { id: 'agents', icon: '◉', label: 'Agents' },
   { id: 'consensus', icon: '⚖', label: 'Consensus' },
   { id: 'model', icon: '◎', label: 'Model' },
+];
+
+const CROSSROADS_ITEMS: { id: CrossroadsSection; label: string }[] = [
+  { id: 'hype', label: 'Hype' },
+  { id: 'agents', label: 'Agents' },
+  { id: 'tools', label: 'Tools' },
+  { id: 'cows', label: 'COWs' },
 ];
 
 interface VoidOverlayProps {
@@ -27,6 +35,8 @@ interface VoidOverlayProps {
   activeTab?: 'crossroads' | 'memcache' | null;
   memcacheSection?: MemCacheSection;
   onMemcacheSectionChange?: (section: MemCacheSection) => void;
+  crossroadsSection?: CrossroadsSection;
+  onCrossroadsSectionChange?: (section: CrossroadsSection) => void;
   onEnterCrossroads?: () => void;
   pendingCrossroadsTransition?: boolean;
 }
@@ -43,6 +53,8 @@ const VoidOverlay: React.FC<VoidOverlayProps> = ({
   activeTab,
   memcacheSection = 'engrams',
   onMemcacheSectionChange,
+  crossroadsSection = 'hype',
+  onCrossroadsSectionChange,
   onEnterCrossroads,
   pendingCrossroadsTransition = false,
 }) => {
@@ -140,10 +152,8 @@ const VoidOverlay: React.FC<VoidOverlayProps> = ({
 
       {/* Top-right container: Nav + Settings */}
       <div className={styles.topRightContainer}>
-        {/* Navigation menu - only show when logged in */}
         {publicKey && (
           <div className={styles.navWrapper} ref={memcacheRef}>
-            {/* Extra submenu items - only visible when memcache active */}
             {activeTab === 'memcache' && (
               <div className={styles.submenuExtra}>
                 {MEMCACHE_ITEMS.slice(2)
@@ -164,9 +174,27 @@ const VoidOverlay: React.FC<VoidOverlayProps> = ({
               </div>
             )}
 
-            {/* Main nav grid - shared by navbar and submenu */}
+            {activeTab === 'crossroads' && (
+              <div className={styles.submenuExtra}>
+                {CROSSROADS_ITEMS.slice(2)
+                  .reverse()
+                  .map((item, index) => (
+                    <React.Fragment key={item.id}>
+                      <button
+                        className={`${styles.submenuItemExtra} ${crossroadsSection === item.id ? styles.submenuItemActive : ''}`}
+                        onClick={() => onCrossroadsSectionChange?.(item.id)}
+                        style={{ animationDelay: `${(CROSSROADS_ITEMS.length - 2 - index) * 0.03}s` }}
+                      >
+                        {item.label}
+                      </button>
+                      {index < CROSSROADS_ITEMS.length - 3 && <span className={styles.navDivider} />}
+                    </React.Fragment>
+                  ))}
+                <span className={styles.navDivider} />
+              </div>
+            )}
+
             <nav className={styles.voidNav}>
-              {/* Row 1: Main nav buttons */}
               <button
                 className={`${styles.navItem} ${activeTab === 'memcache' ? styles.navItemActive : ''}`}
                 onClick={() => onTabSelect('memcache')}
@@ -181,7 +209,6 @@ const VoidOverlay: React.FC<VoidOverlayProps> = ({
                 Crossroads
               </button>
 
-              {/* Row 2: Submenu buttons (same grid columns) */}
               {activeTab === 'memcache' && (
                 <>
                   {MEMCACHE_ITEMS.slice(0, 2).map((item, index) => (
@@ -189,6 +216,23 @@ const VoidOverlay: React.FC<VoidOverlayProps> = ({
                       <button
                         className={`${styles.submenuItem} ${memcacheSection === item.id ? styles.submenuItemActive : ''}`}
                         onClick={() => onMemcacheSectionChange?.(item.id)}
+                        style={{ animationDelay: `${index * 0.03}s` }}
+                      >
+                        {item.label}
+                      </button>
+                      {index < 1 && <span className={styles.submenuDivider} />}
+                    </React.Fragment>
+                  ))}
+                </>
+              )}
+
+              {activeTab === 'crossroads' && (
+                <>
+                  {CROSSROADS_ITEMS.slice(0, 2).map((item, index) => (
+                    <React.Fragment key={item.id}>
+                      <button
+                        className={`${styles.submenuItem} ${crossroadsSection === item.id ? styles.submenuItemActive : ''}`}
+                        onClick={() => onCrossroadsSectionChange?.(item.id)}
                         style={{ animationDelay: `${index * 0.03}s` }}
                       >
                         {item.label}
