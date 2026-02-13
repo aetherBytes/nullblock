@@ -81,7 +81,7 @@ const Crossroads: React.FC<CrossroadsProps> = ({
       loadTools();
     } else if (crossroadsSection === 'agents') {
       loadAgents();
-    } else if (crossroadsSection === 'hype') {
+    } else if (crossroadsSection === 'hype' || crossroadsSection === 'marketplace') {
       loadTools();
       loadAgents();
       loadProtocols();
@@ -104,6 +104,20 @@ const Crossroads: React.FC<CrossroadsProps> = ({
         );
 
       case 'tools':
+        return (
+          <MarketplaceBrowser
+            activeTab="tools"
+            filteredTools={filteredTools}
+            hotTools={hotTools}
+            agents={agents}
+            protocols={protocols}
+            loading={loading}
+            searchQuery=""
+            selectedCategory="All"
+          />
+        );
+
+      case 'marketplace':
         return (
           <MarketplaceBrowser
             activeTab="tools"

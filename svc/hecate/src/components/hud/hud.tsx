@@ -13,7 +13,7 @@ import Crossroads from '../crossroads/Crossroads';
 import type { MemCacheSection } from '../memcache';
 import { MemCache } from '../memcache';
 
-export type CrossroadsSection = 'hype' | 'agents' | 'tools' | 'cows';
+export type CrossroadsSection = 'hype' | 'marketplace' | 'agents' | 'tools' | 'cows';
 import SettingsPanel from './SettingsPanel';
 import VoidOverlay from './VoidOverlay';
 import styles from './hud.module.scss';
