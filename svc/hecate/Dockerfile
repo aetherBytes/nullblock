@@ -1,13 +1,26 @@
+FROM node:20-alpine AS builder
+
+WORKDIR /app
+
+RUN apk add --no-cache python3 make g++ linux-headers libusb-dev eudev-dev
+
+COPY package.json package-lock.json ./
+RUN npm ci
+
+COPY . .
+RUN npm run build
+
 FROM node:20-alpine
 
 RUN apk add --no-cache python3 make g++ linux-headers libusb-dev eudev-dev
 
 WORKDIR /app
 
-COPY package.json package-lock.json ./
+COPY --from=builder /app/package.json /app/package-lock.json ./
 RUN npm install --production
 
-COPY build ./build
+COPY --from=builder /app/build ./build
+COPY --from=builder /app/node_modules/@lomray/vite-ssr-boost ./node_modules/@lomray/vite-ssr-boost
 
 EXPOSE 3000
 
