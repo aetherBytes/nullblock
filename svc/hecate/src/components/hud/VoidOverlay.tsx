@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useLayoutEffect, useRef, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { agentService } from '../../common/services/agent-service';
 import { useWalletTools } from '../../common/hooks/useWalletTools';
 import { useCommands } from '../../hooks/useCommands';
@@ -81,10 +81,11 @@ const VoidOverlay: React.FC<VoidOverlayProps> = ({
   const [isProcessing, setIsProcessing] = useState(false);
   const [showCommandDropdown, setShowCommandDropdown] = useState(false);
   const [commandSelectedIndex, setCommandSelectedIndex] = useState(0);
+  const [chatHistoryVisible, setChatHistoryVisible] = useState(true);
+  const [hasUnreadMessages, setHasUnreadMessages] = useState(false);
   const chatInputRef = useRef<HTMLTextAreaElement>(null);
   const historyEndRef = useRef<HTMLDivElement>(null);
   const layerRef = useRef<HTMLDivElement>(null);
-  const trackRef = useRef<HTMLDivElement>(null);
   const settingsRef = useRef<HTMLDivElement>(null);
   const memcacheRef = useRef<HTMLDivElement>(null);
 
@@ -127,55 +128,21 @@ const VoidOverlay: React.FC<VoidOverlayProps> = ({
     }
   }, [chatMessages.length]);
 
-  // Scroll-aware 3D: style based on visual distance from viewport bottom
-  const updateBubbleStyles = useCallback(() => {
-    const layer = layerRef.current;
-    const track = trackRef.current;
-    if (!layer || !track) return;
-
-    const scrollBottom = layer.scrollTop + layer.clientHeight;
-    const effectRange = layer.clientHeight * 0.5;
-
-    const children = track.querySelectorAll<HTMLElement>('[data-bubble]');
-    children.forEach((el) => {
-      const elBottom = el.offsetTop + el.offsetHeight;
-      const dist = scrollBottom - elBottom;
-      const t = Math.min(Math.max(dist / effectRange, 0), 1);
-
-      const depth = t * 1000;
-      // Flat at bottom (readable), tilt ramps after 15% of the range
-      const tiltT = Math.max(t - 0.15, 0) / 0.85;
-      const angle = tiltT * 55;
-
-      el.style.transform = `translateZ(${-depth}px) rotateX(${angle}deg)`;
-      el.style.opacity = `${Math.max(1 - t * t, 0)}`;
-      el.style.filter = t > 0.3 ? `blur(${(t - 0.3) * 8}px)` : '';
-    });
-  }, []);
-
+  // Flag unread when history is hidden and a new agent message arrives
   useEffect(() => {
-    const layer = layerRef.current;
-    if (!layer) return;
+    if (chatMessages.length === 0) return;
+    const last = chatMessages[chatMessages.length - 1];
+    if (!chatHistoryVisible && last.sender === 'hecate') {
+      setHasUnreadMessages(true);
+    }
+  }, [chatMessages.length, chatHistoryVisible]);
 
-    let rafId: number;
-    const onUpdate = () => {
-      cancelAnimationFrame(rafId);
-      rafId = requestAnimationFrame(updateBubbleStyles);
-    };
-
-    layer.addEventListener('scroll', onUpdate, { passive: true });
-    window.addEventListener('resize', onUpdate, { passive: true });
-    return () => {
-      layer.removeEventListener('scroll', onUpdate);
-      window.removeEventListener('resize', onUpdate);
-      cancelAnimationFrame(rafId);
-    };
-  }, [updateBubbleStyles]);
-
-  // Apply styles before first paint when messages change
-  useLayoutEffect(() => {
-    updateBubbleStyles();
-  }, [chatMessages.length, updateBubbleStyles]);
+  // Snap to bottom when history is toggled on
+  useEffect(() => {
+    if (chatHistoryVisible && historyEndRef.current && chatMessages.length > 0) {
+      historyEndRef.current.scrollIntoView({ behavior: 'instant', block: 'end' });
+    }
+  }, [chatHistoryVisible, chatMessages.length]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -566,13 +533,12 @@ const VoidOverlay: React.FC<VoidOverlayProps> = ({
       </div>
 
       {/* Pre-login Chat History */}
-      {!publicKey && chatMessages.length > 0 && (
+      {!publicKey && chatHistoryVisible && chatMessages.length > 0 && (
         <div className={styles.chatHistoryLayer} ref={layerRef}>
-          <div className={styles.chatHistoryTrack} ref={trackRef}>
+          <div className={styles.chatHistoryTrack}>
             {chatMessages.slice(-MAX_VISIBLE_MESSAGES).map((msg) => (
               <div
                 key={msg.id}
-                data-bubble
                 className={`${styles.chatBubble} ${msg.sender === 'user' ? styles.chatBubbleUser : styles.chatBubbleAgent}`}
               >
                 {msg.sender === 'hecate' && <span className={styles.chatBubbleSender}>HECATE</span>}
@@ -603,7 +569,7 @@ const VoidOverlay: React.FC<VoidOverlayProps> = ({
             </div>
           )}
           <div className={styles.chatInputBar}>
-            <span className={styles.chatLabel}>{isProcessing ? 'THINKING' : 'HECATE'}</span>
+            <span className={`${styles.chatLabel} ${hasUnreadMessages && !chatHistoryVisible ? styles.chatLabelAlert : ''}`}>{isProcessing ? 'THINKING' : 'HECATE'}</span>
             <div className={styles.chatInputWrapper}>
               <textarea
                 ref={chatInputRef}
@@ -636,6 +602,32 @@ const VoidOverlay: React.FC<VoidOverlayProps> = ({
                 )}
               </button>
             </div>
+            {chatMessages.length > 0 && (
+              <button
+                className={`${styles.chatHistoryToggle} ${chatHistoryVisible ? styles.chatHistoryToggleActive : ''} ${hasUnreadMessages && !chatHistoryVisible ? styles.chatHistoryToggleAlert : ''}`}
+                onClick={() => {
+                  setChatHistoryVisible((v) => !v);
+                  if (!chatHistoryVisible) setHasUnreadMessages(false);
+                }}
+                title={chatHistoryVisible ? 'Hide chat history' : 'Show chat history'}
+                aria-label={chatHistoryVisible ? 'Hide chat history' : 'Show chat history'}
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                  {chatHistoryVisible ? (
+                    <>
+                      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                      <circle cx="12" cy="12" r="3" />
+                    </>
+                  ) : (
+                    <>
+                      <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94" />
+                      <path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19" />
+                      <line x1="1" y1="1" x2="23" y2="23" />
+                    </>
+                  )}
+                </svg>
+              </button>
+            )}
           </div>
         </div>
       )}

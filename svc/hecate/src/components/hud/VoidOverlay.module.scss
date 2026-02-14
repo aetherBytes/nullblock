@@ -1007,20 +1007,17 @@ $void-purple: #b967ff;
 .chatHistoryLayer {
   position: fixed;
   bottom: 110px;
-  left: 0;
-  right: 0;
-  top: 35%;
-  z-index: 10004;
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(85%, 1200px);
+  top: 80px;
+  z-index: 10008;
   display: flex;
   flex-direction: column;
-  pointer-events: none;
+  pointer-events: auto;
   padding: 0 24px;
   overflow-y: auto;
   scrollbar-width: none;
-
-  // Dissolve into the void at the top
-  mask-image: linear-gradient(to bottom, transparent 0%, black 30%, black 100%);
-  -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 30%, black 100%);
 
   &::-webkit-scrollbar {
     display: none;
@@ -1028,33 +1025,19 @@ $void-purple: #b967ff;
 
   @media (max-width: 768px) {
     bottom: 100px;
-    top: 40%;
+    top: 60px;
     padding: 0 16px;
   }
 }
 
 .chatHistoryTrack {
   margin-top: auto;
-  margin-left: auto;
-  margin-right: auto;
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 8px;
-  max-width: 720px;
   width: 100%;
   padding: 16px 0;
-
-  // Aggressive 3D — messages beam into the void
-  // Lower perspective = more dramatic depth distortion
-  // NO mask-image, overflow, or filter here — they flatten 3D
-  perspective: 800px;
-  perspective-origin: center -100px;
-
-  @media (max-width: 768px) {
-    perspective: 600px;
-    perspective-origin: center -60px;
-  }
 }
 
 .chatBubble {
@@ -1068,8 +1051,53 @@ $void-purple: #b967ff;
   position: relative;
   word-break: break-word;
   flex-shrink: 0;
-  transform-origin: center bottom;
-  will-change: transform, opacity, filter;
+  overflow: hidden;
+  background: transparent;
+  border: none;
+  z-index: 0;
+
+  // Background layer — torn CRT edges, glass center
+  &::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    z-index: -2;
+
+    // Noise mask — only eats the edges, center stays solid glass
+    mask-image:
+      linear-gradient(to bottom, transparent 0%, black 4%, black 96%, transparent 100%),
+      linear-gradient(to right, transparent 0%, black 2%, black 98%, transparent 100%),
+      url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.55' numOctaves='3' seed='7' stitchTiles='stitch'/%3E%3CfeComponentTransfer%3E%3CfeFuncA type='discrete' tableValues='0 0.3 1 1'/%3E%3C/feComponentTransfer%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    -webkit-mask-image:
+      linear-gradient(to bottom, transparent 0%, black 4%, black 96%, transparent 100%),
+      linear-gradient(to right, transparent 0%, black 2%, black 98%, transparent 100%),
+      url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.55' numOctaves='3' seed='7' stitchTiles='stitch'/%3E%3CfeComponentTransfer%3E%3CfeFuncA type='discrete' tableValues='0 0.3 1 1'/%3E%3C/feComponentTransfer%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    mask-composite: intersect;
+    -webkit-mask-composite: source-in;
+    mask-size: 100% 100%, 100% 100%, 150px 150px;
+    -webkit-mask-size: 100% 100%, 100% 100%, 150px 150px;
+    mask-repeat: no-repeat, no-repeat, repeat;
+    -webkit-mask-repeat: no-repeat, no-repeat, repeat;
+  }
+
+  // Pip-Boy scanlines — subtle, slow flicker
+  &::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    z-index: -1;
+    background: repeating-linear-gradient(
+      to bottom,
+      transparent 0px,
+      transparent 2px,
+      rgba(139, 92, 246, 0.03) 2px,
+      rgba(139, 92, 246, 0.03) 4px
+    );
+    pointer-events: none;
+    animation: crtFlicker 3s ease-in-out infinite alternate;
+  }
 
   @media (min-width: 1600px) {
     font-size: 15px;
@@ -1082,22 +1110,34 @@ $void-purple: #b967ff;
   }
 }
 
+@keyframes crtFlicker {
+  0% { opacity: 0.6; }
+  50% { opacity: 1; }
+  100% { opacity: 0.75; }
+}
+
 .chatBubbleUser {
-  background: rgba(99, 102, 241, 0.12);
-  border: 1px solid rgba(99, 102, 241, 0.2);
   color: $void-silver;
   align-self: flex-end;
   margin-left: 15%;
   border-radius: 10px 10px 2px 10px;
+
+  &::before {
+    background: rgba(8, 8, 24, 0.92);
+    border: 1px solid rgba(99, 102, 241, 0.25);
+  }
 }
 
 .chatBubbleAgent {
-  background: rgba(139, 92, 246, 0.08);
-  border: 1px solid rgba(139, 92, 246, 0.15);
   color: rgba($void-silver, 0.9);
   align-self: flex-start;
   margin-right: 15%;
   border-radius: 10px 10px 10px 2px;
+
+  &::before {
+    background: rgba(8, 8, 24, 0.92);
+    border: 1px solid rgba(139, 92, 246, 0.2);
+  }
 }
 
 .chatBubbleSender {
@@ -1209,7 +1249,7 @@ $void-purple: #b967ff;
 }
 
 .chatInputProcessing {
-  .chatInputBar {
+  .chatInputBar::before {
     border-color: rgba(139, 92, 246, 0.3);
     animation: processingPulse 2s ease-in-out infinite;
   }
@@ -1235,7 +1275,7 @@ $void-purple: #b967ff;
 }
 
 .commandDropdownAnchor {
-  max-width: 720px;
+  max-width: min(85%, 1200px);
   margin: 0 auto;
   position: relative;
   width: 100%;
@@ -1252,33 +1292,81 @@ $void-purple: #b967ff;
 }
 
 .chatInputFocused {
-  .chatInputBar {
-    border-color: rgba(139, 92, 246, 0.4);
+  .chatInputBar::before {
+    border-color: rgba(139, 92, 246, 0.35);
     box-shadow:
-      0 -4px 30px rgba(99, 102, 241, 0.08),
-      0 0 60px rgba(139, 92, 246, 0.06);
+      inset 0 1px 0 rgba(139, 92, 246, 0.1),
+      0 -4px 30px rgba(139, 92, 246, 0.06),
+      0 0 80px rgba(99, 102, 241, 0.04);
   }
 
   .chatLabel {
-    color: rgba(139, 92, 246, 0.9);
-    text-shadow: 0 0 12px rgba(139, 92, 246, 0.4);
+    color: rgba(139, 92, 246, 0.7);
+    text-shadow: 0 0 10px rgba(139, 92, 246, 0.3);
   }
 }
 
 .chatInputBar {
-  max-width: 720px;
+  max-width: min(85%, 1200px);
   margin: 0 auto;
   display: flex;
   align-items: center;
-  gap: 16px;
-  padding: 12px 20px;
-  background: rgba(8, 8, 18, 0.75);
-  backdrop-filter: blur(24px) saturate(1.2);
-  -webkit-backdrop-filter: blur(24px) saturate(1.2);
-  border: 1px solid rgba(99, 102, 241, 0.15);
-  border-bottom: none;
-  border-radius: 12px 12px 0 0;
+  gap: 12px;
+  padding: 10px 16px;
+  background: transparent;
+  border: none;
+  border-radius: 14px 14px 0 0;
   transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+  z-index: 0;
+
+  // Background layer — torn CRT edges matching chat bubbles
+  &::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    z-index: -2;
+    background: rgba(8, 8, 24, 0.92);
+    backdrop-filter: blur(40px) saturate(1.3);
+    -webkit-backdrop-filter: blur(40px) saturate(1.3);
+    border: 1px solid rgba(139, 92, 246, 0.2);
+    border-bottom: none;
+
+    mask-image:
+      linear-gradient(to bottom, transparent 0%, black 5%, black 100%),
+      linear-gradient(to right, transparent 0%, black 2%, black 98%, transparent 100%),
+      url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.55' numOctaves='3' seed='7' stitchTiles='stitch'/%3E%3CfeComponentTransfer%3E%3CfeFuncA type='discrete' tableValues='0 0.3 1 1'/%3E%3C/feComponentTransfer%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    -webkit-mask-image:
+      linear-gradient(to bottom, transparent 0%, black 5%, black 100%),
+      linear-gradient(to right, transparent 0%, black 2%, black 98%, transparent 100%),
+      url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.55' numOctaves='3' seed='7' stitchTiles='stitch'/%3E%3CfeComponentTransfer%3E%3CfeFuncA type='discrete' tableValues='0 0.3 1 1'/%3E%3C/feComponentTransfer%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    mask-composite: intersect;
+    -webkit-mask-composite: source-in;
+    mask-size: 100% 100%, 100% 100%, 150px 150px;
+    -webkit-mask-size: 100% 100%, 100% 100%, 150px 150px;
+    mask-repeat: no-repeat, no-repeat, repeat;
+    -webkit-mask-repeat: no-repeat, no-repeat, repeat;
+  }
+
+  // Pip-Boy scanlines
+  &::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    z-index: -1;
+    background: repeating-linear-gradient(
+      to bottom,
+      transparent 0px,
+      transparent 2px,
+      rgba(139, 92, 246, 0.03) 2px,
+      rgba(139, 92, 246, 0.03) 4px
+    );
+    pointer-events: none;
+    animation: crtFlicker 3s ease-in-out infinite alternate;
+  }
 
   @media (max-width: 768px) {
     gap: 10px;
@@ -1290,15 +1378,17 @@ $void-purple: #b967ff;
 .chatLabel {
   flex-shrink: 0;
   font-family: 'Courier New', monospace;
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 600;
-  letter-spacing: 0.15em;
-  color: rgba(139, 92, 246, 0.5);
+  letter-spacing: 0.2em;
+  color: rgba(139, 92, 246, 0.4);
   user-select: none;
-  transition: all 0.3s ease;
+  transition: all 0.4s ease;
+  padding: 4px 10px;
+  border-right: 1px solid rgba(139, 92, 246, 0.1);
 
   @media (min-width: 1600px) {
-    font-size: 12px;
+    font-size: 11px;
   }
 
   @media (max-width: 768px) {
@@ -1358,60 +1448,90 @@ $void-purple: #b967ff;
 
 .chatSendButton {
   flex-shrink: 0;
-  width: 36px;
-  height: 36px;
+  width: 32px;
+  height: 32px;
   display: flex;
   align-items: center;
   justify-content: center;
   background: transparent;
-  border: 1px solid rgba(99, 102, 241, 0.2);
-  border-radius: 8px;
-  color: rgba(255, 255, 255, 0.5);
+  border: none;
+  border-radius: 50%;
+  color: rgba(139, 92, 246, 0.4);
   cursor: pointer;
-  transition: all 0.25s ease;
-  position: relative;
-  overflow: hidden;
-
-  &::after {
-    content: '';
-    position: absolute;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    height: 2px;
-    background: linear-gradient(90deg, #6366f1, #8b5cf6, #ec4899);
-    transform: scaleX(0);
-    transform-origin: center;
-    transition: transform 0.25s ease;
-  }
-
-  svg {
-    position: relative;
-    z-index: 1;
-  }
+  transition: all 0.3s ease;
 
   &:hover:not(:disabled) {
-    color: rgba(255, 255, 255, 0.9);
-    border-color: rgba(139, 92, 246, 0.4);
-    background: rgba(99, 102, 241, 0.1);
-
-    &::after {
-      transform: scaleX(1);
-    }
+    color: rgba(139, 92, 246, 0.9);
+    background: rgba(139, 92, 246, 0.08);
+    box-shadow: 0 0 12px rgba(139, 92, 246, 0.2);
   }
 
   &:active:not(:disabled) {
-    transform: scale(0.95);
+    transform: scale(0.9);
   }
 
   &:disabled {
-    opacity: 0.25;
+    opacity: 0.15;
     cursor: default;
   }
 
   @media (max-width: 768px) {
-    width: 32px;
-    height: 32px;
+    width: 28px;
+    height: 28px;
+  }
+}
+
+// Chat history toggle — small submenu button inside the input bar
+.chatHistoryToggle {
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  border-radius: 50%;
+  color: rgba(255, 255, 255, 0.2);
+  cursor: pointer;
+  transition: all 0.3s ease;
+  border-left: 1px solid rgba(139, 92, 246, 0.1);
+  padding-left: 10px;
+  margin-left: 2px;
+  border-radius: 0;
+  width: 38px;
+
+  &:hover {
+    color: rgba(139, 92, 246, 0.8);
+  }
+}
+
+.chatHistoryToggleActive {
+  color: rgba(139, 92, 246, 0.5);
+}
+
+.chatHistoryToggleAlert {
+  color: rgba(139, 92, 246, 0.9);
+  animation: toggleAlertPulse 1.5s ease-in-out infinite;
+}
+
+@keyframes toggleAlertPulse {
+  0%, 100% { filter: drop-shadow(0 0 4px rgba(139, 92, 246, 0.3)); }
+  50% { filter: drop-shadow(0 0 8px rgba(139, 92, 246, 0.7)); }
+}
+
+// HECATE label alert glow when unread messages
+.chatLabelAlert {
+  color: rgba(139, 92, 246, 1) !important;
+  animation: labelAlertGlow 1.5s ease-in-out infinite;
+}
+
+@keyframes labelAlertGlow {
+  0%, 100% {
+    text-shadow: 0 0 8px rgba(139, 92, 246, 0.4), 0 0 20px rgba(139, 92, 246, 0.2);
+  }
+  50% {
+    text-shadow: 0 0 12px rgba(139, 92, 246, 0.8), 0 0 30px rgba(139, 92, 246, 0.4), 0 0 50px rgba(139, 92, 246, 0.2);
   }
 }
 
