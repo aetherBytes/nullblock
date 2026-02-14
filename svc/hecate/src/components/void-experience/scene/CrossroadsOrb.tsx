@@ -1138,7 +1138,6 @@ const CrossroadsOrb: React.FC<CrossroadsOrbProps> = ({
     // Handle external trigger for alignment (rising edge only)
     if (triggerAlignment && !prevTriggerAlignment.current) {
       if (!align.isAligning || align.isExiting) {
-        console.log('🌟 External alignment triggered!');
         align.triggeredExternally = true;
         align.isExiting = false;
         align.exitProgress = 0;
@@ -1348,7 +1347,6 @@ const CrossroadsOrb: React.FC<CrossroadsOrbProps> = ({
 
         // Call completion callback once when first fully aligned
         if (align.triggeredExternally && onAlignmentComplete) {
-          console.log('✨ Alignment complete, calling onAlignmentComplete');
           onAlignmentComplete();
           align.triggeredExternally = false;
         }

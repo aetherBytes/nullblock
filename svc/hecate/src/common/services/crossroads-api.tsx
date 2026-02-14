@@ -56,14 +56,6 @@ export const discoverAllMcpTools = async (): Promise<ToolsResponse> => {
     const filteredHotCount = filteredTools.filter((t) => t.isHot).length;
     const filteredCategories = recalculateCategories(filteredTools);
 
-    console.log(
-      'Discovered MCP tools:',
-      filteredTools.length,
-      '(filtered from',
-      data.totalCount,
-      ')'
-    );
-
     return {
       ...data,
       tools: filteredTools,
@@ -81,7 +73,6 @@ export const discoverAgents = async (): Promise<AgentsResponse> => {
   try {
     const response = await axios.get(`${EREBUS_API_BASE_URL}/api/discovery/agents`);
     const data = transformKeys<AgentsResponse>(response.data);
-    console.log('Discovered agents:', data.totalCount);
     return data;
   } catch (error) {
     console.error('Failed to discover agents:', error);
@@ -93,7 +84,6 @@ export const discoverProtocols = async (): Promise<ProtocolsResponse> => {
   try {
     const response = await axios.get(`${EREBUS_API_BASE_URL}/api/discovery/protocols`);
     const data = transformKeys<ProtocolsResponse>(response.data);
-    console.log('Discovered protocols:', data.totalCount);
     return data;
   } catch (error) {
     console.error('Failed to discover protocols:', error);
@@ -108,14 +98,6 @@ export const discoverHotItems = async (): Promise<HotItemsResponse> => {
 
     const filteredTools = data.tools.filter((tool) =>
       isToolAllowedInCrossroads(tool.name)
-    );
-
-    console.log(
-      'Discovered hot items:',
-      filteredTools.length,
-      '(filtered from',
-      data.totalCount,
-      ')'
     );
 
     return {
@@ -141,13 +123,6 @@ export const discoverAll = async (): Promise<DiscoveryResponse> => {
       isToolAllowedInCrossroads(tool.name)
     );
 
-    console.log('Discovery all response:', {
-      tools: filteredTools.length,
-      agents: data.agents.length,
-      protocols: data.protocols.length,
-      hot: filteredHot.length,
-    });
-
     return {
       ...data,
       tools: filteredTools,
@@ -163,7 +138,6 @@ export const checkDiscoveryHealth = async (): Promise<HealthResponse> => {
   try {
     const response = await axios.get(`${EREBUS_API_BASE_URL}/api/discovery/health`);
     const data = transformKeys<HealthResponse>(response.data);
-    console.log('Discovery health:', data.overallStatus);
     return data;
   } catch (error) {
     console.error('Failed to check discovery health:', error);

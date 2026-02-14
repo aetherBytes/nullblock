@@ -63,9 +63,7 @@ export function useWalletAdapter(): UseWalletAdapterReturn {
           const elapsed = Date.now() - Number.parseInt(lastAuthTime, 10);
 
           if (elapsed > SESSION_TIMEOUT_MS) {
-            console.log('Session expired, clearing...');
             clearSession();
-
             return;
           }
         }
@@ -84,7 +82,6 @@ export function useWalletAdapter(): UseWalletAdapterReturn {
         setConnectedChain(storedChain || adapter.detectChain(storedAddress));
         setSessionToken(storedToken);
 
-        console.log(`Session restored for ${storedWalletType}: ${storedAddress}`);
       } catch (err) {
         console.error('Failed to restore session:', err);
       }
@@ -147,12 +144,7 @@ export function useWalletAdapter(): UseWalletAdapterReturn {
         const address = connectionResult.address!;
         const connectedToChain = connectionResult.chain;
 
-        console.log(`Connected to ${walletId} (${connectedToChain}): ${address}`);
-
-        // Create challenge via backend
         const challengeResponse = await createWalletChallenge(address, walletId);
-
-        console.log('Challenge created:', challengeResponse.challenge_id);
 
         // Sign challenge
         const signResult = await adapter.signMessage(challengeResponse.message);
@@ -160,8 +152,6 @@ export function useWalletAdapter(): UseWalletAdapterReturn {
         if (!signResult.success) {
           throw new Error(signResult.error || 'Signing failed');
         }
-
-        console.log('Challenge signed, verifying...');
 
         // Verify signature via backend
         const verifyResponse = await verifyWalletSignature(
@@ -173,8 +163,6 @@ export function useWalletAdapter(): UseWalletAdapterReturn {
         if (!verifyResponse.success) {
           throw new Error(verifyResponse.message || 'Verification failed');
         }
-
-        console.log('Signature verified, session created');
 
         // Update state
         setConnectedWallet(adapter);
@@ -216,7 +204,6 @@ export function useWalletAdapter(): UseWalletAdapterReturn {
     }
 
     clearSession();
-    console.log('Disconnected');
   }, [connectedWallet, clearSession]);
 
   const clearError = useCallback(() => {

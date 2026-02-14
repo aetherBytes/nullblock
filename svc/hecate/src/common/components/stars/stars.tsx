@@ -16,8 +16,6 @@ const Stars = ({ theme = 'light' }: StarsProps) => {
     const numPoints = 1600; // Reduced from 5000/3 to avoid potential issues
     const positions = new Float32Array(numPoints * 3);
 
-    console.log('Generating star positions, array length:', positions.length);
-
     try {
       random.inSphere(positions, { radius: 1.2 });
 
@@ -35,12 +33,7 @@ const Stars = ({ theme = 'light' }: StarsProps) => {
         console.warn(`Fixed ${nanCount} NaN values in star positions`);
       }
 
-      console.log('Star positions generated successfully, sample values:', positions.slice(0, 9));
-    } catch (error) {
-      console.warn(
-        'Failed to generate star positions with random.inSphere, using fallback:',
-        error,
-      );
+    } catch (_error) {
 
       // Fallback: manually generate positions
       for (let i = 0; i < positions.length; i += 3) {
@@ -53,13 +46,9 @@ const Stars = ({ theme = 'light' }: StarsProps) => {
         positions[i + 2] = radius * Math.cos(phi); // z
       }
 
-      console.log('Used fallback star generation, sample values:', positions.slice(0, 9));
     }
 
-    // Final validation to ensure no NaN values exist
     const finalCheck = Array.from(positions).every((val) => isFinite(val));
-
-    console.log('Final validation - all positions are finite:', finalCheck);
 
     if (!finalCheck) {
       console.error('Still have invalid positions after validation!');

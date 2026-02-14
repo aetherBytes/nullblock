@@ -86,6 +86,7 @@ const VoidOverlay: React.FC<VoidOverlayProps> = ({
   const [lockedWarning, setLockedWarning] = useState(false);
   const lockedWarningTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [hasUnreadMessages, setHasUnreadMessages] = useState(false);
+  const [activeModelName, setActiveModelName] = useState<string | null>(null);
   const chatInputRef = useRef<HTMLTextAreaElement>(null);
   const historyEndRef = useRef<HTMLDivElement>(null);
   const layerRef = useRef<HTMLDivElement>(null);
@@ -120,6 +121,16 @@ const VoidOverlay: React.FC<VoidOverlayProps> = ({
 
     return items;
   }, [unlockedTabs]);
+
+  useEffect(() => {
+    agentService.getAgentCapabilities('hecate').then((res) => {
+      if (res.success && res.data?.model_name) {
+        const name = res.data.model_name as string;
+        const short = name.includes('/') ? name.split('/').pop()! : name;
+        setActiveModelName(short.replace(/:free$/, ''));
+      }
+    }).catch(() => {});
+  }, []);
 
   useEffect(() => {
     setWelcomeVisible(showWelcome);
@@ -562,7 +573,7 @@ const VoidOverlay: React.FC<VoidOverlayProps> = ({
                 key={msg.id}
                 className={`${styles.chatBubble} ${msg.sender === 'user' ? styles.chatBubbleUser : styles.chatBubbleAgent}`}
               >
-                {msg.sender === 'hecate' && <span className={styles.chatBubbleSender}>HECATE</span>}
+                {msg.sender === 'hecate' && <span className={styles.chatBubbleSender}>HEXY</span>}
                 {msg.sender === 'hecate' ? (
                   <MarkdownRenderer content={msg.text} className={styles.chatBubbleMarkdown} />
                 ) : (
@@ -590,12 +601,12 @@ const VoidOverlay: React.FC<VoidOverlayProps> = ({
             </div>
           )}
           <div className={styles.chatInputBar}>
-            <span className={`${styles.chatLabel} ${hasUnreadMessages && !chatHistoryVisible ? styles.chatLabelAlert : ''}`}>{isProcessing ? 'THINKING' : 'HECATE'}</span>
+            <span className={`${styles.chatLabel} ${hasUnreadMessages && !chatHistoryVisible ? styles.chatLabelAlert : ''}`}>{isProcessing ? 'THINKING' : `HEXY${activeModelName ? `: ${activeModelName}` : ''}`}</span>
             <div className={styles.chatInputWrapper}>
               <textarea
                 ref={chatInputRef}
                 className={styles.chatInput}
-                placeholder={isProcessing ? 'Hecate is thinking...' : 'Ask Hecate anything... (/ for commands)'}
+                placeholder={isProcessing ? 'Hexy is thinking...' : 'Talk to Hexy... (/ for commands)'}
                 value={chatInput}
                 onChange={handleChatInputChange}
                 onKeyDown={handleChatKeyDown}
