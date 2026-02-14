@@ -37,17 +37,9 @@ resource "aws_security_group" "ecs_instances" {
   vpc_id      = aws_vpc.main.id
 
   ingress {
-    description     = "ALB to Erebus"
-    from_port       = 3000
-    to_port         = 3000
-    protocol        = "tcp"
-    security_groups = [aws_security_group.alb.id]
-  }
-
-  ingress {
-    description     = "ALB to Hecate"
-    from_port       = 5173
-    to_port         = 5173
+    description     = "ALB to ECS (dynamic ports)"
+    from_port       = 0
+    to_port         = 65535
     protocol        = "tcp"
     security_groups = [aws_security_group.alb.id]
   }

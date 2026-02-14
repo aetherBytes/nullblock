@@ -40,7 +40,8 @@
         {"name": "RUST_LOG", "value": "info"},
         {"name": "HOST", "value": "0.0.0.0"},
         {"name": "PORT", "value": "9003"},
-        {"name": "ENGRAMS_SERVICE_URL", "value": "http://172.17.0.1:9004"}
+        {"name": "ENGRAMS_SERVICE_URL", "value": "http://172.17.0.1:9004"},
+        {"name": "EREBUS_BASE_URL", "value": "https://nullblock.io"}
       ],
       "secrets": [
         {"name": "DATABASE_URL", "valueFrom": "arn:aws:secretsmanager:us-west-2:058264371750:secret:nullblock/prod-5afB92:DB_URL_AGENTS::"},

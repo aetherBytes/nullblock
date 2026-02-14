@@ -11,10 +11,11 @@ resource "aws_lb" "main" {
 }
 
 resource "aws_lb_target_group" "erebus" {
-  name     = "nullblock-erebus-tg"
-  port     = 3000
-  protocol = "HTTP"
-  vpc_id   = aws_vpc.main.id
+  name                 = "nullblock-erebus-tg"
+  port                 = 3000
+  protocol             = "HTTP"
+  vpc_id               = aws_vpc.main.id
+  deregistration_delay = 30
 
   health_check {
     path                = "/health"
@@ -58,10 +59,11 @@ resource "aws_acm_certificate_validation" "nullblock" {
 }
 
 resource "aws_lb_target_group" "hecate" {
-  name     = "nullblock-hecate-tg"
-  port     = 5173
-  protocol = "HTTP"
-  vpc_id   = aws_vpc.main.id
+  name                 = "nullblock-hecate-tg"
+  port                 = 5173
+  protocol             = "HTTP"
+  vpc_id               = aws_vpc.main.id
+  deregistration_delay = 30
 
   health_check {
     path                = "/"

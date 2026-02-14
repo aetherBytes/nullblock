@@ -11,7 +11,7 @@ resource "aws_ecs_task_definition" "erebus" {
     name         = "erebus"
     image        = "ghcr.io/aetherbytes/nullblock/erebus:latest"
     essential    = true
-    portMappings = [{ containerPort = 3000, hostPort = 3000, protocol = "tcp" }]
+    portMappings = [{ containerPort = 3000, hostPort = 0, protocol = "tcp" }]
     repositoryCredentials = {
       credentialsParameter = data.aws_secretsmanager_secret.ghcr_token.arn
     }
@@ -51,6 +51,10 @@ resource "aws_ecs_service" "erebus" {
   cluster         = aws_ecs_cluster.main.id
   task_definition = aws_ecs_task_definition.erebus.arn
   desired_count   = 1
+
+  deployment_minimum_healthy_percent = 100
+  deployment_maximum_percent         = 200
+  health_check_grace_period_seconds  = 120
 
   capacity_provider_strategy {
     capacity_provider = aws_ecs_capacity_provider.ec2.name
@@ -106,7 +110,7 @@ resource "aws_ecs_task_definition" "agents" {
       { name = "RUST_LOG", value = "info" },
       { name = "HOST", value = "0.0.0.0" },
       { name = "PORT", value = "9003" },
-      { name = "EREBUS_BASE_URL", value = "http://172.17.0.1:3000" },
+      { name = "EREBUS_BASE_URL", value = "https://nullblock.io" },
       { name = "ENGRAMS_SERVICE_URL", value = "http://172.17.0.1:9004" },
     ]
     secrets = [
@@ -124,6 +128,9 @@ resource "aws_ecs_service" "agents" {
   cluster         = aws_ecs_cluster.main.id
   task_definition = aws_ecs_task_definition.agents.arn
   desired_count   = 1
+
+  deployment_minimum_healthy_percent = 0
+  deployment_maximum_percent         = 100
 
   capacity_provider_strategy {
     capacity_provider = aws_ecs_capacity_provider.ec2.name
@@ -184,6 +191,9 @@ resource "aws_ecs_service" "engrams" {
   task_definition = aws_ecs_task_definition.engrams.arn
   desired_count   = 1
 
+  deployment_minimum_healthy_percent = 0
+  deployment_maximum_percent         = 100
+
   capacity_provider_strategy {
     capacity_provider = aws_ecs_capacity_provider.ec2.name
     weight            = 1
@@ -243,6 +253,9 @@ resource "aws_ecs_service" "protocols" {
   cluster         = aws_ecs_cluster.main.id
   task_definition = aws_ecs_task_definition.protocols.arn
   desired_count   = 1
+
+  deployment_minimum_healthy_percent = 0
+  deployment_maximum_percent         = 100
 
   capacity_provider_strategy {
     capacity_provider = aws_ecs_capacity_provider.ec2.name
@@ -306,6 +319,9 @@ resource "aws_ecs_service" "arb_farm" {
   task_definition = aws_ecs_task_definition.arb_farm.arn
   desired_count   = 1
 
+  deployment_minimum_healthy_percent = 0
+  deployment_maximum_percent         = 100
+
   capacity_provider_strategy {
     capacity_provider = aws_ecs_capacity_provider.ec2.name
     weight            = 1
@@ -329,7 +345,7 @@ resource "aws_ecs_task_definition" "hecate" {
     name         = "hecate"
     image        = "ghcr.io/aetherbytes/nullblock/hecate:latest"
     essential    = true
-    portMappings = [{ containerPort = 3000, hostPort = 5173, protocol = "tcp" }]
+    portMappings = [{ containerPort = 3000, hostPort = 0, protocol = "tcp" }]
     repositoryCredentials = {
       credentialsParameter = data.aws_secretsmanager_secret.ghcr_token.arn
     }
@@ -362,6 +378,10 @@ resource "aws_ecs_service" "hecate" {
   cluster         = aws_ecs_cluster.main.id
   task_definition = aws_ecs_task_definition.hecate.arn
   desired_count   = 1
+
+  deployment_minimum_healthy_percent = 100
+  deployment_maximum_percent         = 200
+  health_check_grace_period_seconds  = 120
 
   capacity_provider_strategy {
     capacity_provider = aws_ecs_capacity_provider.ec2.name
