@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import styles from './ContentView.module.scss';
 
+const EREBUS_URL = import.meta.env.VITE_EREBUS_API_URL || 'http://localhost:3000';
+
 interface ContentItem {
   id: string;
   theme: string;
@@ -57,7 +59,7 @@ export const ContentView: React.FC = () => {
   const fetchQueue = async () => {
     try {
       const statusParam = filterStatus !== 'all' ? `?status=${filterStatus}` : '';
-      const response = await fetch(`http://localhost:3000/api/content/queue${statusParam}`);
+      const response = await fetch(`${EREBUS_URL}/api/content/queue${statusParam}`);
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       const data: QueueResponse = await response.json();
       setContent(data.items);
@@ -71,7 +73,7 @@ export const ContentView: React.FC = () => {
     setLoading(true);
     setError(null);
     try {
-      const response = await fetch('http://localhost:3000/api/content/generate', {
+      const response = await fetch(`${EREBUS_URL}/api/content/generate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -91,7 +93,7 @@ export const ContentView: React.FC = () => {
 
   const updateStatus = async (id: string, status: string) => {
     try {
-      const response = await fetch(`http://localhost:3000/api/content/queue/${id}`, {
+      const response = await fetch(`${EREBUS_URL}/api/content/queue/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status }),
@@ -106,7 +108,7 @@ export const ContentView: React.FC = () => {
   const deleteContent = async (id: string) => {
     if (!confirm('Delete this content?')) return;
     try {
-      const response = await fetch(`http://localhost:3000/api/content/queue/${id}`, {
+      const response = await fetch(`${EREBUS_URL}/api/content/queue/${id}`, {
         method: 'DELETE',
       });
       if (!response.ok) throw new Error(`HTTP ${response.status}`);

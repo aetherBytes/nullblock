@@ -65,11 +65,8 @@ const Home: React.FC = () => {
   const lastConnectionAttempt = React.useRef<number>(0);
   const [hudInitialTab, setHudInitialTab] = useState<
     'crossroads' | 'memcache' | 'tasks' | 'agents' | 'logs' | 'canvas' | null
-  >(initialSession.hasSession ? 'memcache' : null);
+  >(initialSession.hasSession ? 'memcache' : 'crossroads');
   const [isMobileView, setIsMobileView] = useState<boolean>(false);
-
-  // Shared Hecate panel state
-  const [hecatePanelOpen, setHecatePanelOpen] = useState<boolean>(false);
 
   // Track active HUD tab for overlapping panel detection
   const [activeHudTab, setActiveHudTab] = useState<
@@ -141,21 +138,17 @@ const Home: React.FC = () => {
   // Start animation for returning users on mount
   useEffect(() => {
     if (initialSession.hasSession && !animationTriggered.current) {
-      console.log('🎬 Immediate animation start for returning user');
       animationTriggered.current = true;
 
       setTimeout(() => {
-        console.log('🌟🌌 Stars + Background fading in together...');
         setLoginAnimationPhase('background');
       }, 400);
 
       setTimeout(() => {
-        console.log('⚡ Navbar flickering in...');
         setLoginAnimationPhase('navbar');
       }, 2500);
 
       setTimeout(() => {
-        console.log('✅ Login animation complete');
         setLoginAnimationPhase('complete');
       }, 4000);
     }
@@ -164,26 +157,21 @@ const Home: React.FC = () => {
   // Pre-login animation for new visitors
   useEffect(() => {
     if (!initialSession.hasSession && !preLoginAnimationTriggered.current) {
-      console.log('🎬 Pre-login animation start for new visitor');
       preLoginAnimationTriggered.current = true;
 
       setTimeout(() => {
-        console.log('🌟 [Pre-login] Stars fading in...');
         setPreLoginAnimationPhase('stars');
       }, 200);
 
       setTimeout(() => {
-        console.log('🌌 [Pre-login] Background + Mission text fading in...');
         setPreLoginAnimationPhase('background');
       }, 800);
 
       setTimeout(() => {
-        console.log('⚡ [Pre-login] Navbar + CTA flickering in...');
         setPreLoginAnimationPhase('navbar');
       }, 1500);
 
       setTimeout(() => {
-        console.log('✅ [Pre-login] Animation complete');
         setPreLoginAnimationPhase('complete');
       }, 2200);
     }
@@ -197,12 +185,10 @@ const Home: React.FC = () => {
 
     if (isNewLogin && !animationTriggered.current) {
       animationTriggered.current = true;
-      console.log('🎬 Starting login animation for new login...');
 
       setLoginAnimationPhase('background');
 
       setTimeout(() => {
-        console.log('✅ Login animation complete');
         setLoginAnimationPhase('complete');
       }, 1500);
     }
@@ -222,26 +208,21 @@ const Home: React.FC = () => {
       setHasLoggedOut(true);
 
       preLoginAnimationTriggered.current = false;
-      console.log('🎬 Starting pre-login animation after logout...');
       setPreLoginAnimationPhase('black');
 
       setTimeout(() => {
-        console.log('🌟 [Post-logout] Stars fading in...');
         setPreLoginAnimationPhase('stars');
       }, 400);
 
       setTimeout(() => {
-        console.log('🌌 [Post-logout] Background + Mission text fading in...');
         setPreLoginAnimationPhase('background');
       }, 2000);
 
       setTimeout(() => {
-        console.log('⚡ [Post-logout] Navbar + CTA flickering in...');
         setPreLoginAnimationPhase('navbar');
       }, 4500);
 
       setTimeout(() => {
-        console.log('✅ [Post-logout] Animation complete');
         setPreLoginAnimationPhase('complete');
         preLoginAnimationTriggered.current = true;
       }, 6000);
@@ -304,41 +285,29 @@ const Home: React.FC = () => {
 
   // Handle wallet connection using the adapter hook
   const handleConnectWallet = async (walletId?: string, chain?: ChainType) => {
-    console.log('=== handleConnectWallet START ===');
-    console.log('handleConnectWallet called with walletId:', walletId, 'chain:', chain);
-
-    // Debounce rapid successive calls
     const now = Date.now();
 
     if (now - lastConnectionAttempt.current < 1000) {
-      console.log('Connection attempt too soon, debouncing...');
       setInfoMessage('⏱️ Please wait before trying again.');
-
       return;
     }
 
     lastConnectionAttempt.current = now;
 
-    // If no wallet specified, show selection modal
     if (!walletId) {
-      console.log('No walletId specified, showing selection modal');
       setShowWalletModal(true);
-
       return;
     }
 
     clearMessage();
 
     try {
-      console.log('Connecting to wallet:', walletId);
       const result = await connect(walletId, chain);
 
       if (result.success) {
-        console.log('✅ Wallet connected successfully:', result.address);
         setShowWalletModal(false);
         setHudInitialTab('memcache');
 
-        // Register user with task service
         try {
           const { taskService } = await import('../../common/services/task-service');
           const network = result.chain === ChainType.SOLANA ? 'solana' : 'ethereum';
@@ -348,7 +317,6 @@ const Home: React.FC = () => {
           const registrationResult = await taskService.registerUser(result.address!, network);
 
           if (registrationResult.success) {
-            console.log('✅ User registered successfully:', registrationResult.data);
             setInfoMessage('✅ Account registered successfully!');
 
             localStorage.removeItem('userProfile');
@@ -362,22 +330,16 @@ const Home: React.FC = () => {
                 },
               }),
             );
-          } else {
-            console.warn('⚠️ User registration failed:', registrationResult.error);
           }
-        } catch (err) {
-          console.warn('⚠️ User registration error:', err);
+        } catch (_err) {
+          // Registration is non-critical
         }
       } else {
-        console.error('❌ Connection failed:', result.error);
         handleConnectionError(result.error || 'Connection failed', walletId);
       }
     } catch (error: any) {
-      console.error('Connection error:', error);
       handleConnectionError(error.message || 'Unknown error', walletId);
     }
-
-    console.log('=== handleConnectWallet END ===');
   };
 
   // Format connection errors with helpful messages
@@ -427,14 +389,18 @@ const Home: React.FC = () => {
 
   // Handle "Enter the Crossroads" button - triggers orb ring alignment
   const handleEnterCrossroads = () => {
-    console.log('🔮 Triggering orb alignment for Crossroads transition');
+    if (activeHudTab === 'crossroads') {
+      setPendingCrossroadsTransition(false);
+      setTriggerOrbAlignment(false);
+      return;
+    }
+    setHudInitialTab(null);
     setPendingCrossroadsTransition(true);
     setTriggerOrbAlignment(true);
   };
 
   // Handle orb alignment completion - now show Crossroads UI
   const handleAlignmentComplete = () => {
-    console.log('✨ Orb alignment complete, showing Crossroads');
     setTriggerOrbAlignment(false);
     if (pendingCrossroadsTransition) {
       setPendingCrossroadsTransition(false);
@@ -531,9 +497,6 @@ const Home: React.FC = () => {
         theme={currentTheme}
         loginAnimationPhase={currentAnimationPhase}
         isLoggedIn={isReturningUser && currentAnimationPhase === 'complete'}
-        hecatePanelOpen={hecatePanelOpen}
-        onHecatePanelChange={setHecatePanelOpen}
-        hasOverlappingPanels={activeHudTab === 'memcache' || activeHudTab === 'crossroads'}
         triggerAlignment={triggerOrbAlignment}
         onAlignmentComplete={handleAlignmentComplete}
         keepAligned={activeHudTab === 'crossroads'}
@@ -563,8 +526,6 @@ const Home: React.FC = () => {
                 localStorage.setItem('currentTheme', theme);
               }
             }}
-            hecatePanelOpen={hecatePanelOpen}
-            onHecatePanelChange={setHecatePanelOpen}
             onActiveTabChange={setActiveHudTab}
             onEnterCrossroads={handleEnterCrossroads}
             pendingCrossroadsTransition={pendingCrossroadsTransition}

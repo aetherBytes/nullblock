@@ -61,31 +61,16 @@ class TaskService {
 
       const url = `${this.erebusUrl}/api/agents/tasks${endpoint}`;
 
-      console.log('Making request to:', url);
-      console.log('Headers:', headers);
-      console.log('Options:', options);
-
       const response = await fetch(url, {
         ...options,
         headers,
       });
 
-      console.log('📤 Response status:', response.status);
-      console.log('📤 Response headers:', Object.fromEntries(response.headers.entries()));
-
       const responseJson = await response.json();
-
-      console.log('📤 Response data:', responseJson);
-      console.log('🔍 Response has success field:', 'success' in responseJson);
-      console.log('🔍 Response.success value:', responseJson.success);
-      console.log('🔍 Response has data field:', 'data' in responseJson);
-      console.log('🔍 Response.data exists:', Boolean(responseJson.data));
 
       // Handle backend API response format which wraps data in { data: [...], success: true }
       const actualData =
         response.ok && responseJson.data !== undefined ? responseJson.data : responseJson;
-
-      console.log('🔍 actualData:', actualData);
 
       const result = {
         success: response.ok,
@@ -95,8 +80,6 @@ class TaskService {
           : responseJson.message || responseJson.error || 'Request failed',
         timestamp: new Date(),
       };
-
-      console.log('🔍 Returning from task-service:', result);
 
       return result;
     } catch (error) {
@@ -136,19 +119,8 @@ class TaskService {
   }
 
   async getTasks(filter?: TaskFilter): Promise<TaskServiceResponse<Task[]>> {
-    console.log('📋 Getting tasks with filter:', filter);
-    console.log('🔗 Wallet context:', { address: this.walletAddress, chain: this.walletChain });
-
     const queryParams = filter ? `?${new URLSearchParams(this.filterToParams(filter))}` : '';
-    const response = await this.makeRequest<Task[]>(`${queryParams}`);
-
-    if (response.success && response.data) {
-      console.log(`📋 Loaded ${response.data.length} tasks for user`);
-    } else {
-      console.warn('⚠️ Failed to load tasks:', response.error);
-    }
-
-    return response;
+    return this.makeRequest<Task[]>(`${queryParams}`);
   }
 
   // Task Lifecycle Operations
@@ -193,13 +165,6 @@ class TaskService {
     walletAddress: string,
     chain: string = 'solana',
   ): Promise<TaskServiceResponse<any>> {
-    console.log('🔗 TaskService.registerUser called with:', { walletAddress, chain });
-    console.log('🔗 Current wallet context:', {
-      walletAddress: this.walletAddress,
-      chain: this.walletChain,
-    });
-    console.log('🔗 Erebus URL:', this.erebusUrl);
-
     try {
       // Determine provider based on chain
       const provider =
@@ -218,12 +183,6 @@ class TaskService {
         wallet_type: null,
       };
 
-      console.log(
-        '📤 Sending registration request to:',
-        `${this.erebusUrl}/api/agents/users/register`,
-      );
-      console.log('📤 Request body:', requestBody);
-
       // Use direct Erebus endpoint for user registration (not through tasks)
       const url = `${this.erebusUrl}/api/agents/users/register`;
 
@@ -237,15 +196,11 @@ class TaskService {
         body: JSON.stringify(requestBody),
       });
 
-      console.log('📤 Response status:', response.status);
       const data = await response.json();
-
-      console.log('📤 Response data:', data);
 
       if (response.ok) {
         // Update wallet context after successful registration
         this.setWalletContext(walletAddress, chain);
-        console.log('✅ User registration successful, wallet context updated');
       }
 
       return {

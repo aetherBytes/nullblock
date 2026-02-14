@@ -12,6 +12,8 @@ import type { UserProfile as _UserProfile } from '../../types/user';
 import Crossroads from '../crossroads/Crossroads';
 import type { MemCacheSection } from '../memcache';
 import { MemCache } from '../memcache';
+
+export type CrossroadsSection = 'hype' | 'marketplace' | 'agents' | 'tools' | 'cows';
 import SettingsPanel from './SettingsPanel';
 import VoidOverlay from './VoidOverlay';
 import styles from './hud.module.scss';
@@ -45,8 +47,6 @@ interface HUDProps {
   initialTab?: 'crossroads' | 'memcache' | 'tasks' | 'agents' | 'logs' | 'canvas' | null;
   onToggleMobileMenu?: () => void;
   loginAnimationPhase?: LoginAnimationPhase;
-  hecatePanelOpen?: boolean;
-  onHecatePanelChange?: (open: boolean) => void;
   onActiveTabChange?: (
     tab: 'crossroads' | 'memcache' | 'tasks' | 'agents' | 'logs' | 'canvas' | null,
   ) => void;
@@ -64,8 +64,6 @@ const HUD: React.FC<HUDProps> = ({
   initialTab = null,
   onToggleMobileMenu,
   loginAnimationPhase = 'idle',
-  hecatePanelOpen: externalHecatePanelOpen,
-  onHecatePanelChange,
   onActiveTabChange,
   onEnterCrossroads,
   pendingCrossroadsTransition = false,
@@ -86,10 +84,10 @@ const HUD: React.FC<HUDProps> = ({
     'crossroads' | 'memcache' | 'tasks' | 'agents' | 'logs' | 'canvas' | null
   >(initialTab);
   const [showMobileMenu, setShowMobileMenu] = useState(false);
-  const [showCrossroadsMarketplace, setShowCrossroadsMarketplace] = useState(false);
   const [resetCrossroadsToLanding, setResetCrossroadsToLanding] = useState(false);
   const [showSettingsPanel, setShowSettingsPanel] = useState(false);
   const [memcacheSection, setMemcacheSection] = useState<MemCacheSection>('arbfarm');
+  const [crossroadsSection, setCrossroadsSection] = useState<CrossroadsSection>('hype');
 
   // Void mode state
   const [hasSeenVoidWelcome, setHasSeenVoidWelcome] = useState(() => {
@@ -99,18 +97,6 @@ const HUD: React.FC<HUDProps> = ({
 
     return false;
   });
-
-  // Hecate panel toggle state (controls VoidScopes + VoidChatHUD history together)
-  // Use external state if provided, otherwise local state
-  const [localHecatePanelOpen, setLocalHecatePanelOpen] = useState(false);
-  const hecatePanelOpen = externalHecatePanelOpen ?? localHecatePanelOpen;
-  const setHecatePanelOpen = (open: boolean) => {
-    if (onHecatePanelChange) {
-      onHecatePanelChange(open);
-    } else {
-      setLocalHecatePanelOpen(open);
-    }
-  };
 
   // Detect if we're in void mode (logged in but no tab selected)
   // Note: We check for void mode during ALL animation phases to prevent old HUD from flickering in
@@ -180,29 +166,15 @@ const HUD: React.FC<HUDProps> = ({
     }
   }, [chat.chatMessages, eventSystem]);
 
-  // Watch for initialTab prop changes and mobile menu toggle
   useEffect(() => {
     if (initialTab !== undefined && initialTab !== mainHudActiveTab) {
       setMainHudActiveTab(initialTab);
 
-      // If initialTab is 'crossroads', also show the marketplace
-      if (initialTab === 'crossroads') {
-        setShowCrossroadsMarketplace(true);
-
-        // Toggle mobile menu if callback is provided (mobile hint clicked)
-        if (onToggleMobileMenu) {
-          setShowMobileMenu(true);
-        }
+      if (initialTab === 'crossroads' && onToggleMobileMenu) {
+        setShowMobileMenu(true);
       }
     }
   }, [initialTab, onToggleMobileMenu]);
-
-  // Reset the showCrossroadsMarketplace flag after it's been used
-  useEffect(() => {
-    if (showCrossroadsMarketplace) {
-      setShowCrossroadsMarketplace(false);
-    }
-  }, [showCrossroadsMarketplace]);
 
   // Reset the resetCrossroadsToLanding flag after it's been used
   useEffect(() => {
@@ -711,16 +683,14 @@ const HUD: React.FC<HUDProps> = ({
       return (
         <>
           <div
-            className={`${styles.tabWrapper} ${mainHudActiveTab === 'crossroads' || mainHudActiveTab === null ? '' : styles.hidden}`}
+            className={`${styles.tabWrapper} ${mainHudActiveTab === 'crossroads' ? '' : styles.hidden}`}
           >
             <Crossroads
               publicKey={publicKey}
               onConnectWallet={onConnectWallet}
-              showMarketplace={showCrossroadsMarketplace}
+              crossroadsSection={crossroadsSection}
               resetToLanding={resetCrossroadsToLanding}
               animationPhase={loginAnimationPhase}
-              onEnterCrossroads={onEnterCrossroads}
-              pendingTransition={pendingCrossroadsTransition}
             />
           </div>
           <div
@@ -764,11 +734,9 @@ const HUD: React.FC<HUDProps> = ({
           <Crossroads
             publicKey={publicKey}
             onConnectWallet={onConnectWallet}
-            showMarketplace={showCrossroadsMarketplace}
+            crossroadsSection={crossroadsSection}
             resetToLanding={resetCrossroadsToLanding}
             animationPhase={loginAnimationPhase}
-            onEnterCrossroads={onEnterCrossroads}
-            pendingTransition={pendingCrossroadsTransition}
           />
         </div>
         <div
@@ -798,31 +766,18 @@ const HUD: React.FC<HUDProps> = ({
   };
 
   const handleTabSelect = (tab: 'crossroads' | 'memcache') => {
-    // Close Hecate panel when selecting a tab
-    if (hecatePanelOpen) {
-      setHecatePanelOpen(false);
-    }
-
     if (mainHudActiveTab === tab) {
       setMainHudActiveTab(null);
-
-      if (tab === 'crossroads') {
-        setShowCrossroadsMarketplace(false);
-      }
     } else {
       setMainHudActiveTab(tab);
-
-      if (tab === 'crossroads') {
-        setShowCrossroadsMarketplace(true);
-      }
     }
   };
 
 
   const handleResetToVoid = () => {
     setMainHudActiveTab(null);
-    setShowCrossroadsMarketplace(false);
     setResetCrossroadsToLanding(true);
+    setCrossroadsSection('hype');
     setShowMobileMenu(false);
   };
 
@@ -876,6 +831,10 @@ const HUD: React.FC<HUDProps> = ({
           }
           memcacheSection={memcacheSection}
           onMemcacheSectionChange={setMemcacheSection}
+          crossroadsSection={crossroadsSection}
+          onCrossroadsSectionChange={setCrossroadsSection}
+          onEnterCrossroads={onEnterCrossroads}
+          pendingCrossroadsTransition={pendingCrossroadsTransition}
         />
       )}
       {renderMainContent()}

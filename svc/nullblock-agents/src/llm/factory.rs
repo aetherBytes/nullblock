@@ -273,7 +273,7 @@ impl LLMServiceFactory {
             "api_providers": {},
             "local_providers": {},
             "models_available": 0,
-            "default_model": "cognitivecomputations/dolphin3.0-mistral-24b:free",
+            "default_model": "openrouter/free",
             "issues": []
         });
 
@@ -477,8 +477,8 @@ impl LLMServiceFactory {
 
     pub fn is_model_available(&self, model_name: &str, api_keys: &ApiKeys) -> bool {
         // Check if model is a known static model or a dynamic OpenRouter model
-        if model_name == "cognitivecomputations/dolphin3.0-mistral-24b:free" {
-            // This is our default free model - available if we have OpenRouter key or if it's truly free
+        if model_name == "openrouter/free" {
+            // OpenRouter free auto-router - always available with an OpenRouter key
             api_keys.openrouter.is_some()
         } else if model_name.contains("/") || model_name.contains(":") {
             // Dynamic OpenRouter model
@@ -620,7 +620,7 @@ impl LLMServiceFactory {
     /// Check if a model is free based on its name pattern (quick check)
     /// Returns true for models ending with `:free` suffix
     pub fn is_free_model_by_name(&self, model_name: &str) -> bool {
-        model_name.ends_with(":free")
+        model_name.ends_with(":free") || model_name == "openrouter/free"
     }
 
     /// Validate that a model is allowed for free-tier users
@@ -660,6 +660,6 @@ impl LLMServiceFactory {
 
     /// Get the default free model for free-tier users
     pub fn get_default_free_model(&self) -> String {
-        "cognitivecomputations/dolphin3.0-mistral-24b:free".to_string()
+        "openrouter/free".to_string()
     }
 }

@@ -702,8 +702,8 @@ impl Provider for OpenRouterProvider {
 
                     // Generic rate limit - could be OpenRouter or provider level
                     warn!("⚠️ Rate limit hit for model {}", config.name);
-                    return Err(AppError::LLMRequestFailed(format!(
-                        "Rate limit exceeded for model '{}'. Please wait a moment before retrying.",
+                    return Err(AppError::ModelNotAvailable(format!(
+                        "Model '{}' is rate-limited. Try a different model or wait a moment.",
                         config.name
                     )));
                 }

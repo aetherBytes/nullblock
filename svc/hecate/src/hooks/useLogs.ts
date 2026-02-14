@@ -76,13 +76,10 @@ export const useLogs = (options: UseLogsOptions = {}) => {
       return;
     }
 
-    console.log('📡 Connecting to log stream...');
-
     const url = `${EREBUS_API_URL}/api/logs/stream`;
     const eventSource = new EventSource(url);
 
     eventSource.onopen = () => {
-      console.log('✅ Connected to log stream');
       setIsConnected(true);
       setError(null);
       reconnectAttemptsRef.current = 0;
@@ -145,7 +142,6 @@ export const useLogs = (options: UseLogsOptions = {}) => {
     }
 
     if (eventSourceRef.current) {
-      console.log('📡 Disconnecting from log stream...');
       eventSourceRef.current.close();
       eventSourceRef.current = null;
       setIsConnected(false);

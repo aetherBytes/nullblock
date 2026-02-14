@@ -71,7 +71,7 @@ pub async fn available_models(
 
     Ok(Json(json!({
         "current_model": agent.current_model,
-        "default_model": "cognitivecomputations/dolphin3.0-mistral-24b:free",
+        "default_model": "openrouter/free",
         "message": "Use /hecate/available-models for full model catalog"
     })))
 }

@@ -131,7 +131,9 @@ const TOOL_QUERY_PATTERNS = [
   /show commands/i,
 ];
 
-export function useCommands(_erebusUrl: string = 'http://localhost:3000', isAuthenticated: boolean = false) {
+const EREBUS_URL = import.meta.env.VITE_EREBUS_API_URL || 'http://localhost:3000';
+
+export function useCommands(_erebusUrl: string = EREBUS_URL, isAuthenticated: boolean = false) {
   const [mcpTools, setMcpTools] = useState<McpTool[]>([]);
   const [agentTools, setAgentTools] = useState<McpTool[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -144,7 +146,7 @@ export function useCommands(_erebusUrl: string = 'http://localhost:3000', isAuth
     setIsLoading(true);
     setError(null);
     try {
-      const agentMcpResponse = await fetch('http://localhost:9003/mcp/jsonrpc', {
+      const agentMcpResponse = await fetch(`${EREBUS_URL}/mcp/jsonrpc`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

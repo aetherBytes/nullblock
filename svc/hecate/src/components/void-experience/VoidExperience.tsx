@@ -3,8 +3,6 @@ import { Canvas, useThree, useFrame } from '@react-three/fiber';
 import React, { Suspense, useState, useCallback, useRef, useEffect } from 'react';
 import * as THREE from 'three';
 import styles from './VoidExperience.module.scss';
-import VoidHUD from './VoidHUD';
-import VoidChatHUD from './chat/VoidChatHUD';
 import VoidScene from './scene/VoidScene';
 
 export interface ClusterData {
@@ -26,15 +24,11 @@ interface VoidExperienceProps {
   theme?: 'null' | 'light' | 'dark';
   loginAnimationPhase?: string;
   isLoggedIn?: boolean;
-  hecatePanelOpen?: boolean;
-  onHecatePanelChange?: (open: boolean) => void;
-  hasOverlappingPanels?: boolean;
   triggerAlignment?: boolean;
   onAlignmentComplete?: () => void;
   keepAligned?: boolean;
 }
 
-// Camera positions for different states
 const PRE_LOGIN_POSITION = new THREE.Vector3(6, 4.5, 20);
 const POST_LOGIN_POSITION = new THREE.Vector3(6, 4.5, 18);
 const LOOK_AT_TARGET = new THREE.Vector3(0, 0, 0);
@@ -108,19 +102,15 @@ const CameraAnimator: React.FC<CameraAnimatorProps> = ({ isLoggedIn, orbitContro
 };
 
 const VoidExperience: React.FC<VoidExperienceProps> = ({
-  publicKey,
+  publicKey: _publicKey,
   theme: _theme = 'null',
-  loginAnimationPhase,
+  loginAnimationPhase: _loginAnimationPhase,
   isLoggedIn = false,
-  hecatePanelOpen = false,
-  onHecatePanelChange,
-  hasOverlappingPanels = false,
   triggerAlignment = false,
   onAlignmentComplete,
   keepAligned = false,
 }) => {
   const [isInteracting, setIsInteracting] = useState(false);
-  const [glowActive, setGlowActive] = useState(false);
   const orbitControlsRef = useRef<any>(null);
 
   const handleInteractionStart = useCallback(() => {
@@ -129,12 +119,6 @@ const VoidExperience: React.FC<VoidExperienceProps> = ({
 
   const handleInteractionEnd = useCallback(() => {
     setIsInteracting(false);
-  }, []);
-
-  // Chat glow effect - triggered when agent responds
-  const handleAgentResponseReceived = useCallback((_messageId: string) => {
-    setGlowActive(true);
-    setTimeout(() => setGlowActive(false), 800);
   }, []);
 
   return (
@@ -179,30 +163,6 @@ const VoidExperience: React.FC<VoidExperienceProps> = ({
 
         <Preload all />
       </Canvas>
-
-      {/* Full VoidHUD when logged in */}
-      {isLoggedIn && (
-        <VoidHUD
-          publicKey={publicKey}
-          isActive
-          loginAnimationPhase={loginAnimationPhase}
-          onAgentResponseReceived={handleAgentResponseReceived}
-          glowActive={glowActive}
-          hecatePanelOpen={hecatePanelOpen}
-          onHecatePanelChange={onHecatePanelChange}
-          hasOverlappingPanels={hasOverlappingPanels}
-        />
-      )}
-
-      {/* Pre-login chat - Hecate available with free models before wallet connection */}
-      {!isLoggedIn && loginAnimationPhase === 'complete' && (
-        <VoidChatHUD
-          publicKey={null}
-          isActive
-          glowActive={glowActive}
-          agentHealthStatus="healthy"
-        />
-      )}
     </div>
   );
 };

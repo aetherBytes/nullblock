@@ -2,7 +2,7 @@ import type { AxiosResponse } from 'axios';
 import axios from 'axios';
 
 // MCP Server API base URL - now points to the new MCP server
-const MCP_API_BASE_URL = import.meta.env.VITE_MCP_API_URL || 'http://localhost:8000';
+const MCP_API_BASE_URL = import.meta.env.VITE_EREBUS_API_URL || 'http://localhost:3000';
 
 // MCP API Interfaces
 interface MCPAuthChallenge {

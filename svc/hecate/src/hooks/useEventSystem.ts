@@ -176,9 +176,6 @@ export const useEventSystem = (
   );
 
   const setPerformanceMode = useCallback((enabled: boolean) => {
-    console.log(
-      `🎯 Event system performance mode: ${enabled ? 'ENABLED (10s interval)' : 'DISABLED (normal interval)'}`,
-    );
     setIsPerformanceMode(enabled);
   }, []);
 
