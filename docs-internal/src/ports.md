@@ -11,6 +11,7 @@ Quick reference for all NullBlock service ports.
 | **8001** | Protocols | A2A/MCP protocol server |
 | **9003** | Agents | HECATE agent API |
 | **9004** | Engrams | Memory/context layer |
+| **8002** | Content | Social media content service |
 | **9006** | Poly Mev | Polymarket scanner (planned) |
 | **9007** | ArbFarm | Solana MEV agent swarm |
 

@@ -25,24 +25,34 @@ In a rapidly expanding onchain automated world, we are building the picks and ax
 | **Understand the architecture** | [Architecture Overview](./architecture.md) |
 | **Start the dev environment** | [Quick Start](./quickstart.md) |
 | **Learn about Engrams** | [Engrams Service](./services/engrams.md) |
-| **See Echo Factory plan** | [Echo Factory](./echo-factory/plan.md) |
+| **See ArbFarm plan** | [ArbFarm Plan](./arb-farm/plan.md) |
 | **Check API endpoints** | [API Reference](./reference/api.md) |
 
 ---
 
 ## Current Development Focus
 
-### Echo Factory (First COW)
+### ArbFarm (Solana MEV Agent Swarm)
 
-Building NullBlock's first Constellation of Work - an autonomous X/Twitter content creation suite.
+Autonomous multi-agent system for capturing MEV opportunities on Solana. See [ArbFarm Plan](./arb-farm/plan.md).
 
-| Phase | Status | Focus |
-|-------|--------|-------|
-| 1. Engram Service | ✅ Complete | Universal memory layer |
-| 2. Crossroads COW Model | 🔄 Next Up | COWs as marketplace listings |
-| 3. Echo Factory Core | ⏳ Pending | Persona, Content, Scheduler, Publisher |
-| 4. X API Integration | ⏳ Pending | OAuth 1.0a + real posting |
-| 5. Frontend | ⏳ Pending | Hecate UI components |
+| Phase | Status |
+|-------|--------|
+| 1-5. Core + Curves + Execution | ✅ Complete |
+| 6. Research/DD Agent | ❌ Not Started |
+| 7. KOL Tracking + Copy Trading | ✅ Complete |
+| 8. Threat Detection | ❌ Not Started |
+| 9-11. Engrams + Swarm + Dashboard | ✅ Complete |
+| 12. Crossroads Integration | ⏳ Next |
+
+### Also Active
+
+- **NullBlock Content Service** — Social media content generation (Phase 1-5 Complete)
+- **Poly Mev** — Polymarket trading (planned)
+
+### Paused
+
+- **Echo Factory** — X/Twitter COW ([archived](./archive/echo-factory/plan.md))
 
 ---
 
@@ -55,6 +65,8 @@ Building NullBlock's first Constellation of Work - an autonomous X/Twitter conte
 | **Protocols** | 8001 | A2A/MCP server |
 | **Agents** | 9003 | HECATE agent API |
 | **Engrams** | 9004 | Memory/context layer |
+| **ArbFarm** | 9007 | Solana MEV agent swarm |
+| **Content** | 8002 | Social media content service |
 
 ---
 

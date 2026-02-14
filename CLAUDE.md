@@ -508,16 +508,6 @@ just migrate              # Run all migrations
 just wipe-db              # Fresh start (deletes data!)
 ```
 
-## Archives
-
-Detailed implementation notes moved to `archive/implementation-notes/`:
-- `a2a-implementation.md` - A2A Protocol implementation details
-- `development-status.md` - Detailed completion status
-
-Historical design docs in `archive/crossroads/`:
-- `CROSSROADS_UI_DESIGN.md`
-- `CROSSROADS_BACKEND_PLAN.md`
-
 ---
 
 _NullBlock: The void where agentic flows connect, modify, and evolve._

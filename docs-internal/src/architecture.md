@@ -3,19 +3,17 @@
 ## System Diagram
 
 ```
-┌─────────────┐    ┌──────────────┐    ┌─────────────────┐
-│   Frontend  │    │    Erebus    │    │   Backend       │
-│   (Hecate)  │◄──►│   Router     │◄──►│   Services      │
-│   Port 5173 │    │   Port 3000  │    │   Various Ports │
-└─────────────┘    └──────────────┘    └─────────────────┘
-                           │
-           ┌───────────────┼───────────────┐
-           │               │               │
-    ┌──────┴──────┐ ┌──────┴──────┐ ┌──────┴──────┐
-    │  Crossroads │ │   Engrams   │ │    COWs     │
-    │ Marketplace │ │   Memory    │ │  (Echo etc) │
-    │  (Internal) │ │  Port 9004  │ │  Port 9005+ │
-    └─────────────┘ └─────────────┘ └─────────────┘
+Frontend (5173) → Erebus (3000) → Backend Services
+                       │
+         ┌─────────────┼─────────────┐
+         │             │             │
+    Crossroads    Engrams (9004)   Services
+    (Internal)                        │
+                           ┌──────────┼──────────┐
+                           │          │          │
+                      Agents (9003) ArbFarm   Content
+                      Protocols     (9007)    (8002)
+                      (8001)
 ```
 
 ## Golden Rule
@@ -59,4 +57,5 @@ Frontend → Erebus → {
 
 | Service | Location | Description |
 |---------|----------|-------------|
-| **Echo Factory** | `/svc/echo-factory/` | First COW - X/Twitter automation |
+| **ArbFarm** | `/svc/arb-farm/` | Solana MEV agent swarm |
+| **Content** | `/svc/nullblock-content/` | Social media content service |

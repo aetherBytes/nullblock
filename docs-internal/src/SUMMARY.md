@@ -29,7 +29,6 @@
 - [Moros Agent](./agents/moros.md)
 - [Siren Marketing](./agents/siren.md)
 - [LLM Factory](./agents/llm-factory.md)
-- [Hecate Frontend TODO](./agents/hecate-frontend-todo.md)
 
 ---
 
