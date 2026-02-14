@@ -179,6 +179,11 @@ html, body {
       background-position: center 35%;
     }
 
+    @media (max-width: 380px) and (orientation: portrait) {
+      background-size: 130% auto;
+      background-position: center 42%;
+    }
+
     @media (max-width: 768px) and (orientation: landscape) {
       background-size: auto 175%;
       background-position: center 40%;

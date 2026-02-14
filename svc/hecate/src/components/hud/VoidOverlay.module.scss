@@ -25,6 +25,10 @@ $void-purple: #b967ff;
   @media (max-width: 768px) {
     height: 60px;
   }
+
+  @media (max-width: 480px) {
+    height: 54px;
+  }
 }
 
 // Logo container (top-left)
@@ -153,6 +157,12 @@ $void-purple: #b967ff;
     right: 16px;
     gap: 8px;
   }
+
+  @media (max-width: 480px) {
+    top: 12px;
+    right: 10px;
+    gap: 6px;
+  }
 }
 
 // Wrapper for nav + extra items
@@ -191,7 +201,11 @@ $void-purple: #b967ff;
   }
 
   @media (max-width: 768px) {
-    max-width: calc(100vw - 120px);
+    max-width: calc(100vw - 90px);
+  }
+
+  @media (max-width: 480px) {
+    max-width: calc(100vw - 70px);
   }
 }
 
@@ -411,6 +425,10 @@ $void-purple: #b967ff;
     height: 44px;
     margin-top: 45px;
     flex-wrap: nowrap;
+
+    &:has(.submenuItemLocked) {
+      display: none;
+    }
   }
 }
 
@@ -821,6 +839,12 @@ $void-purple: #b967ff;
     padding: 0 16px;
     font-size: 13px;
   }
+
+  @media (max-width: 480px) {
+    height: 40px;
+    padding: 0 12px;
+    font-size: 12px;
+  }
 }
 
 // Connect button (shown when not logged in)
@@ -885,6 +909,12 @@ $void-purple: #b967ff;
     padding: 0 16px;
     font-size: 13px;
   }
+
+  @media (max-width: 480px) {
+    height: 40px;
+    padding: 0 12px;
+    font-size: 12px;
+  }
 }
 
 .connectButtonLocked {
@@ -927,6 +957,10 @@ $void-purple: #b967ff;
 
   @media (max-width: 768px) {
     padding: 10px 16px;
+  }
+
+  @media (max-width: 480px) {
+    padding: 6px 10px;
   }
 }
 
@@ -1110,6 +1144,11 @@ $void-purple: #b967ff;
   @media (max-width: 768px) {
     bottom: 100px;
     top: 60px;
+  }
+
+  @media (max-width: 480px) {
+    bottom: 88px;
+    top: 56px;
   }
 }
 
@@ -1341,6 +1380,11 @@ $void-purple: #b967ff;
     bottom: 40px;
     padding: 0 16px;
   }
+
+  @media (max-width: 480px) {
+    bottom: 34px;
+    padding: 0 8px;
+  }
 }
 
 .chatInputProcessing {
@@ -1447,6 +1491,10 @@ $void-purple: #b967ff;
     padding: 10px 14px;
     border-radius: 10px 10px 0 0;
   }
+
+  @media (max-width: 480px) {
+    width: min(92%, 1200px);
+  }
 }
 
 .chatLabel {
@@ -1550,8 +1598,9 @@ $void-purple: #b967ff;
   }
 
   @media (max-width: 768px) {
-    width: 28px;
-    height: 28px;
+    width: 44px;
+    height: 44px;
+    padding: 8px;
   }
 }
 

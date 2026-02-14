@@ -3653,6 +3653,10 @@ $category-model: #ec4899;
   @media (max-width: 768px) {
     margin-top: 50px;
   }
+
+  @media (max-width: 480px) {
+    margin-top: 30px;
+  }
 }
 
 .hypeContent {
@@ -3672,6 +3676,10 @@ $category-model: #ec4899;
   @media (max-width: 768px) {
     font-size: 2rem;
   }
+
+  @media (max-width: 480px) {
+    font-size: 1.5rem;
+  }
 }
 
 .hypeSubtitle {
@@ -3681,6 +3689,17 @@ $category-model: #ec4899;
   letter-spacing: 0.15em;
   margin: 0 0 2.5rem 0;
   text-transform: lowercase;
+
+  @media (max-width: 768px) {
+    margin: 0 0 1.5rem 0;
+    font-size: 0.75rem;
+  }
+
+  @media (max-width: 480px) {
+    margin: 0 0 1rem 0;
+    font-size: 0.7rem;
+    padding: 0 1rem;
+  }
 }
 
 .hypeStats {
@@ -3691,6 +3710,11 @@ $category-model: #ec4899;
 
   @media (max-width: 768px) {
     gap: 1.5rem;
+  }
+
+  @media (max-width: 480px) {
+    gap: 1rem;
+    margin-bottom: 1.5rem;
   }
 }
 
@@ -3711,6 +3735,10 @@ $category-model: #ec4899;
   @media (max-width: 768px) {
     font-size: 1.5rem;
   }
+
+  @media (max-width: 480px) {
+    font-size: 1.25rem;
+  }
 }
 
 .hypeStatLabel {
@@ -3729,4 +3757,9 @@ $category-model: #ec4899;
   padding: 0.75rem 1.5rem;
   border-radius: 2px;
   display: inline-block;
+
+  @media (max-width: 768px) {
+    padding: 0.5rem 1rem;
+    font-size: 0.7rem;
+  }
 }

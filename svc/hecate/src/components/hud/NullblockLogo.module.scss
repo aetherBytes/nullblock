@@ -48,6 +48,16 @@ $echo-orange: #ff7f00;
       transform: scale(3.24);
       transform-origin: center center;
     }
+
+    @media (max-width: 768px) {
+      width: 44px;
+      height: 44px;
+    }
+
+    @media (max-width: 480px) {
+      width: 38px;
+      height: 38px;
+    }
   }
 
   &.large {
