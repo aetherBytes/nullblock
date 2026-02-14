@@ -39,7 +39,6 @@ jobs:
       - uses: actions/download-artifact@v4
         with:
           name: build-artifact
-          path: svc/hecate
 
       - name: Inject version
         uses: jacobtomlinson/gha-find-replace@v3
