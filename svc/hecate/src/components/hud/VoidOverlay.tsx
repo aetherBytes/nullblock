@@ -95,7 +95,7 @@ const VoidOverlay: React.FC<VoidOverlayProps> = ({
     getHelpText,
     getToolListText,
     getMcpStatusText,
-  } = useCommands('http://localhost:3000', !!publicKey);
+  } = useCommands('http://localhost:3000', false);
 
   const filteredCommands = chatInput.startsWith('/') ? filterCommands(chatInput) : [];
 
@@ -532,8 +532,8 @@ const VoidOverlay: React.FC<VoidOverlayProps> = ({
         )}
       </div>
 
-      {/* Pre-login Chat History */}
-      {!publicKey && chatHistoryVisible && chatMessages.length > 0 && (
+      {/* Chat History */}
+      {chatHistoryVisible && chatMessages.length > 0 && (
         <div className={styles.chatHistoryLayer} ref={layerRef}>
           <div className={styles.chatHistoryTrack}>
             {chatMessages.slice(-MAX_VISIBLE_MESSAGES).map((msg) => (
@@ -554,8 +554,8 @@ const VoidOverlay: React.FC<VoidOverlayProps> = ({
         </div>
       )}
 
-      {/* Pre-login Chat Input */}
-      {!publicKey && (
+      {/* Chat Input */}
+      {(
         <div className={`${styles.chatInputLayer} ${chatFocused ? styles.chatInputFocused : ''} ${isProcessing ? styles.chatInputProcessing : ''}`}>
           {showCommandDropdown && filteredCommands.length > 0 && (
             <div className={styles.commandDropdownAnchor}>
@@ -580,7 +580,6 @@ const VoidOverlay: React.FC<VoidOverlayProps> = ({
                 onKeyDown={handleChatKeyDown}
                 onFocus={() => setChatFocused(true)}
                 onBlur={() => setChatFocused(false)}
-                disabled={isProcessing}
                 rows={1}
               />
               <button

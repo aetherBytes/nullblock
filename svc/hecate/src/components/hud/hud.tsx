@@ -47,8 +47,6 @@ interface HUDProps {
   initialTab?: 'crossroads' | 'memcache' | 'tasks' | 'agents' | 'logs' | 'canvas' | null;
   onToggleMobileMenu?: () => void;
   loginAnimationPhase?: LoginAnimationPhase;
-  hecatePanelOpen?: boolean;
-  onHecatePanelChange?: (open: boolean) => void;
   onActiveTabChange?: (
     tab: 'crossroads' | 'memcache' | 'tasks' | 'agents' | 'logs' | 'canvas' | null,
   ) => void;
@@ -66,8 +64,6 @@ const HUD: React.FC<HUDProps> = ({
   initialTab = null,
   onToggleMobileMenu,
   loginAnimationPhase = 'idle',
-  hecatePanelOpen: externalHecatePanelOpen,
-  onHecatePanelChange,
   onActiveTabChange,
   onEnterCrossroads,
   pendingCrossroadsTransition = false,
@@ -101,18 +97,6 @@ const HUD: React.FC<HUDProps> = ({
 
     return false;
   });
-
-  // Hecate panel toggle state (controls VoidScopes + VoidChatHUD history together)
-  // Use external state if provided, otherwise local state
-  const [localHecatePanelOpen, setLocalHecatePanelOpen] = useState(false);
-  const hecatePanelOpen = externalHecatePanelOpen ?? localHecatePanelOpen;
-  const setHecatePanelOpen = (open: boolean) => {
-    if (onHecatePanelChange) {
-      onHecatePanelChange(open);
-    } else {
-      setLocalHecatePanelOpen(open);
-    }
-  };
 
   // Detect if we're in void mode (logged in but no tab selected)
   // Note: We check for void mode during ALL animation phases to prevent old HUD from flickering in
@@ -782,10 +766,6 @@ const HUD: React.FC<HUDProps> = ({
   };
 
   const handleTabSelect = (tab: 'crossroads' | 'memcache') => {
-    if (hecatePanelOpen) {
-      setHecatePanelOpen(false);
-    }
-
     if (mainHudActiveTab === tab) {
       setMainHudActiveTab(null);
     } else {

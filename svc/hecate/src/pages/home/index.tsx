@@ -68,9 +68,6 @@ const Home: React.FC = () => {
   >(initialSession.hasSession ? 'memcache' : null);
   const [isMobileView, setIsMobileView] = useState<boolean>(false);
 
-  // Shared Hecate panel state
-  const [hecatePanelOpen, setHecatePanelOpen] = useState<boolean>(false);
-
   // Track active HUD tab for overlapping panel detection
   const [activeHudTab, setActiveHudTab] = useState<
     'crossroads' | 'memcache' | 'tasks' | 'agents' | 'logs' | 'canvas' | null
@@ -536,9 +533,6 @@ const Home: React.FC = () => {
         theme={currentTheme}
         loginAnimationPhase={currentAnimationPhase}
         isLoggedIn={isReturningUser && currentAnimationPhase === 'complete'}
-        hecatePanelOpen={hecatePanelOpen}
-        onHecatePanelChange={setHecatePanelOpen}
-        hasOverlappingPanels={activeHudTab === 'memcache' || activeHudTab === 'crossroads'}
         triggerAlignment={triggerOrbAlignment}
         onAlignmentComplete={handleAlignmentComplete}
         keepAligned={activeHudTab === 'crossroads'}
@@ -568,8 +562,6 @@ const Home: React.FC = () => {
                 localStorage.setItem('currentTheme', theme);
               }
             }}
-            hecatePanelOpen={hecatePanelOpen}
-            onHecatePanelChange={setHecatePanelOpen}
             onActiveTabChange={setActiveHudTab}
             onEnterCrossroads={handleEnterCrossroads}
             pendingCrossroadsTransition={pendingCrossroadsTransition}
