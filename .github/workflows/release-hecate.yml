@@ -2,7 +2,11 @@ name: Release Hecate
 
 on:
   push:
-    branches: [ prod ] 
+    branches: [ main ]
+    paths:
+      - 'svc/hecate/**'
+      - '.github/workflows/release-hecate.yml'
+      - '.github/task-definitions/hecate.json'
 
 jobs:
   build:
