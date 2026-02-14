@@ -910,7 +910,7 @@ const ConsensusView: React.FC<ConsensusViewProps> = ({ embedded: _embedded = fal
         <h3>MCP Server</h3>
         <div className={styles.mcpInfo}>
           <p>Connect via JSON-RPC at:</p>
-          <code className={styles.mcpEndpoint}>http://localhost:9007/mcp/jsonrpc</code>
+          <code className={styles.mcpEndpoint}>{`${import.meta.env.VITE_ARBFARM_API_URL || 'http://localhost:9007'}/mcp/jsonrpc`}</code>
           <p className={styles.mcpHint}>Protocol: MCP 2025-11-25</p>
         </div>
       </div>

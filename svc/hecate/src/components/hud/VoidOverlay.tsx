@@ -98,7 +98,7 @@ const VoidOverlay: React.FC<VoidOverlayProps> = ({
     getHelpText,
     getToolListText,
     getMcpStatusText,
-  } = useCommands('http://localhost:3000', false);
+  } = useCommands(undefined, false);
 
   const filteredCommands = chatInput.startsWith('/') ? filterCommands(chatInput) : [];
 

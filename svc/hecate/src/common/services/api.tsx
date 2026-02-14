@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 // API base URL
-const API_BASE_URL = import.meta.env.VITE_FAST_API_BACKEND_URL || 'http://localhost:8000';
+const API_BASE_URL = import.meta.env.VITE_EREBUS_API_URL || 'http://localhost:3000';
 
 interface WalletData {
   balance: number;
@@ -40,7 +40,7 @@ export interface MissionData {
 const fetchWalletData = async (publicKey: string): Promise<WalletData> => {
   try {
     // Use Vite's environment variable with a fallback
-    const baseUrl = import.meta.env.VITE_FAST_API_BACKEND_URL || 'http://localhost:8000'; // Default if not set
+    const baseUrl = import.meta.env.VITE_EREBUS_API_URL || 'http://localhost:3000'; // Default if not set
     const url = `${baseUrl}/api/wallet/${publicKey}`;
 
     const response = await axios.get<WalletData>(url);
@@ -65,7 +65,7 @@ const fetchWalletData = async (publicKey: string): Promise<WalletData> => {
 const fetchUserProfile = async (publicKey: string): Promise<UserProfileData> => {
   try {
     // Use Vite's environment variable with a fallback
-    const baseUrl = import.meta.env.VITE_FAST_API_BACKEND_URL || 'http://localhost:8000'; // Default if not set
+    const baseUrl = import.meta.env.VITE_EREBUS_API_URL || 'http://localhost:3000'; // Default if not set
     const url = `${baseUrl}/api/wallet/health/${publicKey}`;
 
     const response = await axios.get<UserProfileData>(url);
@@ -73,9 +73,6 @@ const fetchUserProfile = async (publicKey: string): Promise<UserProfileData> => 
     if (response.status !== 200) {
       throw new Error(`Unexpected response status: ${response.status}`);
     }
-
-    // Log the response to see what fields are available
-    console.log('User profile data:', response.data);
 
     return response.data;
   } catch (error) {

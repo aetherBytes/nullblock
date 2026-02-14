@@ -140,7 +140,7 @@ const getCategoryIcon = (category: string): string => {
   }
 };
 
-const EREBUS_BASE_URL = import.meta.env.VITE_EREBUS_URL || 'http://localhost:3000';
+const EREBUS_BASE_URL = import.meta.env.VITE_EREBUS_API_URL || 'http://localhost:3000';
 
 const MemCache: React.FC<MemCacheProps> = ({
   publicKey,
