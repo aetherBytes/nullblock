@@ -12,6 +12,7 @@ import NullblockLogo from './NullblockLogo';
 import styles from './VoidOverlay.module.scss';
 
 const DEV_SHOW_ALL_COW_TABS = true;
+const DEV_UNLOCK_CONNECT = false;
 
 interface PreLoginMessage {
   id: string;
@@ -82,6 +83,8 @@ const VoidOverlay: React.FC<VoidOverlayProps> = ({
   const [showCommandDropdown, setShowCommandDropdown] = useState(false);
   const [commandSelectedIndex, setCommandSelectedIndex] = useState(0);
   const [chatHistoryVisible, setChatHistoryVisible] = useState(true);
+  const [lockedWarning, setLockedWarning] = useState(false);
+  const lockedWarningTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [hasUnreadMessages, setHasUnreadMessages] = useState(false);
   const chatInputRef = useRef<HTMLTextAreaElement>(null);
   const historyEndRef = useRef<HTMLDivElement>(null);
@@ -322,6 +325,12 @@ const VoidOverlay: React.FC<VoidOverlayProps> = ({
     onDisconnect();
   };
 
+  const handleLockedClick = useCallback(() => {
+    setLockedWarning(true);
+    if (lockedWarningTimer.current) clearTimeout(lockedWarningTimer.current);
+    lockedWarningTimer.current = setTimeout(() => setLockedWarning(false), 2500);
+  }, []);
+
   return (
     <>
       {/* Full-width navbar border */}
@@ -484,23 +493,25 @@ const VoidOverlay: React.FC<VoidOverlayProps> = ({
         ) : (
           <>
             <div className={styles.navWrapper}>
-              <div className={styles.submenuExtra}>
-                {CROSSROADS_ITEMS.slice(2)
-                  .reverse()
-                  .map((item, index) => (
-                    <React.Fragment key={item.id}>
-                      <button
-                        className={`${styles.submenuItemExtra} ${crossroadsSection === item.id ? styles.submenuItemActive : ''}`}
-                        onClick={() => onCrossroadsSectionChange?.(item.id)}
-                        style={{ animationDelay: `${(CROSSROADS_ITEMS.length - 2 - index) * 0.03}s` }}
-                      >
-                        {item.label}
-                      </button>
-                      {index < CROSSROADS_ITEMS.length - 3 && <span className={styles.navDivider} />}
-                    </React.Fragment>
-                  ))}
-                <span className={styles.navDivider} />
-              </div>
+              {activeTab === 'crossroads' && (
+                <div className={styles.submenuExtra}>
+                  {CROSSROADS_ITEMS.slice(2)
+                    .reverse()
+                    .map((item, index) => (
+                      <React.Fragment key={item.id}>
+                        <button
+                          className={`${styles.submenuItemExtra} ${styles.submenuItemLocked}`}
+                          onClick={handleLockedClick}
+                          style={{ animationDelay: `${(CROSSROADS_ITEMS.length - 2 - index) * 0.03}s` }}
+                        >
+                          {item.label}
+                        </button>
+                        {index < CROSSROADS_ITEMS.length - 3 && <span className={styles.navDivider} />}
+                      </React.Fragment>
+                    ))}
+                  <span className={styles.navDivider} />
+                </div>
+              )}
 
               <nav className={`${styles.voidNav} ${styles.voidNavSingle}`}>
                 <button
@@ -511,21 +522,31 @@ const VoidOverlay: React.FC<VoidOverlayProps> = ({
                   {pendingCrossroadsTransition ? 'Aligning...' : 'Crossroads'}
                 </button>
 
-                {CROSSROADS_ITEMS.slice(0, 2).map((item, index) => (
-                  <React.Fragment key={item.id}>
-                    <button
-                      className={`${styles.submenuItem} ${crossroadsSection === item.id ? styles.submenuItemActive : ''}`}
-                      onClick={() => onCrossroadsSectionChange?.(item.id)}
-                      style={{ animationDelay: `${index * 0.03}s` }}
-                    >
-                      {item.label}
-                    </button>
-                    {index < 1 && <span className={styles.submenuDivider} />}
-                  </React.Fragment>
-                ))}
+                {activeTab === 'crossroads' && CROSSROADS_ITEMS.slice(0, 2).map((item, index) => {
+                  const isHype = item.id === 'hype';
+                  return (
+                    <React.Fragment key={item.id}>
+                      <button
+                        className={`${styles.submenuItem} ${isHype && crossroadsSection === item.id ? styles.submenuItemActive : ''} ${!isHype ? styles.submenuItemLocked : ''}`}
+                        onClick={isHype ? () => onCrossroadsSectionChange?.(item.id) : handleLockedClick}
+                        style={{ animationDelay: `${index * 0.03}s` }}
+                      >
+                        {item.label}
+                      </button>
+                      {index < 1 && <span className={styles.submenuDivider} />}
+                    </React.Fragment>
+                  );
+                })}
               </nav>
             </div>
-            <button className={styles.connectButton} onClick={onConnectWallet} title="Connect Wallet">
+            {lockedWarning && (
+              <div className={styles.lockedWarning}>Coming soon</div>
+            )}
+            <button
+              className={`${styles.connectButton} ${!DEV_UNLOCK_CONNECT ? styles.connectButtonLocked : ''}`}
+              onClick={DEV_UNLOCK_CONNECT ? onConnectWallet : handleLockedClick}
+              title={DEV_UNLOCK_CONNECT ? 'Connect Wallet' : 'Coming soon'}
+            >
               Connect
             </button>
           </>

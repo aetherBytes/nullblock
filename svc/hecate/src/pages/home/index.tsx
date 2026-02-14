@@ -65,7 +65,7 @@ const Home: React.FC = () => {
   const lastConnectionAttempt = React.useRef<number>(0);
   const [hudInitialTab, setHudInitialTab] = useState<
     'crossroads' | 'memcache' | 'tasks' | 'agents' | 'logs' | 'canvas' | null
-  >(initialSession.hasSession ? 'memcache' : null);
+  >(initialSession.hasSession ? 'memcache' : 'crossroads');
   const [isMobileView, setIsMobileView] = useState<boolean>(false);
 
   // Track active HUD tab for overlapping panel detection
@@ -430,6 +430,7 @@ const Home: React.FC = () => {
       return;
     }
     console.log('🔮 Triggering orb alignment for Crossroads transition');
+    setHudInitialTab(null);
     setPendingCrossroadsTransition(true);
     setTriggerOrbAlignment(true);
   };

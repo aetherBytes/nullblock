@@ -683,7 +683,7 @@ const HUD: React.FC<HUDProps> = ({
       return (
         <>
           <div
-            className={`${styles.tabWrapper} ${mainHudActiveTab === 'crossroads' || mainHudActiveTab === null ? '' : styles.hidden}`}
+            className={`${styles.tabWrapper} ${mainHudActiveTab === 'crossroads' ? '' : styles.hidden}`}
           >
             <Crossroads
               publicKey={publicKey}
@@ -777,6 +777,7 @@ const HUD: React.FC<HUDProps> = ({
   const handleResetToVoid = () => {
     setMainHudActiveTab(null);
     setResetCrossroadsToLanding(true);
+    setCrossroadsSection('hype');
     setShowMobileMenu(false);
   };
 
