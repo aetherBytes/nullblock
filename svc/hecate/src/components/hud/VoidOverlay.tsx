@@ -86,12 +86,15 @@ const VoidOverlay: React.FC<VoidOverlayProps> = ({
   const [lockedWarning, setLockedWarning] = useState(false);
   const lockedWarningTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [hasUnreadMessages, setHasUnreadMessages] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [activeModelName, setActiveModelName] = useState<string | null>(null);
   const chatInputRef = useRef<HTMLTextAreaElement>(null);
   const historyEndRef = useRef<HTMLDivElement>(null);
   const layerRef = useRef<HTMLDivElement>(null);
   const settingsRef = useRef<HTMLDivElement>(null);
   const memcacheRef = useRef<HTMLDivElement>(null);
+  const mobileMenuRef = useRef<HTMLDivElement>(null);
+  const hamburgerRef = useRef<HTMLButtonElement>(null);
 
   const { unlockedTabs } = useWalletTools(publicKey || null, { autoFetch: true });
   const {
@@ -173,6 +176,27 @@ const VoidOverlay: React.FC<VoidOverlayProps> = ({
       };
     }
   }, [settingsOpen]);
+
+  useEffect(() => {
+    if (!mobileMenuOpen) return;
+    const handleClickOutside = (e: MouseEvent) => {
+      if (
+        mobileMenuRef.current && !mobileMenuRef.current.contains(e.target as Node) &&
+        (!hamburgerRef.current || !hamburgerRef.current.contains(e.target as Node))
+      ) {
+        setMobileMenuOpen(false);
+      }
+    };
+    const handleResize = () => {
+      if (window.innerWidth > 768) setMobileMenuOpen(false);
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    window.addEventListener('resize', handleResize);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      window.removeEventListener('resize', handleResize);
+    };
+  }, [mobileMenuOpen]);
 
   const handleDismissWelcome = () => {
     setWelcomeFading(true);
@@ -503,53 +527,15 @@ const VoidOverlay: React.FC<VoidOverlayProps> = ({
           </div>
         ) : (
           <>
-            <div className={styles.navWrapper}>
-              {activeTab === 'crossroads' && (
-                <div className={styles.submenuExtra}>
-                  {CROSSROADS_ITEMS.slice(2)
-                    .reverse()
-                    .map((item, index) => (
-                      <React.Fragment key={item.id}>
-                        <button
-                          className={`${styles.submenuItemExtra} ${styles.submenuItemLocked}`}
-                          onClick={handleLockedClick}
-                          style={{ animationDelay: `${(CROSSROADS_ITEMS.length - 2 - index) * 0.03}s` }}
-                        >
-                          {item.label}
-                        </button>
-                        {index < CROSSROADS_ITEMS.length - 3 && <span className={styles.navDivider} />}
-                      </React.Fragment>
-                    ))}
-                  <span className={styles.navDivider} />
-                </div>
-              )}
-
-              <nav className={`${styles.voidNav} ${styles.voidNavSingle}`}>
-                <button
-                  className={`${styles.navItem} ${styles.navItemActive}`}
-                  onClick={onEnterCrossroads}
-                  disabled={pendingCrossroadsTransition}
-                >
-                  {pendingCrossroadsTransition ? 'Aligning...' : 'Crossroads'}
-                </button>
-
-                {activeTab === 'crossroads' && CROSSROADS_ITEMS.slice(0, 2).map((item, index) => {
-                  const isHype = item.id === 'hype';
-                  return (
-                    <React.Fragment key={item.id}>
-                      <button
-                        className={`${styles.submenuItem} ${isHype && crossroadsSection === item.id ? styles.submenuItemActive : ''} ${!isHype ? styles.submenuItemLocked : ''}`}
-                        onClick={isHype ? () => onCrossroadsSectionChange?.(item.id) : handleLockedClick}
-                        style={{ animationDelay: `${index * 0.03}s` }}
-                      >
-                        {item.label}
-                      </button>
-                      {index < 1 && <span className={styles.submenuDivider} />}
-                    </React.Fragment>
-                  );
-                })}
-              </nav>
-            </div>
+            <nav className={`${styles.voidNav} ${styles.voidNavSingle}`}>
+              <button
+                className={`${styles.navItem} ${styles.navItemActive}`}
+                onClick={onEnterCrossroads}
+                disabled={pendingCrossroadsTransition}
+              >
+                {pendingCrossroadsTransition ? 'Aligning...' : 'Crossroads'}
+              </button>
+            </nav>
             {lockedWarning && (
               <div className={styles.lockedWarning}>Coming soon</div>
             )}
@@ -560,9 +546,65 @@ const VoidOverlay: React.FC<VoidOverlayProps> = ({
             >
               Connect
             </button>
+            {activeTab === 'crossroads' && (
+              <button
+                ref={hamburgerRef}
+                className={styles.hamburgerButton}
+                onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+                aria-label="Toggle menu"
+              >
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
+                  <path d="M3 6h18M3 12h18M3 18h18" />
+                </svg>
+              </button>
+            )}
           </>
         )}
       </div>
+
+      {/* Crossroads submenu bar (pre-login, desktop) */}
+      {!publicKey && activeTab === 'crossroads' && (
+        <div className={styles.crossroadsSubmenuBar}>
+          {CROSSROADS_ITEMS.map((item, index) => {
+            const isHype = item.id === 'hype';
+            return (
+              <button
+                key={item.id}
+                className={`${styles.submenuBarItem} ${isHype && crossroadsSection === item.id ? styles.submenuBarItemActive : ''} ${!isHype ? styles.submenuBarItemLocked : ''}`}
+                onClick={isHype ? () => onCrossroadsSectionChange?.(item.id) : handleLockedClick}
+                style={{ animationDelay: `${index * 0.04}s` }}
+              >
+                {item.label}
+              </button>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Crossroads mobile dropdown (pre-login) */}
+      {!publicKey && activeTab === 'crossroads' && mobileMenuOpen && (
+        <div className={styles.mobileMenuDropdown} ref={mobileMenuRef}>
+          {CROSSROADS_ITEMS.map((item) => {
+            const isHype = item.id === 'hype';
+            return (
+              <button
+                key={item.id}
+                className={`${styles.mobileMenuItem} ${isHype && crossroadsSection === item.id ? styles.mobileMenuItemActive : ''} ${!isHype ? styles.mobileMenuItemLocked : ''}`}
+                onClick={() => {
+                  if (isHype) {
+                    onCrossroadsSectionChange?.(item.id);
+                    setMobileMenuOpen(false);
+                  } else {
+                    handleLockedClick();
+                  }
+                }}
+              >
+                {item.label}
+              </button>
+            );
+          })}
+        </div>
+      )}
 
       {/* Chat History */}
       {chatHistoryVisible && chatMessages.length > 0 && (
